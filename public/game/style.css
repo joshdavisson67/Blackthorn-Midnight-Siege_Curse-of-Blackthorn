@@ -545,3 +545,10 @@ body.touch-tap-fire #touchJump{right:calc(var(--sr) + 27px);bottom:calc(var(--sb
 body.touch-tap-fire #touchReload{right:calc(var(--sr) + 105px);bottom:calc(var(--sb) + 109px)}
 body.phone-ui .pauseSubSetting{margin-top:8px;padding-top:6px}
 body.phone-ui .pauseSubSetting>small{font-size:10px;line-height:1.4;margin-top:5px}
+/* Touch HUD layout (v146). The stick rests 10px above the health panel (its
+   height is measured into --vitals-clear), and the health panel's left edge
+   sits under the stick's centre. With Tap to Fire Only, the ammo readout moves
+   in beside the 2x2 button grid (15px gap). */
+.touchStick{top:auto;bottom:calc(var(--vitals-clear,64px) + 10px)}
+body.touch-playing #bottomHud{left:calc(env(safe-area-inset-left,0px) + 116px)}
+body.touch-playing.touch-tap-fire #bottomHud{right:calc(env(safe-area-inset-right,0px) + 172px)}

@@ -105,7 +105,8 @@ export function verifyShedM4(qa,frames,listeners,elements){
   assert(weapon.purchased&&qa.get().inventory.rifle.owned);assert.equal(qa.get().weapon,'rifle');assert.equal(qa.get().inventory.rifle.ammo,30);assert.equal(qa.get().inventory.rifle.reserve,180);
   assert.equal(qa.get().inventory.smg.ammo,13);assert.equal(qa.get().inventory.smg.reserve,42,'M4 purchase does not refill other guns');
   frames(1);assert.match(elements.get('interaction').textContent,/OWNED/);
-  qa.setPlayer(SHED.x,SHED.z-1);qa.setAim(Math.PI,0);frames(1);const enemy=qa.makeZombie(SHED.x,SHED.z+.9),hp=enemy.hp;
+  // Aim at the torso: the rifle's spread can graze past an eye-level skull.
+  qa.setPlayer(SHED.x,SHED.z-1);qa.setAim(Math.PI,-.3);frames(1);const enemy=qa.makeZombie(SHED.x,SHED.z+.9),hp=enemy.hp;
   qa.get().scene.updateMatrixWorld(true);qa.shoot();assert(enemy.hp<hp,'Purchased M4 fires real bullets from the equipped model');assert.equal(qa.get().inventory.rifle.ammo,29);
   const afterShotPoints=qa.get().points;qa.setPlayer(weapon.x,weapon.z+1.4);qa.selectWeapon('smg');pressE();assert.equal(qa.get().weapon,'rifle');assert.equal(qa.get().points,afterShotPoints);assert.equal(qa.get().inventory.rifle.ammo,29,'Later equips are free and cannot grant repeated free ammo');
   qa.selectWeapon('smg');listeners.keydown({code:'Digit6',repeat:false});assert.equal(qa.get().weapon,'rifle','Key 6 selects the purchased M4');
