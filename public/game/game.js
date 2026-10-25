@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=143';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=144';
-import {createChangelog} from './changelog.mjs?v=144';
+import {createLeaderboard} from './leaderboard.mjs?v=145';
+import {createChangelog} from './changelog.mjs?v=145';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -19,7 +19,7 @@ import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
 import {buildShed} from './shed.mjs?v=129';
 import * as T from './three.module.js';
 import {createRenderScale} from './render-scale.mjs?v=120';
-import {createTouchControls,TOUCH} from './touch-controls.mjs?v=141';
+import {createTouchControls,TOUCH} from './touch-controls.mjs?v=145';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
@@ -932,7 +932,7 @@ for(const type of ['keydown','mousedown','pointerdown'])window.addEventListener(
   if(type==='pointerdown'&&e.pointerType==='mouse')return;
   controlScheme.noteInput(type==='pointerdown'?'touch':'keyboard');
 },true);
-touchControls=createTouchControls({document,toggle:$('touchToggle'),enabled:controlScheme.scheme==='touch',onToggle:on=>controlScheme.choose(on?'touch':'standard'),actions:{
+touchControls=createTouchControls({document,toggle:$('touchToggle'),fireToggle:$('tapFireToggle'),fireSetting:$('tapFireSetting'),enabled:controlScheme.scheme==='touch',onToggle:on=>controlScheme.choose(on?'touch':'standard'),actions:{
   look:touchLook,
   fireStart(){if(mode!=='playing')return;if(!mouseDown){mouseDown=true;shoot();}},
   fireEnd(){mouseDown=false;},
