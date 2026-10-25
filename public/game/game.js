@@ -1,12 +1,12 @@
 import {BRUTE} from './brute.mjs?v=30';
 import {FERAL} from './feral.mjs?v=116';
 import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curseWaveConfig,curseReward,chooseCurseEnemyKind} from './curse.mjs?v=130';
-import {createCurseUI,curseSummary} from './curse-ui.mjs?v=130';
+import {createCurseUI,curseSummary} from './curse-ui.mjs?v=143';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=142';
-import {createChangelog} from './changelog.mjs?v=142';
+import {createLeaderboard} from './leaderboard.mjs?v=144';
+import {createChangelog} from './changelog.mjs?v=144';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -823,11 +823,59 @@ function pauseGame(){
   $('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');
   $('resume').textContent=resumeLabel();showPauseMenu();
 }
-function showPauseMenu(){curseUI.updatePauseStats();$('pause').classList.remove('hidden');}
+function showPauseMenu(){curseUI.updatePauseStats();showPausePage('main');$('pause').classList.remove('hidden');}
+// Pause pages (v143): the main list, the Settings page or a confirm prompt.
+// Settings also opens from the title screen (v144), over the menu.
+function showPausePage(page){for(const [id,name] of [['pauseMain','main'],['pauseSettings','settings'],['pauseConfirm','confirm']])$(id).classList.toggle('hidden',page!==name);}
+const pausePageOpen=id=>!$('pause').classList.contains('hidden')&&!$(id).classList.contains('hidden');
+function settingsOpen(){return pausePageOpen('pauseSettings');}
+let settingsFrom='pause';
+function openSettings(from='pause'){
+  settingsFrom=from;$('settingsEyebrow').textContent=from==='menu'?'BLACKTHORN ESTATE':'BLACKTHORN ESTATE / PAUSED';
+  if(from==='menu'){$('pauseCurse').classList.add('hidden');$('pause').classList.remove('hidden');}
+  showPausePage('settings');$('settingsBack').focus({preventScroll:true});
+}
+function closeSettings(){
+  showPausePage('main');
+  if(settingsFrom==='menu'){$('pause').classList.add('hidden');$('settingsMenu').focus({preventScroll:true});return;}
+  $('settingsPause').focus({preventScroll:true});
+}
+// Are-you-sure prompts (v144) before New Run or Main Menu throw a run away.
+// After a death the run is already over, so those act at once.
+const CONFIRM={
+  restart:['Start a new run?','Your current run ends here and won’t be scored. A fresh run starts at wave 1.','YES, START A NEW RUN',()=>resetRun()],
+  menu:['Return to the main menu?','Your current run ends here and won’t be scored.','YES, GO TO MAIN MENU',()=>returnToMenu()]
+};
+let confirmAction=null,confirmReturn=null;
+function confirmOpen(){return pausePageOpen('pauseConfirm');}
+function askConfirm(kind,trigger){
+  const [title,text,yes,act]=CONFIRM[kind];
+  if(mode==='dead'){act();return;}
+  confirmAction=act;confirmReturn=trigger;
+  $('confirmTitle').textContent=title;$('confirmText').textContent=text;$('confirmYes').textContent=yes;
+  showPausePage('confirm');$('confirmNo').focus({preventScroll:true});
+}
+function cancelConfirm(){confirmAction=null;showPausePage('main');confirmReturn?.focus({preventScroll:true});confirmReturn=null;}
+function acceptConfirm(){const act=confirmAction;confirmAction=confirmReturn=null;showPausePage('main');act?.();}
+// Main Menu (v143): abandon the run, clear the estate as a new run would, and
+// return to the title screen with Enter the Estate ready again.
+function returnToMenu(){
+  if(mode!=='paused'&&mode!=='dead')return;
+  resetRun({capture:false});
+  mode='menu';clearPlayInput();releaseMouse();touchControls?.setActive(false);
+  $('pause').classList.add('hidden');$('hud').classList.add('hidden');$('menu').classList.remove('hidden');
+  bannerTime=0;setOpacity('banner',0);renderCurseMenu();
+  const start=$('start');start.disabled=false;start.innerHTML='ENTER THE ESTATE <span>→</span>';start.focus({preventScroll:true});
+}
 function resumeGame(){if(mode==='paused')requestPointer();}
 function gameOver(){if(mode==='dead')return;curseUI.update();worldEvents.endWave();eventVisuals.reset();grenadeThrow.cancel();grenadeCooldown=0;mode='dead';clearPlayInput();releaseMouse();$('captureHelp').classList.add('hidden');if(wave>bestWave||wave===bestWave&&kills>bestKills){bestWave=wave;bestKills=kills;try{localStorage.setItem('blackthorn-best',JSON.stringify({wave,kills}));}catch{}}$('pauseTitle').textContent='The house claims another.';$('pauseText').textContent=`Survived to wave ${wave} · ${kills} kills · ${totalScore.toLocaleString()} essence earned · Curse ${curse.rank} / ${curse.title}. Personal best: wave ${bestWave}.`;$('resume').classList.add('hidden');showPauseMenu();tone(90,2,.12,'sawtooth',25);leaderboard.endRun({score:totalScore,wave,kills,duration:runTime,curseRank:curse.rank});}
 let guideReturnFocus=null;
-function openFieldGuide(trigger){
+// One window, three views (v143): 'controls' and 'guide' from the pause menu,
+// and 'all' (controls first, then the guide) from the title screen.
+const GUIDE_VIEWS={controls:['BLACKTHORN / CONTROLS','Controls','Close controls'],guide:['BLACKTHORN / FIELD GUIDE','Stay alive. Spend wisely.','Close field guide'],all:['BLACKTHORN / FIELD GUIDE','Stay alive. Spend wisely.','Close field guide']};
+function openFieldGuide(trigger,view='guide'){
+  const [eyebrow,title,close]=GUIDE_VIEWS[view]||GUIDE_VIEWS.guide;
+  $('guide').dataset.view=view;$('guideEyebrow').textContent=eyebrow;$('guideTitle').textContent=title;$('closeGuide').setAttribute('aria-label',close);
   pauseGame();guideReturnFocus=trigger;$('guide').classList.remove('hidden');
   $('guideBody').scrollTop=0;$('guideBody').focus({preventScroll:true});
 }
@@ -837,17 +885,32 @@ function closeFieldGuide(){
 function fieldGuideKeydown(e){
   if(e.code==='Escape'){e.preventDefault?.();closeFieldGuide();return;}
   if(e.code==='Tab'){
-    const items=[...$('guide').querySelectorAll('button,a[href],[tabindex="0"]')];
+    // Skip links the current view hides (Controls hides the section index).
+    const items=[...$('guide').querySelectorAll('button,a[href],[tabindex="0"]')].filter(el=>{const r=el.getClientRects?.();return r?r.length>0:true;});
     const current=items.indexOf(document.activeElement);
     const next=e.shiftKey?(current<=0?items.length-1:current-1):(current+1)%items.length;
     e.preventDefault();items[next]?.focus();
   }
   // Leave native scrolling and link/button activation to the browser.
 }
-if(!window.Blackthorn)$('start').onclick=resetRun;$('resume').onclick=resumeGame;$('restart').onclick=resetRun;
-$('howBtn').onclick=()=>openFieldGuide($('howBtn'));$('guidePause').onclick=()=>openFieldGuide($('guidePause'));
+if(!window.Blackthorn)$('start').onclick=resetRun;$('resume').onclick=resumeGame;$('restart').onclick=()=>askConfirm('restart',$('restart'));
+$('howBtn').onclick=()=>openFieldGuide($('howBtn'),'all');$('guidePause').onclick=()=>openFieldGuide($('guidePause'),'guide');$('controlsPause').onclick=()=>openFieldGuide($('controlsPause'),'controls');
+$('settingsPause').onclick=()=>openSettings('pause');$('settingsMenu').onclick=()=>openSettings('menu');$('settingsBack').onclick=closeSettings;$('mainMenuPause').onclick=()=>askConfirm('menu',$('mainMenuPause'));
+$('confirmYes').onclick=acceptConfirm;$('confirmNo').onclick=cancelConfirm;
 $('closeGuide').onclick=closeFieldGuide;$('guideDone').onclick=closeFieldGuide;
-$('sound').onchange=()=>{if(ambience)ambience.gain.value=soundOn()?.018:0;};
+// Sensitivity and sound are remembered like the other settings (v144);
+// explicit launch-link values still win.
+const SENSITIVITY_KEY='blackthorn-sensitivity',SOUND_KEY='blackthorn-sound';
+function showSensitivity(){$('sensitivityValue').textContent=`${Number($('sensitivity').value).toFixed(1)}×`;}
+function showSound(){const label=document.querySelector('[data-sound-setting]');if(label)label.textContent=soundOn()?'ON':'OFF';}
+try{
+  const launch=new URLSearchParams(location.search),sens=Number(localStorage.getItem(SENSITIVITY_KEY)),sound=localStorage.getItem(SOUND_KEY);
+  if(!launch.has('sensitivity')&&sens>=.5&&sens<=2)$('sensitivity').value=String(sens);
+  if(!launch.has('sound')&&(sound==='0'||sound==='1'))$('sound').checked=sound==='1';
+}catch{}
+$('sensitivity').oninput=$('sensitivity').onchange=()=>{showSensitivity();try{localStorage.setItem(SENSITIVITY_KEY,$('sensitivity').value);}catch{}};
+$('sound').onchange=()=>{if(ambience)ambience.gain.value=soundOn()?.018:0;showSound();try{localStorage.setItem(SOUND_KEY,soundOn()?'1':'0');}catch{}};
+showSensitivity();showSound();
 configureMinimap({radar:$('radar'),navigation:$('hudNavigation'),vitals:$('hudVitals'),toggle:$('minimapToggle')});
 const WEAPON_CYCLE=['glock','shotgun','smg','lmg','bushmaster','rifle'];
 function toggleFlashlight(){flashlightOn=!flashlightOn;flashlight.intensity=flashlightOn?FLASHLIGHT_INTENSITY:0;}
@@ -915,6 +978,8 @@ function padBack(){
   if(changelog.visible){changelog.keydown({code:'Escape',preventDefault(){}});return;}
   if(!$('guide').classList.contains('hidden')){closeFieldGuide();return;}
   if(!$('estateMap').classList.contains('hidden')){closeEstateMap();return;}
+  if(confirmOpen()){cancelConfirm();return;}
+  if(settingsOpen()){closeSettings();return;}
   if(mode==='paused')resumeGame();
 }
 function padStart(){
@@ -922,6 +987,8 @@ function padStart(){
   if(leaderboard.visible||changelog.visible||!$('guide').classList.contains('hidden')){padBack();return;}
   if(!$('estateMap').classList.contains('hidden')){closeEstateMap();return;}
   if(mode==='paused'){resumeGame();return;}
+  if(confirmOpen()){cancelConfirm();return;}
+  if(settingsOpen()){closeSettings();return;}
   if(mode==='menu'&&!$('start').disabled)$('start').click();
 }
 // Light aim assist: look speed eases while the sights sit over an enemy body.
@@ -962,7 +1029,7 @@ document.addEventListener('pointerlockerror',()=>captureFailed(captureAttempt));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
 document.addEventListener('mousemove',e=>{if(mode==='playing'&&pointer&&hasMouseLock()&&$('guide').classList.contains('hidden')){const sens=Number($('sensitivity').value)*.002*(aiming?.62/(weapons[weapon].zoom||1):1);lookYaw-=e.movementX*sens;lookPitch=clamp(lookPitch-e.movementY*sens,-1.3,1.3);}});
 canvas.addEventListener('mousedown',e=>{if(mode!=='playing'||directControls())return;if(!hasMouseLock()){pauseGame();requestPointer();return;}e.preventDefault?.();if(e.button===0&&!mouseDown){mouseDown=true;shoot();}if(e.button===2)aiming=true;});document.addEventListener('mouseup',e=>{if(e.button===0)mouseDown=false;if(e.button===2)aiming=false;});canvas.addEventListener('contextmenu',e=>e.preventDefault());
-document.addEventListener('keydown',e=>{if(changelog.visible){changelog.keydown(e);return;}if(leaderboard.visible){if(e.code==='Escape'){e.preventDefault();leaderboard.close();}return;}if(!$('guide').classList.contains('hidden')){fieldGuideKeydown(e);return;}if(['INPUT','TEXTAREA'].includes(e.target?.tagName))return;if(e.code==='KeyM'){e.preventDefault();if(e.repeat)return;if($('estateMap').classList.contains('hidden'))openEstateMap();else closeEstateMap();return;}if(e.code==='Escape'&&!$('estateMap').classList.contains('hidden')){closeEstateMap(false);return;}if(e.code==='Escape'){pauseGame();return;}if(mode!=='playing'||!(hasMouseLock()||directControls()))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='KeyR')reload();if(e.code==='KeyE')interact();if(e.code==='KeyF')toggleFlashlight();if(e.code==='KeyG')grenade();if(e.code==='Digit1')selectWeapon('glock');if(e.code==='Digit2')selectWeapon('shotgun');if(e.code==='Digit3')selectWeapon('smg');if(e.code==='Digit4')selectWeapon('lmg');if(e.code==='Digit5')selectWeapon('bushmaster');if(e.code==='Digit6')selectWeapon('rifle');if(e.code==='Space'&&grounded){jumpV=4.2;grounded=false;}});document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{if((mode==='playing'||mode==='curse')&&!capturePending)pauseGame();});
+document.addEventListener('keydown',e=>{if(changelog.visible){changelog.keydown(e);return;}if(leaderboard.visible){if(e.code==='Escape'){e.preventDefault();leaderboard.close();}return;}if(!$('guide').classList.contains('hidden')){fieldGuideKeydown(e);return;}if(e.code==='Escape'&&confirmOpen()){e.preventDefault?.();cancelConfirm();return;}if(e.code==='Escape'&&settingsOpen()){e.preventDefault?.();closeSettings();return;}if(['INPUT','TEXTAREA'].includes(e.target?.tagName))return;if(e.code==='KeyM'){e.preventDefault();if(e.repeat)return;if($('estateMap').classList.contains('hidden'))openEstateMap();else closeEstateMap();return;}if(e.code==='Escape'&&!$('estateMap').classList.contains('hidden')){closeEstateMap(false);return;}if(e.code==='Escape'){pauseGame();return;}if(mode!=='playing'||!(hasMouseLock()||directControls()))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='KeyR')reload();if(e.code==='KeyE')interact();if(e.code==='KeyF')toggleFlashlight();if(e.code==='KeyG')grenade();if(e.code==='Digit1')selectWeapon('glock');if(e.code==='Digit2')selectWeapon('shotgun');if(e.code==='Digit3')selectWeapon('smg');if(e.code==='Digit4')selectWeapon('lmg');if(e.code==='Digit5')selectWeapon('bushmaster');if(e.code==='Digit6')selectWeapon('rifle');if(e.code==='Space'&&grounded){jumpV=4.2;grounded=false;}});document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{if((mode==='playing'||mode==='curse')&&!capturePending)pauseGame();});
 let mapWasPlaying=false;
 function closeEstateMap(restorePlay=true){if($('estateMap').classList.contains('hidden'))return;const resume=mapWasPlaying&&restorePlay;mapWasPlaying=false;$('estateMap').classList.add('hidden');if(resume)resumeGame();}
 function openEstateMap(){if(!['playing','paused'].includes(mode))return;mapWasPlaying=mode==='playing';if(mapWasPlaying)pauseGame();(player.y<-.3?drawCellarMap:player.y>2.15?drawUpperMap:drawEstateMap)($('estateMapCanvas'),player,interactables,lookYaw);$('estateMap').classList.remove('hidden');$('closeEstateMap').focus();}

@@ -102,16 +102,20 @@ export function verifyGamepad(qa,frames,listeners,elements,windowEvents){
   pad.set('down');frames(1);const first=state().gamepad.focused;frames(Math.round(PAD.repeatDelay*60)-4);assert.equal(state().gamepad.focused,first,'No repeat before the delay');
   frames(12);assert.notEqual(state().gamepad.focused,first,'Holding repeats');pad.set('down',false);frames(1);
   // Toggles respond to A, and the vibration toggle silences the pad.
-  const rumble=elements.get('rumbleToggle');
+  // Switches live on the Settings page (v143); B returns to the pause list.
+  const rumble=elements.get('rumbleToggle'),settings=elements.get('pauseSettings');
+  const openSettings=()=>{for(let i=0;i<40&&state().gamepad.focused!==elements.get('settingsPause');i++)tap('down');tap('a');assert(!settings.classList.contains('hidden'),'A on Settings opens the settings page');};
+  openSettings();
   for(let i=0;i<40&&state().gamepad.focused!==rumble;i++)tap('down');
   assert.equal(state().gamepad.focused,rumble,'The vibration switch is reachable with the D-pad');
   tap('a');assert.equal(rumble.getAttribute('aria-checked'),'false','A flips the focused switch');
+  tap('b');assert(settings.classList.contains('hidden'),'B leaves Settings');assert.equal(state().mode,'paused','B on Settings goes back to the pause list, not into play');
   for(let i=0;i<40&&state().gamepad.focused!==elements.get('resume');i++)tap('down');
   tap('a');assert.equal(state().mode,'playing','A on Resume resumes');
   const quiet=pad.effects.length;pad.buttons[BUTTON.rt].value=1;frames(1);pad.buttons[BUTTON.rt].value=0;frames(30);
   assert.equal(pad.effects.length,quiet,'Vibration off means no rumble');
-  tap('start');for(let i=0;i<40&&state().gamepad.focused!==rumble;i++)tap('down');tap('a');assert.equal(rumble.getAttribute('aria-checked'),'true');
-  tap('b');assert.equal(state().mode,'playing','B on the pause screen resumes');
+  tap('start');openSettings();for(let i=0;i<40&&state().gamepad.focused!==rumble;i++)tap('down');tap('a');assert.equal(rumble.getAttribute('aria-checked'),'true');
+  tap('b');tap('b');assert.equal(state().mode,'playing','B on the pause screen resumes');
   // The field guide opens from the pause menu and B closes it again.
   tap('start');elements.get('guidePause').click();assert(!elements.get('guide').classList.contains('hidden'));
   tap('b');assert(elements.get('guide').classList.contains('hidden'),'B closes the field guide');assert.equal(state().mode,'paused');

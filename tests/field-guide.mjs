@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 export function verifyFieldGuide(qa,frames,listeners,elements){
   const guide=elements.get('guide'),body=elements.get('guideBody');
   const controls=[...guide.querySelectorAll('button,a[href],[tabindex="0"]')];
-  const tracked=[...controls,elements.get('howBtn'),elements.get('guidePause')];
+  const tracked=[...controls,elements.get('howBtn'),elements.get('guidePause'),elements.get('controlsPause')];
   const originalFocus=tracked.map(el=>el.focus);
   const originalActive=Object.getOwnPropertyDescriptor(document,'activeElement');
   let focused=null;
@@ -20,6 +20,7 @@ export function verifyFieldGuide(qa,frames,listeners,elements){
     body.scrollTop=500;
     elements.get('howBtn').onclick();
     assert(!guide.classList.contains('hidden'));
+    assert.equal(guide.dataset.view,'all','The title-screen guide shows controls and the full guide');
     assert.equal(qa.get().mode,mode);
     assert.equal(body.scrollTop,0);
     assert.equal(focused,body);
@@ -42,6 +43,7 @@ export function verifyFieldGuide(qa,frames,listeners,elements){
     // A guide opened during a run pauses it; closing does not recapture the mouse.
     qa.start();document.exitPointerLock();
     elements.get('guidePause').onclick();
+    assert.equal(guide.dataset.view,'guide','Field Guide opens the guide view');assert.equal(elements.get('guideTitle').textContent,'Stay alive. Spend wisely.');
     const before=qa.get();frames(120);
     assert.equal(qa.get().mode,'paused');
     assert.equal(qa.get().wave,before.wave);
@@ -57,10 +59,16 @@ export function verifyFieldGuide(qa,frames,listeners,elements){
     elements.get('guidePause').onclick();assert.equal(body.scrollTop,0);
     press('Escape');assert.equal(qa.get().mode,'paused');
     assert.equal(document.pointerLockElement,null);
+    // Controls (v143) is its own pause-menu entry: the same window, controls only.
+    elements.get('controlsPause').onclick();
+    assert(!guide.classList.contains('hidden'));assert.equal(guide.dataset.view,'controls');
+    assert.equal(elements.get('guideTitle').textContent,'Controls');assert.equal(elements.get('guideEyebrow').textContent,'BLACKTHORN / CONTROLS');
+    assert(elements.get('guideControls').textContent.includes('DOUBLE-TAP RIGHT'),'Controls list the touch layout too');
+    press('Escape');assert(guide.classList.contains('hidden'));assert.equal(focused,elements.get('controlsPause'));assert.equal(qa.get().mode,'paused');
   }finally{
     tracked.forEach((el,i)=>{el.focus=originalFocus[i];});
     if(originalActive)Object.defineProperty(document,'activeElement',originalActive);
     else delete document.activeElement;
   }
-  console.log('PASS: field guide resets scroll, preserves keyboard scrolling, contains focus, links to all sections, and closes safely from menu/pause.');
+  console.log('PASS: field guide and controls views (pause-menu Controls and Field Guide, title-screen combined guide) reset scroll, preserves keyboard scrolling, contains focus, links to all sections, and closes safely from menu/pause.');
 }

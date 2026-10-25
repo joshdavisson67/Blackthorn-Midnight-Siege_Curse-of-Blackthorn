@@ -9,6 +9,8 @@ export function createCurseUI({document,curse}){
   let pauseRank=null;
   // Refresh when a pause screen opens; the readout has no per-frame work.
   function updatePauseStats(){
+    // The panel only appears once the run carries a curse (rank 1 or above).
+    pausePanel.classList.toggle('hidden',curse.rank<1);
     if(pauseRank===curse.rank)return;
     pauseRank=curse.rank;const modifiers=curseModifiers(pauseRank);
     pausePanel.dataset.rank=String(pauseRank);

@@ -1,5 +1,5 @@
 const PENDING_KEY='blackthorn-leaderboard-pending-v1',QUEUE_KEY='blackthorn-leaderboard-queue-v1',NAME_KEY='blackthorn-leaderboard-name';
-import {CURRENT_VERSION} from './version.mjs?v=142';
+import {CURRENT_VERSION} from './version.mjs?v=144';
 import {curseTitle} from './curse.mjs?v=130';
 import {usesSupabase,supabaseFetcher} from './leaderboard-supabase.mjs?v=132';
 export const GAME_VERSION=String(CURRENT_VERSION);
@@ -118,7 +118,7 @@ export function createLeaderboard({document,fetcher=usesSupabase()?supabaseFetch
   picker?.addEventListener('change',()=>{if(saving)return;const run=runs.find(r=>r.stats.id===picker.value);if(!run)return;captureDraft();pending=run;persist();renderForm();showMessage(run.error?`${run.error} ${retainedMessage()}`:'Add your name to share this run. Saving is optional.',!!run.error);name.focus();});
   name.addEventListener('input',captureDraft);
   form.addEventListener('submit',save);el('leaderboardRefresh').addEventListener('click',refresh);el('leaderboardClose').addEventListener('click',close);el('leaderboardNewRun').addEventListener('click',()=>{close();onNewRun();});
-  for(const id of ['leaderboardMenu','leaderboardPause'])el(id).addEventListener('click',open);
+  for(const id of ['leaderboardMenu','leaderboardPause'])el(id)?.addEventListener('click',open);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopRefresh();else if(!modal.classList.contains('hidden'))refresh();});
   return {startRun,endRun,open,close,refresh,save,get visible(){return !modal.classList.contains('hidden');}};
 }
