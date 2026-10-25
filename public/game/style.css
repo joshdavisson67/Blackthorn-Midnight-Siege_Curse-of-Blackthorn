@@ -155,11 +155,11 @@
 .pauseSetting{margin:20px 0 8px;padding:14px 0;border-top:1px solid #a7b1a32a;border-bottom:1px solid #a7b1a32a}
 .pauseSetting>span{display:block;color:var(--gold);font-size:10px;letter-spacing:2px;margin-bottom:10px}
 .pauseSetting>small{display:block;font-size:11px;line-height:1.5;color:#acbab7;margin-top:9px}
-#minimapToggle,#headshotToggle,#touchToggle,#rumbleToggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:11px 13px;border:1px solid #596660;background:#101f26;color:var(--ivory);font-size:12px;letter-spacing:1.5px;text-align:left}
+#minimapToggle,#headshotToggle,#touchToggle,#rumbleToggle,#tapFireToggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:11px 13px;border:1px solid #596660;background:#101f26;color:var(--ivory);font-size:12px;letter-spacing:1.5px;text-align:left}
 .pauseToggleTrack{display:flex;align-items:center;width:38px;height:22px;padding:3px;flex:none;border:1px solid #81938c77;border-radius:12px;background:#071015}
 .pauseToggleTrack i{width:14px;height:14px;flex:none;border-radius:50%;background:#a7b7ae;transition:transform .15s}
-#minimapToggle[aria-checked=true] .pauseToggleTrack,#headshotToggle[aria-checked=true] .pauseToggleTrack,#touchToggle[aria-checked=true] .pauseToggleTrack,#rumbleToggle[aria-checked=true] .pauseToggleTrack{border-color:var(--gold);background:#4d422b}
-#minimapToggle[aria-checked=true] .pauseToggleTrack i,#headshotToggle[aria-checked=true] .pauseToggleTrack i,#touchToggle[aria-checked=true] .pauseToggleTrack i,#rumbleToggle[aria-checked=true] .pauseToggleTrack i{background:var(--gold);transform:translateX(16px)}
+#minimapToggle[aria-checked=true] .pauseToggleTrack,#headshotToggle[aria-checked=true] .pauseToggleTrack,#touchToggle[aria-checked=true] .pauseToggleTrack,#rumbleToggle[aria-checked=true] .pauseToggleTrack,#tapFireToggle[aria-checked=true] .pauseToggleTrack{border-color:var(--gold);background:#4d422b}
+#minimapToggle[aria-checked=true] .pauseToggleTrack i,#headshotToggle[aria-checked=true] .pauseToggleTrack i,#touchToggle[aria-checked=true] .pauseToggleTrack i,#rumbleToggle[aria-checked=true] .pauseToggleTrack i,#tapFireToggle[aria-checked=true] .pauseToggleTrack i{background:var(--gold);transform:translateX(16px)}
 
 #hit[data-headshot=true]{font-size:43px;text-shadow:0 0 8px #cf7d334d}
 #headshotIndicator{position:absolute;left:50%;top:calc(50% + 38px);transform:translateX(-50%);font:600 12px 'Barlow Condensed',Arial,sans-serif;letter-spacing:2px;color:#f2c879;text-shadow:0 1px 3px #000;opacity:0;pointer-events:none}
@@ -530,3 +530,18 @@ body.phone-ui .confirmActions button{padding:9px 12px;font-size:10px}
   #menu .best{font-size:11px;margin-top:6px}
   #menu .menuBottom{display:none}
 }
+/* Tap to fire only (v145): a nested sub-setting under Touch Controls. With it
+   on, FIRE is removed and AIM, JUMP, RELOAD and NADE keep their sizes in a 2x2
+   grid of 62px cells (14px apart) in the bottom-right thumb corner:
+     RELOAD  JUMP
+     NADE    AIM   */
+.pauseSubSetting{margin:12px 0 0 14px;padding:10px 0 0 12px;border-left:2px solid #d4b77a55}
+.pauseSubSetting>span{display:block;color:var(--gold);font-size:9px;letter-spacing:2px;margin-bottom:8px}
+.pauseSubSetting>small{display:block;font-size:11px;line-height:1.5;color:#acbab7;margin-top:8px}
+body.touch-tap-fire #touchFire{display:none}
+body.touch-tap-fire #touchAim{right:calc(var(--sr) + 24px);bottom:calc(var(--sb) + 28px)}
+body.touch-tap-fire #touchGrenade{right:calc(var(--sr) + 106px);bottom:calc(var(--sb) + 34px)}
+body.touch-tap-fire #touchJump{right:calc(var(--sr) + 27px);bottom:calc(var(--sb) + 107px)}
+body.touch-tap-fire #touchReload{right:calc(var(--sr) + 105px);bottom:calc(var(--sb) + 109px)}
+body.phone-ui .pauseSubSetting{margin-top:8px;padding-top:6px}
+body.phone-ui .pauseSubSetting>small{font-size:10px;line-height:1.4;margin-top:5px}

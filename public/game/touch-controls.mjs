@@ -2,8 +2,11 @@
 // on the right half looks, and on-screen buttons cover every keyboard action.
 // The fire button also steers while held, so a thumb can shoot and track a
 // target in one motion. Double-tapping the right half fires too (v141): the
-// second tap holds the trigger and keeps steering until it lifts. Touch play does not need mouse capture. Which scheme
+// second tap holds the trigger and keeps steering until it lifts.
+// Tap-to-fire only (v145): a sub-setting hides the FIRE button entirely and
+// the four buttons beside it (AIM, JUMP, RELOAD, NADE) regroup into a 2x2 grid. Touch play does not need mouse capture. Which scheme
 // is on (and remembering the player's choice) belongs to input-scheme.mjs.
+export const TAP_FIRE_KEY='blackthorn-touch-tap-fire';
 export const TOUCH=Object.freeze({
   stickRadius:56,     // CSS px of thumb travel for full speed
   deadZone:.12,       // fraction of the radius ignored around the centre
@@ -22,7 +25,9 @@ const BUTTONS=[
   ['swap','SWAP','touchSwap'],['light','LIGHT','touchLight'],['map','MAP','touchMap'],['pause','II','touchPause']
 ];
 
-export function createTouchControls({document,toggle,enabled:initial=false,actions,onToggle=null,onChange=()=>{},now=()=>globalThis.performance?.now?.()??Date.now()}){
+export function createTouchControls({document,toggle,fireToggle=null,fireSetting=null,storage,enabled:initial=false,actions,onToggle=null,onChange=()=>{},now=()=>globalThis.performance?.now?.()??Date.now()}){
+  if(storage===undefined){try{storage=globalThis.localStorage;}catch{storage=null;}}
+  let tapFire=false;try{tapFire=storage?.getItem(TAP_FIRE_KEY)==='1';}catch{}
   const body=document.body;
   const root=document.createElement('div');root.id='touchControls';root.setAttribute('aria-hidden','true');
   const moveZone=document.createElement('div');moveZone.className='touchZone touchMoveZone';
@@ -129,6 +134,11 @@ export function createTouchControls({document,toggle,enabled:initial=false,actio
 
   function apply(){
     body.classList.toggle('touch-controls',enabled);
+    body.classList.toggle('touch-tap-fire',tapFire);
+    fireToggle?.setAttribute('aria-checked',String(tapFire));
+    const fireLabel=fireToggle?.querySelector('[data-tap-fire-setting]');if(fireLabel)fireLabel.textContent=tapFire?'ON · NO FIRE BUTTON':'OFF';
+    // The sub-setting only applies while touch controls are on.
+    fireSetting?.classList.toggle('hidden',!enabled);
     toggle?.setAttribute('aria-checked',String(enabled));
     const label=toggle?.querySelector('[data-touch-setting]');if(label)label.textContent=enabled?'ON':'OFF';
   }
@@ -148,12 +158,19 @@ export function createTouchControls({document,toggle,enabled:initial=false,actio
       const v=!!state[key];if(shown[key]!==v){shown[key]=v;el.classList.toggle(cls,v);}
     }
   }
+  function setTapFire(value){
+    value=!!value;if(value===tapFire)return;tapFire=value;
+    if(tapFire)releaseFire();
+    try{storage?.setItem(TAP_FIRE_KEY,tapFire?'1':'0');}catch{}
+    apply();
+  }
+  if(fireToggle)fireToggle.onclick=()=>setTapFire(!tapFire);
   // The pause-menu switch asks the scheme owner, which calls setEnabled back.
   if(toggle)toggle.onclick=()=>onToggle?onToggle(!enabled):setEnabled(!enabled);
   apply();
   return {
-    get enabled(){return enabled;},get active(){return active;},get sprint(){return active&&sprint;},
-    move,setEnabled,setActive,update,reset,root,buttons,
+    get enabled(){return enabled;},get active(){return active;},get sprint(){return active&&sprint;},get tapFire(){return tapFire;},
+    move,setEnabled,setActive,setTapFire,update,reset,root,buttons,
     // Test hooks for the stick geometry and the double-tap clock.
     _setStick:setStick,_setClock(fn){clock=fn||now;}
   };

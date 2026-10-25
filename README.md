@@ -27,6 +27,12 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Tap to fire only (version 145)
+
+- **New touch sub-setting.** Under Touch Controls in Settings, **Tap to Fire Only** explains that you can always fire by double-tapping the right side of the screen (hold the second tap to keep firing and aiming), and turning it on removes the FIRE button. It only shows while touch controls are on, and your choice is saved.
+- **2×2 button grid.** With FIRE removed, AIM, JUMP, RELOAD and NADE keep their exact sizes and regroup into a 2×2 grid in the bottom-right thumb corner: RELOAD and JUMP on top, NADE and AIM below.
+- Turning it on while FIRE is held releases the trigger; double-tap fire works the same either way.
+
 ## Confirm prompts and one Settings page (version 144)
 
 - **Are you sure?** New Run and Main Menu now ask before ending a run (“Your current run ends here and won’t be scored”). Cancel is the default; Esc or B cancels too. After a death there is nothing to lose, so both act at once.

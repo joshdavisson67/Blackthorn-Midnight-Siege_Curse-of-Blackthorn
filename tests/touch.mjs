@@ -103,8 +103,32 @@ export function verifyTouchControls(qa,frames,listeners,elements,document,gameCa
   let locks=0;const lock=gameCanvas.requestPointerLock;gameCanvas.requestPointerLock=()=>{locks++;return lock();};
   gameCanvas.events.mousedown({button:0,preventDefault(){}});assert.equal(qa.get().mode,'playing');assert.equal(locks,0);gameCanvas.requestPointerLock=lock;
 
-  // Switching back restores the mouse scheme.
+  // Tap to fire only (v145): the sub-setting removes FIRE; double taps still shoot.
+  {
+    const fireToggle=elements.get('tapFireToggle'),sub=elements.get('tapFireSetting');
+    assert(fireToggle&&sub.contains(fireToggle),'Tap to fire lives under Touch Controls');
+    assert(sub.closest('.pauseSetting')?.contains(elements.get('touchToggle')),'It is a sub-setting of Touch Controls');
+    assert(!sub.classList.contains('hidden'),'Shown while touch controls are on');
+    assert(elements.get('tapFireHint').textContent.includes('double-tapping'),'The hint explains tapping to fire');
+    assert.equal(touch().tapFire,false);assert.equal(fireToggle.getAttribute('aria-checked'),'false');
+    press('fire');assert(qa.get().mouseDown);
+    fireToggle.onclick();
+    assert(touch().tapFire&&body.classList.contains('touch-tap-fire'),'The switch removes the FIRE button');
+    assert.equal(fireToggle.getAttribute('aria-checked'),'true');assert.match(fireToggle.textContent,/NO FIRE BUTTON/);
+    assert.equal(qa.get().mouseDown,false,'Hiding FIRE mid-shot releases the trigger');press('fire','pointerup');frames(30);
+    let saved=null;try{saved=globalThis.localStorage?.getItem?.('blackthorn-touch-tap-fire');}catch{}
+    if(saved!==null&&saved!==undefined)assert.equal(saved,'1','The choice is saved');
+    const zone=touch().root.querySelector('.touchLookZone');let clock=50000;touch()._setClock(()=>clock);
+    const ammo=qa.get().inventory.glock.ammo;
+    zone.dispatchEvent(event('pointerdown',{pointerId:61,clientX:800,clientY:220}));clock+=80;zone.dispatchEvent(event('pointerup',{pointerId:61}));clock+=120;
+    zone.dispatchEvent(event('pointerdown',{pointerId:62,clientX:805,clientY:222}));
+    assert(qa.get().mouseDown&&qa.get().inventory.glock.ammo===ammo-1,'Double tap still fires with the FIRE button gone');
+    zone.dispatchEvent(event('pointerup',{pointerId:62}));touch()._setClock(null);frames(30);
+    fireToggle.onclick();assert(!touch().tapFire&&!body.classList.contains('touch-tap-fire'),'Turning it off brings FIRE back');
+  }
+
+
   listeners.keydown({code:'Escape'});toggle.onclick();
-  assert.equal(scheme().scheme,'standard');assert.equal(touch().enabled,false);assert(!body.classList.contains('touch-controls'));assert.match(resume.textContent,/LOCK MOUSE/);
-  frames(2);console.log('PASS: touch controls — pause-menu switch, play without mouse lock, analog stick with dead zone and forward sprint, look/fire-and-steer, double-tap fire (held second tap steers; drags, slow, distant and long taps ignored), AIM/JUMP/RELOAD/LIGHT/SWAP/NADE/USE/MAP/II, USE prompts, and switching back to mouse.');
+  assert.equal(scheme().scheme,'standard');assert.equal(touch().enabled,false);assert(elements.get('tapFireSetting').classList.contains('hidden'),'Tap to fire hides with touch controls off');assert(!body.classList.contains('touch-controls'));assert.match(resume.textContent,/LOCK MOUSE/);
+  frames(2);console.log('PASS: touch controls — tap-to-fire-only sub-setting (FIRE removed, 2x2 grid class, saved, releases a held trigger, double tap still fires), pause-menu switch, play without mouse lock, analog stick with dead zone and forward sprint, look/fire-and-steer, double-tap fire (held second tap steers; drags, slow, distant and long taps ignored), AIM/JUMP/RELOAD/LIGHT/SWAP/NADE/USE/MAP/II, USE prompts, and switching back to mouse.');
 }

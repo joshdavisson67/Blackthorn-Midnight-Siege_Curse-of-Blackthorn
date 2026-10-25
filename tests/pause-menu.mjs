@@ -9,7 +9,7 @@ export function verifyPauseMenu(qa,frames,listeners,elements,gameCanvas){
   assert.deepEqual(order.slice(1).map(([,label])=>label),['ESTATE MAP','SETTINGS','CONTROLS','FIELD GUIDE','NEW RUN','MAIN MENU']);
   assert(!elements.get('leaderboardPause')&&!pause.textContent.includes('LEADERBOARD'),'The leaderboard is gone from the pause menu');
   assert(elements.get('leaderboardMenu'),'The title screen keeps its leaderboard');
-  for(const id of ['quality','sensitivity','sound','minimapToggle','headshotToggle','touchToggle','rumbleToggle']){
+  for(const id of ['quality','sensitivity','sound','minimapToggle','headshotToggle','touchToggle','tapFireToggle','rumbleToggle']){
     assert(settings.contains(elements.get(id)),`${id} lives on the Settings page`);assert(!main.contains(elements.get(id)),`${id} is off the main pause list`);
   }
   assert.equal(main.querySelectorAll('.pauseSetting').length,0,'No settings clutter the main list');
