@@ -27,6 +27,13 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Confirm prompts and one Settings page (version 144)
+
+- **Are you sure?** New Run and Main Menu now ask before ending a run (“Your current run ends here and won’t be scored”). Cancel is the default; Esc or B cancels too. After a death there is nothing to lose, so both act at once.
+- **All settings in one place.** Graphics quality, look sensitivity (with a live 0.5×–2.0× readout) and sound moved off the title screen into Settings, beside the minimap, headshot, touch and controller switches. Sensitivity and sound are now remembered like the rest (launch-link values still win).
+- **Settings on the title screen.** A new Settings entry opens the same page over the title screen; Back or Esc returns to it.
+- **Title screen fits.** On 720–900 px tall screens everything, including the menu links, now fits without scrolling, and on a landscape phone the title splits into two columns so Enter the Estate, the curse choice and the menu links are all on screen (before, Enter sat below the fold).
+
 ## Pause menu redesign (version 143)
 
 - **One clear list.** The pause menu is now Resume, Estate Map, Settings, Controls, Field Guide, New Run and Main Menu, top to bottom.
