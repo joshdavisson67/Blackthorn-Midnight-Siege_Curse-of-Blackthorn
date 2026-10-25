@@ -15,6 +15,7 @@ export function verifyPauseCurse(qa,frames,listeners,elements,gameCanvas){
   function readout(rank){
     assert(!pause.classList.contains('hidden'));
     assert.equal(panel.closest('#pause'),pause,'Readout belongs to the pause overlay');
+    assert.equal(panel.classList.contains('hidden'),rank<1,'The curse panel only shows once the run is cursed (rank 1+)');
     assert.equal(elements.get('pauseCurseRank').textContent,`RANK ${rank}`);
     assert.equal(elements.get('pauseCurseTitle').textContent,qa.get().curse.title);
     assert.equal(panel.dataset.rank,String(rank));
@@ -47,5 +48,5 @@ export function verifyPauseCurse(qa,frames,listeners,elements,gameCanvas){
   }
   qa.setHealth(100);qa.hurtPlayer(200000,qa.get().player);assert.equal(qa.get().mode,'dead');readout(11);
   select.value='0';select.onchange();qa.start({capture:false});readout(0);assert(elements.get('pauseCurseNote').textContent.includes('unlock the first rank'));resume();qa.start();
-  console.log('PASS: pause curse rank/title and five current modifiers from Uncursed through Rank 11, title-screen rank choice, speed/special caps, reset/death/capture retry, unchanged paused timers, cached stat nodes and restored mouse lock.');
+  console.log('PASS: pause curse panel hidden until rank 1, rank/title and five current modifiers from Uncursed through Rank 11, title-screen rank choice, speed/special caps, reset/death/capture retry, unchanged paused timers, cached stat nodes and restored mouse lock.');
 }

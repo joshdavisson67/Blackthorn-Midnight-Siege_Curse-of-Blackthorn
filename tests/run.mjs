@@ -86,6 +86,8 @@ const {verifyCurse}=await import('./curse.mjs');
 verifyCurse(qa,frames,listeners,elements,gameCanvas);
 const {verifyPauseCurse}=await import('./pause-curse.mjs');
 verifyPauseCurse(qa,frames,listeners,elements,gameCanvas);
+const {verifyPauseMenu}=await import('./pause-menu.mjs');
+verifyPauseMenu(qa,frames,listeners,elements,gameCanvas);
 const {verifyRotundaBell}=await import('./rotunda-bell.mjs');
 verifyRotundaBell(qa,frames,listeners,elements);
 const {verifyGlock}=await import('./glock.mjs');

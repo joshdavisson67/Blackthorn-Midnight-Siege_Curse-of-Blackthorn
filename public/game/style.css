@@ -446,3 +446,32 @@ body.phone-ui .round .worldEventBadge b{margin:1px 0;font-size:12px;line-height:
 body.phone-ui .round .worldEventBadge small{font-size:8px;letter-spacing:.2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 body.phone-ui #banner{top:21%;left:50%;width:min(460px,64vw);transform:translateX(-50%);padding:0;font-size:24px;letter-spacing:3px;line-height:1.05}
 body.phone-ui #banner small{margin-top:5px;font-size:9px;letter-spacing:1px;line-height:1.4}
+/* Pause menu (v143): one vertical list, a Settings sub-page, and the field
+   guide split into Controls and Field Guide views of the same window. */
+.pauseMenu{display:flex;flex-direction:column;gap:7px;margin-top:22px}
+.pauseMenu button{width:100%;margin:0;padding:13px 16px;text-align:left;border:1px solid #596660;background:#0c161bcc;color:#c9d2ce;font-size:11px;letter-spacing:2px;font-weight:600}
+.pauseMenu button:hover,.pauseMenu button:focus-visible{border-color:var(--gold);color:#f0e6cf}
+.pauseMenu #resume{border-color:#ddc28b;background:var(--gold);color:#121714;font-weight:700}
+.pauseMenu .pauseRunAction{background:transparent;color:#aab6b2}
+.pauseMenu #restart{margin-top:9px}
+#pauseSettings .pauseSetting:first-of-type{margin-top:16px}
+.settingsHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.settingsHead h2{margin-bottom:0}
+.settingsHead small{font-size:9px;letter-spacing:3px;color:var(--gold)}
+#settingsBack{flex:none;margin-top:4px;padding:10px 14px}
+.guideBody{counter-reset:guide}
+.guideSection{counter-increment:guide}
+.guideSectionHeading span::before{content:counter(guide,decimal-leading-zero)}
+#guide[data-view=controls] .guideSection:not(#guideControls),#guide[data-view=controls] .guideNav{display:none}
+#guide[data-view=guide] #guideControls,#guide[data-view=guide] .guideNav a[href="#guideControls"]{display:none}
+body.phone-ui #pause{padding:12px;gap:12px}
+body.phone-ui #pause .card{padding:16px 18px;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px)}
+body.phone-ui #pause .card h2{font-size:26px;margin:6px 0}
+body.phone-ui #pause .card>p{font-size:11px;line-height:1.5;margin:4px 0}
+body.phone-ui .pauseMenu{margin-top:10px;gap:5px}
+body.phone-ui .pauseMenu button{padding:8px 12px;font-size:10px}
+body.phone-ui .pauseMenu #restart{margin-top:5px}
+body.phone-ui .pauseSetting{margin:8px 0 4px;padding:8px 0}
+body.phone-ui .pauseSetting>span{margin-bottom:6px;font-size:9px}
+body.phone-ui .pauseSetting>small{margin-top:5px;font-size:10px;line-height:1.4}
+body.phone-ui #settingsBack{padding:7px 12px;font-size:10px}

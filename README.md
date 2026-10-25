@@ -27,6 +27,15 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Pause menu redesign (version 143)
+
+- **One clear list.** The pause menu is now Resume, Estate Map, Settings, Controls, Field Guide, New Run and Main Menu, top to bottom.
+- **Settings page.** Minimap position, the headshot indicator, touch controls and controller vibration moved off the main pause card onto their own Settings page. Back (also Esc, or B on a controller) returns to the list.
+- **Controls and Field Guide split.** Controls opens only the controls (keyboard and mouse, controller and the touch layout, now listed in full). Field Guide opens everything else. Each view numbers its own sections. The title screen's guide still shows both.
+- **Curse panel only when cursed.** The Blackthorn Curse panel beside the pause menu appears only on a run at curse rank 1 or higher.
+- **Leaderboard off the pause menu.** The shared leaderboard stays on the title screen and still opens at the end of a run to save your score.
+- **Main Menu.** Abandons the current run, clears the estate and returns to the title screen, where Enter the Estate starts a fresh run. It also works from the end-of-run screen.
+
 ## Phone-sized event HUD (version 142)
 
 - **Phone check.** The game now tells phones from tablets and computers: a touch device whose screen's short side is 540 px or less counts as a phone. It checks at load, whenever the screen rotates or resizes, and again when you enter the mansion, and switches on a compact phone layout.
