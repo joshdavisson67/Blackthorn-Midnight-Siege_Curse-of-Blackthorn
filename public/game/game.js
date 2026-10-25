@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=143';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=145';
-import {createChangelog} from './changelog.mjs?v=145';
+import {createLeaderboard} from './leaderboard.mjs?v=146';
+import {createChangelog} from './changelog.mjs?v=146';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -807,7 +807,7 @@ function startDirectPlay(){
   captureWanted=false;captureAttempt++;finishCaptureRequest();pointer=false;
   mode='playing';clearPlayInput();canvas.classList.remove('mouse-locked');
   $('pause').classList.add('hidden');$('captureHelp').classList.add('hidden');
-  touchControls.setActive(touchControls.enabled);initAudio();
+  touchControls.setActive(touchControls.enabled);fitTouchStick();initAudio();
   const root=document.documentElement;
   if(touchControls.enabled&&!document.fullscreenElement&&typeof root?.requestFullscreen==='function')try{root.requestFullscreen({navigationUI:'hide'}).then(()=>screen.orientation?.lock?.('landscape')).catch(()=>{});}catch{}
 }
@@ -923,6 +923,18 @@ const controlScheme=createControlScheme({win:window,controllerSupported:true,onC
 // Phone layout (v142): a compact HUD for phone screens, checked at load, on
 // every resize or rotation, and again on entering the mansion.
 function applyFormFactor(){controlScheme.refresh('device');document.body.classList.toggle('phone-ui',controlScheme.phone);}
+// Touch layout (v146): the movement stick rests just above the health panel
+// (and the shield row when one is owned, and the minimap when it is set to the
+// bottom left), so its bottom edge always clears them. The column is measured
+// whenever it changes size or the screen does.
+let stickClearance=-1,vitalsWatch=null;
+function fitTouchStick(){
+  const vitals=$('hudVitals');if(!vitals||!touchControls?.root)return;
+  if(!vitalsWatch&&typeof ResizeObserver==='function'){vitalsWatch=new ResizeObserver(()=>fitTouchStick());vitalsWatch.observe(vitals);}
+  const top=vitals.getBoundingClientRect?.().top;if(!(top>0))return;
+  const clear=Math.round(innerHeight-top);if(clear===stickClearance)return;
+  stickClearance=clear;touchControls.root.style.setProperty('--vitals-clear',`${clear}px`);
+}
 function directControls(){return controlScheme.scheme==='touch'||controlScheme.scheme==='controller';}
 function padPlay(){return controlScheme.scheme==='controller';}
 // The last device used takes over: a controller button, or a real key, click
@@ -1161,7 +1173,7 @@ updateReloadHud();combatHud.update(dt,player,lookYaw+weaponRecoil.yaw);recoil=Ma
 for(const l of lamps)l.light.intensity=l.base*(.95+Math.sin(elapsed*4+l.phase)*.04+Math.sin(elapsed*7.1+l.phase)*.015);fire.scale.y=.55+Math.sin(elapsed*8)*.08;stationBuilder.update(elapsed);for(const m of mist){m.position.x+=dt*.025;if(m.position.x>43)m.position.x=-43;}
 for(let i=0;i<rainPos.length;i+=3){rainPos[i+1]-=dt*9;if(rainPos[i+1]<0)rainPos[i+1]=18;if(rainPos[i]<player.x-22)rainPos[i]+=44;if(rainPos[i]>player.x+22)rainPos[i]-=44;if(rainPos[i+2]<player.z-22)rainPos[i+2]+=44;if(rainPos[i+2]>player.z+22)rainPos[i+2]-=44;}rainGeo.attributes.position.needsUpdate=true;
 lighting.setBlockerState((cellar.progress===1?'open':'closed')+':'+(graveyard.progress===1?'open':'closed')+(shed.progress===1?':shed-open':''));bloodPool.sync();markPool.sync();combatLights.update(effects,pickups,player);estateDetail.update(elapsed,dt);blackout.apply(worldEvents.darkness());environmentLights.update(camera.position,elapsed,player.y);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;lighting.prepare(elapsed);renderCleanFrame(renderer,scene,camera,viewCamera,rt,postScene,postCamera,gunRoot.visible||grenadeThrow.root.visible,world,weaponViewFov);}
-function resize(){applyFormFactor();const pr=renderer.getPixelRatio();renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const scale=renderScale.scale;rt.setSize(Math.max(1,Math.round(innerWidth*pr*scale)),Math.max(1,Math.round(innerHeight*pr*scale)));}window.addEventListener('resize',resize);resize();
+function resize(){applyFormFactor();fitTouchStick();const pr=renderer.getPixelRatio();renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const scale=renderScale.scale;rt.setSize(Math.max(1,Math.round(innerWidth*pr*scale)),Math.max(1,Math.round(innerHeight*pr*scale)));}window.addEventListener('resize',resize);resize();
 async function prepareRendering(){
   if(!renderer.compileAsync)return;
   const finishEventWarmup=eventVisuals.warm();

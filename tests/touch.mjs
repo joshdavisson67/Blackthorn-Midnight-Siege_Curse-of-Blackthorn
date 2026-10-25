@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {TOUCH} from '../public/game/touch-controls.mjs';
 
 // Phone controls: the pause-menu switch, play without mouse capture, analog
@@ -128,6 +129,17 @@ export function verifyTouchControls(qa,frames,listeners,elements,document,gameCa
   }
 
 
+  // Touch HUD layout (v146): the resting stick sits above the measured health
+  // column, health starts under the stick's centre, and with Tap to Fire Only
+  // the ammo readout moves in beside the 2x2 grid.
+  {
+    const css=readFileSync(new URL('../public/game/style.css',import.meta.url),'utf8');
+    assert(css.includes('.touchStick{top:auto;bottom:calc(var(--vitals-clear,64px) + 10px)}'),'The stick rests 10px above the health column');
+    assert(css.includes('body.touch-playing #bottomHud{left:calc(env(safe-area-inset-left,0px) + 116px)}')&&css.includes('left:calc(var(--sl) + 116px)'),'Health starts under the stick centre');
+    assert(css.includes('body.touch-playing.touch-tap-fire #bottomHud{right:calc(env(safe-area-inset-right,0px) + 172px)}'),'Ammo moves beside the 2x2 grid');
+  }
+
+  // Switching back restores the mouse scheme.
   listeners.keydown({code:'Escape'});toggle.onclick();
   assert.equal(scheme().scheme,'standard');assert.equal(touch().enabled,false);assert(elements.get('tapFireSetting').classList.contains('hidden'),'Tap to fire hides with touch controls off');assert(!body.classList.contains('touch-controls'));assert.match(resume.textContent,/LOCK MOUSE/);
   frames(2);console.log('PASS: touch controls — tap-to-fire-only sub-setting (FIRE removed, 2x2 grid class, saved, releases a held trigger, double tap still fires), pause-menu switch, play without mouse lock, analog stick with dead zone and forward sprint, look/fire-and-steer, double-tap fire (held second tap steers; drags, slow, distant and long taps ignored), AIM/JUMP/RELOAD/LIGHT/SWAP/NADE/USE/MAP/II, USE prompts, and switching back to mouse.');

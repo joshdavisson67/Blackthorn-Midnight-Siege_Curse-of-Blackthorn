@@ -27,6 +27,13 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Touch HUD layout (version 146)
+
+- **Stick clears the health panel.** The left movement stick now rests just above the health panel, 10 px clear of it. The game measures the panel (and the shield row when you own one, and the minimap when it is set to the bottom left), so the stick stays clear as the panel grows.
+- **Health lines up with the stick.** The health panel moved left so its left edge sits directly under the stick's resting centre.
+- **Ammo beside the buttons.** With Tap to Fire Only on, the ammo and weapon readout moves right, next to the 2×2 AIM / JUMP / RELOAD / NADE grid. With the FIRE button shown it stays where it was.
+- Touching anywhere on the left still brings the stick to your thumb; it returns to the new resting spot when you let go.
+
 ## Tap to fire only (version 145)
 
 - **New touch sub-setting.** Under Touch Controls in Settings, **Tap to Fire Only** explains that you can always fire by double-tapping the right side of the screen (hold the second tap to keep firing and aiming), and turning it on removes the FIRE button. It only shows while touch controls are on, and your choice is saved.
