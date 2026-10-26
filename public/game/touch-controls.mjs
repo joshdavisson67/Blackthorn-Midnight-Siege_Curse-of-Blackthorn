@@ -3,6 +3,8 @@
 // The fire button also steers while held, so a thumb can shoot and track a
 // target in one motion. Double-tapping the right half fires too (v141): the
 // second tap holds the trigger and keeps steering until it lifts.
+// Double-tapping the left half (v148) toggles aiming down the sights, like
+// AIM; the second tap still drives the stick, so you can keep moving.
 // Tap-to-fire only (v145): a sub-setting hides the FIRE button entirely and
 // the four buttons beside it (AIM, JUMP, RELOAD, NADE) regroup into a 2x2 grid. Touch play does not need mouse capture. Which scheme
 // is on (and remembering the player's choice) belongs to input-scheme.mjs.
@@ -48,6 +50,8 @@ export function createTouchControls({document,toggle,fireToggle=null,fireSetting
   // Double-tap fire: where and when the current look touch began, how far it
   // has wandered, and the last quick tap that could open a double tap.
   let lookStart=null,lastTap=null,clock=now;
+  // The same for the move side: a double tap there aims down the sights.
+  let moveStart=null,lastMoveTap=null;
   const shown={};
 
   function setStick(dx,dy){
@@ -72,7 +76,7 @@ export function createTouchControls({document,toggle,fireToggle=null,fireSetting
   }
   function reset(){
     releaseStick();if(lookPointer===firePointer)lookPointer=null;
-    releaseFire();lookPointer=null;lookStart=lastTap=null;
+    releaseFire();lookPointer=null;lookStart=lastTap=moveStart=lastMoveTap=null;
     for(const b of Object.values(buttons))b.classList.remove('pressed');
   }
   const point=e=>({x:e.clientX,y:e.clientY});
@@ -83,9 +87,12 @@ export function createTouchControls({document,toggle,fireToggle=null,fireSetting
   moveZone.addEventListener('pointerdown',e=>{
     swallow(e);if(!active||movePointer!==null)return;
     movePointer=e.pointerId;capture(moveZone,e);
-    const rect=moveZone.getBoundingClientRect(),{x,y}=point(e);
+    const rect=moveZone.getBoundingClientRect(),{x,y}=point(e),t=clock(),tap=lastMoveTap;lastMoveTap=null;
     originX=x;originY=y;stick.style.left=`${x-rect.left}px`;stick.style.top=`${y-rect.top}px`;
     stick.classList.add('engaged');setStick(0,0);
+    // Second tap of a double tap: raise or lower the sights; the stick still works.
+    if(tap&&t-tap.t<=TOUCH.doubleTap&&Math.hypot(x-tap.x,y-tap.y)<=TOUCH.tapReach){moveStart=null;actions.aimToggle?.();return;}
+    moveStart={x,y,t,far:false};
   });
   lookZone.addEventListener('pointerdown',e=>{
     swallow(e);if(!active||lookPointer!==null)return;
@@ -96,14 +103,21 @@ export function createTouchControls({document,toggle,fireToggle=null,fireSetting
   });
   function pointerMove(e){
     if(!active)return;
-    if(e.pointerId===movePointer){swallow(e);const {x,y}=point(e);setStick(x-originX,y-originY);}
+    if(e.pointerId===movePointer){
+      swallow(e);const {x,y}=point(e);setStick(x-originX,y-originY);
+      if(moveStart&&Math.hypot(x-moveStart.x,y-moveStart.y)>TOUCH.tapSlop)moveStart.far=true;
+    }
     else if(e.pointerId===lookPointer){
       swallow(e);const {x,y}=point(e);actions.look(x-lastX,y-lastY);lastX=x;lastY=y;
       if(lookStart&&Math.hypot(x-lookStart.x,y-lookStart.y)>TOUCH.tapSlop)lookStart.far=true;
     }
   }
   function pointerEnd(e){
-    if(e.pointerId===movePointer)releaseStick();
+    if(e.pointerId===movePointer){
+      const start=moveStart;moveStart=null;
+      lastMoveTap=start&&!start.far&&clock()-start.t<=TOUCH.tapTime?{x:start.x,y:start.y,t:clock()}:null;
+      releaseStick();
+    }
     if(e.pointerId===lookPointer){
       // A short, still touch is a tap that can open a double tap; drags are not.
       const fired=e.pointerId===firePointer,start=lookStart;

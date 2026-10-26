@@ -27,6 +27,12 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Double-tap left to aim (version 148)
+
+- **New touch control.** Double-tap the left side of the screen (the movement side) to look down your gun sights. It works like the AIM button: double-tap again to lower the gun. The second tap still grabs the movement stick, so you can keep walking while aiming.
+- Only quick, still taps count (within 0.3 s and close together), so normal stick use never toggles the sights. Left and right double taps are tracked separately: right still fires, left aims.
+- The Controls page lists the new gesture.
+
 ## Title screen menu (version 147)
 
 - **Cleaner list.** The title screen now reads Enter the Estate, Settings, Controls, Field Guide and Leaderboard, top to bottom, in the same type as before. Controls and Field Guide are separate entries, matching the pause menu.

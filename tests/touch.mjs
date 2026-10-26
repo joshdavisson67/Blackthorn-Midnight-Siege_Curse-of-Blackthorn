@@ -104,6 +104,32 @@ export function verifyTouchControls(qa,frames,listeners,elements,document,gameCa
   let locks=0;const lock=gameCanvas.requestPointerLock;gameCanvas.requestPointerLock=()=>{locks++;return lock();};
   gameCanvas.events.mousedown({button:0,preventDefault(){}});assert.equal(qa.get().mode,'playing');assert.equal(locks,0);gameCanvas.requestPointerLock=lock;
 
+  // Double-tap the left half to aim down the sights (v148); the second tap still moves.
+  {
+    const zone=touch().root.querySelector('.touchMoveZone');let clock=90000;touch()._setClock(()=>clock);
+    const down=(id,x,y=300)=>zone.dispatchEvent(event('pointerdown',{pointerId:id,clientX:x,clientY:y}));
+    const moveTo=(id,x,y=300)=>zone.dispatchEvent(event('pointermove',{pointerId:id,clientX:x,clientY:y}));
+    const up=id=>zone.dispatchEvent(event('pointerup',{pointerId:id}));
+    qa.setPlayer(0,20);qa.setAim(0,0);frames(1);if(qa.get().aiming)tap('aim');assert.equal(qa.get().aiming,false);
+    down(71,150);clock+=90;up(71);clock+=150;down(72,158);
+    assert(qa.get().aiming,'A double tap on the left raises the sights');
+    moveTo(72,158,300-TOUCH.stickRadius);assert(touch().move.z<-.5,'The second tap still drives the stick');
+    up(72);assert(qa.get().aiming,'Aim stays up after lifting (it is a toggle, like AIM)');assert.equal(touch().move.z,0);
+    clock+=1000;down(73,150);clock+=80;up(73);clock+=120;down(74,150);up(74);assert.equal(qa.get().aiming,false,'Double-tapping again lowers the sights');
+    const misses=[
+      ['a drag then a tap',()=>{down(75,150);moveTo(75,190);clock+=80;up(75);clock+=100;down(76,190);up(76);}],
+      ['a slow second tap',()=>{down(77,150);clock+=80;up(77);clock+=TOUCH.doubleTap+150;down(78,150);up(78);}],
+      ['a long press then a tap',()=>{down(79,150);clock+=TOUCH.tapTime+200;up(79);clock+=100;down(80,150);up(80);}],
+      ['taps far apart',()=>{down(81,120);clock+=80;up(81);clock+=100;down(82,120+TOUCH.tapReach+60);up(82);}]
+    ];
+    for(const [name,act] of misses){clock+=1000;act();assert.equal(qa.get().aiming,false,`${name} on the left does not aim`);}
+    // A left double tap and a right double tap stay independent.
+    clock+=1000;down(83,150);clock+=80;up(83);clock+=100;
+    touch().root.querySelector('.touchLookZone').dispatchEvent(event('pointerdown',{pointerId:84,clientX:800,clientY:220}));touch().root.querySelector('.touchLookZone').dispatchEvent(event('pointerup',{pointerId:84}));
+    assert.equal(qa.get().aiming,false,'A right tap does not complete a left double tap');assert.equal(qa.get().mouseDown,false);
+    touch()._setClock(null);frames(20);
+  }
+
   // Tap to fire only (v145): the sub-setting removes FIRE; double taps still shoot.
   {
     const fireToggle=elements.get('tapFireToggle'),sub=elements.get('tapFireSetting');
@@ -142,5 +168,5 @@ export function verifyTouchControls(qa,frames,listeners,elements,document,gameCa
   // Switching back restores the mouse scheme.
   listeners.keydown({code:'Escape'});toggle.onclick();
   assert.equal(scheme().scheme,'standard');assert.equal(touch().enabled,false);assert(elements.get('tapFireSetting').classList.contains('hidden'),'Tap to fire hides with touch controls off');assert(!body.classList.contains('touch-controls'));assert.match(resume.textContent,/LOCK MOUSE/);
-  frames(2);console.log('PASS: touch controls — tap-to-fire-only sub-setting (FIRE removed, 2x2 grid class, saved, releases a held trigger, double tap still fires), pause-menu switch, play without mouse lock, analog stick with dead zone and forward sprint, look/fire-and-steer, double-tap fire (held second tap steers; drags, slow, distant and long taps ignored), AIM/JUMP/RELOAD/LIGHT/SWAP/NADE/USE/MAP/II, USE prompts, and switching back to mouse.');
+  frames(2);console.log('PASS: touch controls — double-tap left aims down the sights (toggle; second tap still moves; drags, slow, long and distant taps ignored), tap-to-fire-only sub-setting (FIRE removed, 2x2 grid class, saved, releases a held trigger, double tap still fires), pause-menu switch, play without mouse lock, analog stick with dead zone and forward sprint, look/fire-and-steer, double-tap fire (held second tap steers; drags, slow, distant and long taps ignored), AIM/JUMP/RELOAD/LIGHT/SWAP/NADE/USE/MAP/II, USE prompts, and switching back to mouse.');
 }
