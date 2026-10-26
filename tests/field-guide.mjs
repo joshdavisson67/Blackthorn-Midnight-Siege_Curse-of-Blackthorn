@@ -20,7 +20,7 @@ export function verifyFieldGuide(qa,frames,listeners,elements){
     body.scrollTop=500;
     elements.get('howBtn').onclick();
     assert(!guide.classList.contains('hidden'));
-    assert.equal(guide.dataset.view,'all','The title-screen guide shows controls and the full guide');
+    assert.equal(guide.dataset.view,'guide','The title-screen Field Guide opens the guide view');
     assert.equal(qa.get().mode,mode);
     assert.equal(body.scrollTop,0);
     assert.equal(focused,body);

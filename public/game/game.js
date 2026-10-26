@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=143';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=146';
-import {createChangelog} from './changelog.mjs?v=146';
+import {createLeaderboard} from './leaderboard.mjs?v=147';
+import {createChangelog} from './changelog.mjs?v=147';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -600,16 +600,34 @@ function updateBossHud(){
   if($('bossState').textContent!==state)$('bossState').textContent=state;$('bossHud').classList.toggle('enraged',!!e.furious);
 }
 // Title-screen curse selector: every unlocked rank, plus the next one locked.
+// Curse choice (v147). The title screen no longer carries the curse picker:
+// until rank 1 is unlocked, Enter the Estate starts an uncursed run at once;
+// after that, Enter asks which unlocked rank this run should carry.
 function renderCurseMenu(){
-  const select=$('curseRank');select.replaceChildren();
-  for(let rank=0;rank<=curseLadder.unlocked;rank++){const o=document.createElement('option');o.value=String(rank);o.textContent=`RANK ${rank} · ${curseTitle(rank).toUpperCase()}`;select.appendChild(o);}
-  if(curseLadder.unlocked<MAX_CURSE_RANK){const o=document.createElement('option');o.value='locked';o.disabled=true;o.textContent=`RANK ${curseLadder.unlocked+1} · LOCKED`;select.appendChild(o);}
-  select.value=String(curseLadder.selected);
-  const next=curseLadder.selected===curseLadder.unlocked&&curseLadder.unlocked<MAX_CURSE_RANK?` · Defeat Sir Blackthorn on this rank to unlock rank ${curseLadder.unlocked+1}.`:'';
-  $('curseRankInfo').textContent=curseSummary(curseLadder.selected)+next;
-  $('menuCurse').dataset.rank=String(curseLadder.selected);
+  const list=$('curseStartList');list.replaceChildren();
+  for(let rank=0;rank<=curseLadder.unlocked;rank++){
+    const b=document.createElement('button');b.type='button';b.className='curseOption';b.dataset.rank=String(rank);b.setAttribute('role','listitem');
+    const title=document.createElement('strong');title.textContent=`RANK ${rank} · ${curseTitle(rank).toUpperCase()}`;
+    const info=document.createElement('span');info.textContent=curseSummary(rank)+(rank===curseLadder.unlocked&&rank<MAX_CURSE_RANK?` · Defeat Sir Blackthorn on this rank to unlock rank ${rank+1}.`:'');
+    b.append(title,info);
+    if(rank===curseLadder.selected){b.dataset.padDefault='';b.setAttribute('aria-current','true');}
+    b.onclick=()=>chooseCurse(rank);list.appendChild(b);
+  }
+  if(curseLadder.unlocked<MAX_CURSE_RANK){const locked=document.createElement('div');locked.className='curseOption locked';locked.setAttribute('role','listitem');locked.setAttribute('aria-disabled','true');locked.innerHTML=`<strong>RANK ${curseLadder.unlocked+1} · LOCKED</strong>`;list.appendChild(locked);}
 }
-$('curseRank').onchange=()=>{const v=Number($('curseRank').value);if(Number.isSafeInteger(v))curseLadder.select(v);renderCurseMenu();};
+function curseStartOpen(){return !$('curseStart').classList.contains('hidden');}
+function openCurseChoice(){
+  renderCurseMenu();$('curseStart').classList.remove('hidden');
+  ($('curseStartList').querySelector('[aria-current]')||$('curseStartList').querySelector('button'))?.focus({preventScroll:true});
+}
+function closeCurseChoice(){
+  $('curseStart').classList.add('hidden');
+  const start=$('start');start.disabled=false;start.focus({preventScroll:true});
+}
+// The rank button is the click that enters the estate, so mouse capture keeps
+// its user activation.
+function chooseCurse(rank){curseLadder.select(rank);$('curseStart').classList.add('hidden');resetRun();}
+function startFromMenu(){if(curseLadder.unlocked>=1)openCurseChoice();else resetRun();}
 renderCurseMenu();
 
 // ---- Olivia's attic (v131 Easter egg) -----------------------------------------------
@@ -893,8 +911,8 @@ function fieldGuideKeydown(e){
   }
   // Leave native scrolling and link/button activation to the browser.
 }
-if(!window.Blackthorn)$('start').onclick=resetRun;$('resume').onclick=resumeGame;$('restart').onclick=()=>askConfirm('restart',$('restart'));
-$('howBtn').onclick=()=>openFieldGuide($('howBtn'),'all');$('guidePause').onclick=()=>openFieldGuide($('guidePause'),'guide');$('controlsPause').onclick=()=>openFieldGuide($('controlsPause'),'controls');
+if(!window.Blackthorn)$('start').onclick=startFromMenu;$('resume').onclick=resumeGame;$('restart').onclick=()=>askConfirm('restart',$('restart'));
+$('howBtn').onclick=()=>openFieldGuide($('howBtn'),'guide');$('controlsMenu').onclick=()=>openFieldGuide($('controlsMenu'),'controls');$('curseStartBack').onclick=closeCurseChoice;$('guidePause').onclick=()=>openFieldGuide($('guidePause'),'guide');$('controlsPause').onclick=()=>openFieldGuide($('controlsPause'),'controls');
 $('settingsPause').onclick=()=>openSettings('pause');$('settingsMenu').onclick=()=>openSettings('menu');$('settingsBack').onclick=closeSettings;$('mainMenuPause').onclick=()=>askConfirm('menu',$('mainMenuPause'));
 $('confirmYes').onclick=acceptConfirm;$('confirmNo').onclick=cancelConfirm;
 $('closeGuide').onclick=closeFieldGuide;$('guideDone').onclick=closeFieldGuide;
@@ -981,11 +999,12 @@ function updateControllerStatus(){
 }
 // Which menu the controller is driving, topmost first.
 function padLayer(){
-  for(const id of ['leaderboard','changelog','guide','estateMap','pause'])if(!$(id).classList.contains('hidden'))return $(id);
+  for(const id of ['curseStart','leaderboard','changelog','guide','estateMap','pause'])if(!$(id).classList.contains('hidden'))return $(id);
   if(mode==='menu'&&!$('menu').classList.contains('hidden'))return $('menu');
   return null;
 }
 function padBack(){
+  if(curseStartOpen()){closeCurseChoice();return;}
   if(leaderboard.visible){leaderboard.close();return;}
   if(changelog.visible){changelog.keydown({code:'Escape',preventDefault(){}});return;}
   if(!$('guide').classList.contains('hidden')){closeFieldGuide();return;}
@@ -999,6 +1018,7 @@ function padStart(){
   if(leaderboard.visible||changelog.visible||!$('guide').classList.contains('hidden')){padBack();return;}
   if(!$('estateMap').classList.contains('hidden')){closeEstateMap();return;}
   if(mode==='paused'){resumeGame();return;}
+  if(curseStartOpen()){closeCurseChoice();return;}
   if(confirmOpen()){cancelConfirm();return;}
   if(settingsOpen()){closeSettings();return;}
   if(mode==='menu'&&!$('start').disabled)$('start').click();
@@ -1041,7 +1061,7 @@ document.addEventListener('pointerlockerror',()=>captureFailed(captureAttempt));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
 document.addEventListener('mousemove',e=>{if(mode==='playing'&&pointer&&hasMouseLock()&&$('guide').classList.contains('hidden')){const sens=Number($('sensitivity').value)*.002*(aiming?.62/(weapons[weapon].zoom||1):1);lookYaw-=e.movementX*sens;lookPitch=clamp(lookPitch-e.movementY*sens,-1.3,1.3);}});
 canvas.addEventListener('mousedown',e=>{if(mode!=='playing'||directControls())return;if(!hasMouseLock()){pauseGame();requestPointer();return;}e.preventDefault?.();if(e.button===0&&!mouseDown){mouseDown=true;shoot();}if(e.button===2)aiming=true;});document.addEventListener('mouseup',e=>{if(e.button===0)mouseDown=false;if(e.button===2)aiming=false;});canvas.addEventListener('contextmenu',e=>e.preventDefault());
-document.addEventListener('keydown',e=>{if(changelog.visible){changelog.keydown(e);return;}if(leaderboard.visible){if(e.code==='Escape'){e.preventDefault();leaderboard.close();}return;}if(!$('guide').classList.contains('hidden')){fieldGuideKeydown(e);return;}if(e.code==='Escape'&&confirmOpen()){e.preventDefault?.();cancelConfirm();return;}if(e.code==='Escape'&&settingsOpen()){e.preventDefault?.();closeSettings();return;}if(['INPUT','TEXTAREA'].includes(e.target?.tagName))return;if(e.code==='KeyM'){e.preventDefault();if(e.repeat)return;if($('estateMap').classList.contains('hidden'))openEstateMap();else closeEstateMap();return;}if(e.code==='Escape'&&!$('estateMap').classList.contains('hidden')){closeEstateMap(false);return;}if(e.code==='Escape'){pauseGame();return;}if(mode!=='playing'||!(hasMouseLock()||directControls()))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='KeyR')reload();if(e.code==='KeyE')interact();if(e.code==='KeyF')toggleFlashlight();if(e.code==='KeyG')grenade();if(e.code==='Digit1')selectWeapon('glock');if(e.code==='Digit2')selectWeapon('shotgun');if(e.code==='Digit3')selectWeapon('smg');if(e.code==='Digit4')selectWeapon('lmg');if(e.code==='Digit5')selectWeapon('bushmaster');if(e.code==='Digit6')selectWeapon('rifle');if(e.code==='Space'&&grounded){jumpV=4.2;grounded=false;}});document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{if((mode==='playing'||mode==='curse')&&!capturePending)pauseGame();});
+document.addEventListener('keydown',e=>{if(changelog.visible){changelog.keydown(e);return;}if(leaderboard.visible){if(e.code==='Escape'){e.preventDefault();leaderboard.close();}return;}if(!$('guide').classList.contains('hidden')){fieldGuideKeydown(e);return;}if(curseStartOpen()){if(e.code==='Escape'){e.preventDefault?.();closeCurseChoice();}return;}if(e.code==='Escape'&&confirmOpen()){e.preventDefault?.();cancelConfirm();return;}if(e.code==='Escape'&&settingsOpen()){e.preventDefault?.();closeSettings();return;}if(['INPUT','TEXTAREA'].includes(e.target?.tagName))return;if(e.code==='KeyM'){e.preventDefault();if(e.repeat)return;if($('estateMap').classList.contains('hidden'))openEstateMap();else closeEstateMap();return;}if(e.code==='Escape'&&!$('estateMap').classList.contains('hidden')){closeEstateMap(false);return;}if(e.code==='Escape'){pauseGame();return;}if(mode!=='playing'||!(hasMouseLock()||directControls()))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='KeyR')reload();if(e.code==='KeyE')interact();if(e.code==='KeyF')toggleFlashlight();if(e.code==='KeyG')grenade();if(e.code==='Digit1')selectWeapon('glock');if(e.code==='Digit2')selectWeapon('shotgun');if(e.code==='Digit3')selectWeapon('smg');if(e.code==='Digit4')selectWeapon('lmg');if(e.code==='Digit5')selectWeapon('bushmaster');if(e.code==='Digit6')selectWeapon('rifle');if(e.code==='Space'&&grounded){jumpV=4.2;grounded=false;}});document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{if((mode==='playing'||mode==='curse')&&!capturePending)pauseGame();});
 let mapWasPlaying=false;
 function closeEstateMap(restorePlay=true){if($('estateMap').classList.contains('hidden'))return;const resume=mapWasPlaying&&restorePlay;mapWasPlaying=false;$('estateMap').classList.add('hidden');if(resume)resumeGame();}
 function openEstateMap(){if(!['playing','paused'].includes(mode))return;mapWasPlaying=mode==='playing';if(mapWasPlaying)pauseGame();(player.y<-.3?drawCellarMap:player.y>2.15?drawUpperMap:drawEstateMap)($('estateMapCanvas'),player,interactables,lookYaw);$('estateMap').classList.remove('hidden');$('closeEstateMap').focus();}
@@ -1207,7 +1227,7 @@ async function prepareRendering(){
   }
 }
 try{const saved=localStorage.getItem(QUALITY_KEY);if(saved&&saved!==$('quality').value&&[...$('quality').options].some(o=>o.value===saved)){$('quality').value=saved;$('quality').onchange();}}catch{}
-await prepareRendering();rendererPrepared=true;lastTime=performance.now();$('loading').classList.add('hidden');window.Blackthorn?.ready(resetRun);requestAnimationFrame(tick);
+await prepareRendering();rendererPrepared=true;lastTime=performance.now();$('loading').classList.add('hidden');window.Blackthorn?.ready(startFromMenu);requestAnimationFrame(tick);
 // Batch static geometry and each articulated body section to limit draw calls.
 function combineMeshes(list,parent){if(list.length<2)return;const inverse=new T.Matrix4().copy(parent.matrixWorld).invert(),positions=[],normals=[],uvs=[],colors=[],rageColors=[],finishes=[],hasColors=list.some(m=>m.geometry.hasAttribute('color')),hasRageColors=list.some(m=>m.geometry.hasAttribute('rageColor')),hasFinishes=list.some(m=>m.geometry.hasAttribute('surfaceFinish'));for(const m of list){const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(new T.Matrix4().multiplyMatrices(inverse,m.matrixWorld));positions.push(geo.attributes.position.array);normals.push(geo.attributes.normal.array);uvs.push(geo.attributes.uv.array);if(hasColors)colors.push(geo.attributes.color?.array||new Float32Array(geo.attributes.position.count*3).fill(1));if(hasRageColors)rageColors.push(geo.attributes.rageColor?.array||geo.attributes.color?.array||new Float32Array(geo.attributes.position.count*3).fill(1));if(hasFinishes)finishes.push(geo.attributes.surfaceFinish.array);geo.dispose();}function concat(arrays){const dst=new Float32Array(arrays.reduce((n,a)=>n+a.length,0));let at=0;for(const a of arrays){dst.set(a,at);at+=a.length;}return dst;}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(concat(positions),3));geo.setAttribute('normal',new T.BufferAttribute(concat(normals),3));geo.setAttribute('uv',new T.BufferAttribute(concat(uvs),2));if(hasColors)geo.setAttribute('color',new T.BufferAttribute(concat(colors),3));if(hasRageColors)geo.setAttribute('rageColor',new T.BufferAttribute(concat(rageColors),3));if(hasFinishes)geo.setAttribute('surfaceFinish',new T.BufferAttribute(concat(finishes),2));geo.computeBoundingSphere();const merged=new T.Mesh(geo,list[0].material);merged.castShadow=list.some(m=>m.castShadow);merged.receiveShadow=true;parent.add(merged);for(const m of list)m.parent.remove(m);}
 function batchStaticWorld(){scene.updateMatrixWorld(true);const buckets=new Map();world.traverse(m=>{if(!m.isMesh||m.isInstancedMesh||m.userData.dynamic||m===fire)return;const p=m.getWorldPosition(new T.Vector3());let k=m.material.uuid+":"+Math.floor(p.x/24)+":"+Math.floor(p.z/24)+":"+m.castShadow;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);});for(const list of buckets.values())combineMeshes(list,world);}

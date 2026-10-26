@@ -20,8 +20,8 @@ export function verifyBlackthorn(qa,frames,listeners,elements){
   assert.equal(segmentDistance(new T.Vector3(0,0,0),new T.Vector3(10,0,0),new T.Vector3(5,.5,0)),.5);assert.equal(segmentDistance(new T.Vector3(0,0,0),new T.Vector3(1,0,0),new T.Vector3(4,0,0)),3);
 
   // ---- Waking ------------------------------------------------------------------------
-  const ladder=qa.get().curseLadder,select=elements.get('curseRank');
-  select.value=String(ladder.unlocked);select.onchange();const rank=ladder.unlocked;
+  const ladder=qa.get().curseLadder;
+  ladder.select(Number(String(ladder.unlocked)));const rank=ladder.unlocked;
   qa.start();qa.holdSpawns();qa.setHealth(1e6);
   for(let i=0;i<21;i++)qa.startWave();qa.clearQueuedSpawns();frames(110);
   const graveyard=qa.get().graveyard,s=graveyard.nuke.station,lidZ=()=>graveyard.lidGroup.position.z;
@@ -107,7 +107,7 @@ export function verifyBlackthorn(qa,frames,listeners,elements){
   assert(qa.get().totalScore-score>=curseReward(BOSS.reward,rank),'He pays his bounty, multiplied by the curse');
   assert.equal(ladder.unlocked,unlockedBefore+1,'Beating him at the highest unlocked rank unlocks the next');
   assert(elements.get('banner').textContent.includes(`CURSE RANK ${unlockedBefore+1} UNLOCKED`));
-  assert([...select.querySelectorAll('option')].some(o=>o.textContent.startsWith(`RANK ${unlockedBefore+1} ·`)&&!o.disabled),'The title screen offers the new rank');
+  assert([...elements.get('curseStartList').querySelectorAll('button')].some(o=>o.textContent.startsWith(`RANK ${unlockedBefore+1} ·`)),'The curse choice offers the new rank');
   assert(qa.get().pickups.some(p=>p.type==='ammo')||elements.get('toast').textContent.includes('MAX AMMO'),'He drops a Max Ammo');
   assert.equal(qa.get().mode,'playing','The run carries on');
   for(const e of qa.get().zombies)if(!e.dead)qa.damageEnemy(e,1e9);
@@ -117,7 +117,7 @@ export function verifyBlackthorn(qa,frames,listeners,elements){
   assert.equal(qa.get().boss.stage,'dormant');assert.equal(lidZ(),SARCOPHAGUS.z,'A new run closes the tomb');assert(rest.disabled);
   assert(elements.get('bossHud').classList.contains('hidden'));assert.equal(qa.get().bossFx.activeBolts.length,0);
   // Beating him below your highest rank unlocks nothing new.
-  select.value='0';select.onchange();qa.start();qa.holdSpawns();qa.setHealth(1e6);
+  ladder.select(Number('0'));qa.start();qa.holdSpawns();qa.setHealth(1e6);
   for(let i=0;i<21;i++)qa.startWave();qa.clearQueuedSpawns();frames(110);
   qa.setPlayer(s.x-1.3,s.z);qa.setPoints(20000);qa.interact();frames(Math.ceil(WAKE_DURATION*60)+6);
   const again=qa.get().boss.enemy,top=ladder.unlocked;assert.equal(qa.get().boss.stage,'active');

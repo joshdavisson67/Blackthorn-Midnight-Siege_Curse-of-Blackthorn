@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 // Pause menu (v143): one list in a fixed order, a Settings page holding every
 // switch, no leaderboard entry, and Main Menu returning to the title screen.
 export function verifyPauseMenu(qa,frames,listeners,elements,gameCanvas){
+  // Enter the Estate asks for a curse once a rank is unlocked (v147); take the last one played.
+  const enter=()=>{elements.get('start').onclick();if(!elements.get('curseStart').classList.contains('hidden'))elements.get('curseStartList').querySelector('[aria-current]').onclick();};
   const pause=elements.get('pause'),main=elements.get('pauseMain'),settings=elements.get('pauseSettings'),menu=elements.get('menu');
   const order=[...main.querySelectorAll('.pauseMenu button')].map(b=>[b.id,b.textContent.trim()]);
   assert.deepEqual(order.map(([id])=>id),['resume','mapPause','settingsPause','controlsPause','guidePause','restart','mainMenuPause'],'Resume, Estate Map, Settings, Controls, Field Guide, New Run, Main Menu');
@@ -16,6 +18,10 @@ export function verifyPauseMenu(qa,frames,listeners,elements,gameCanvas){
   // v144: the title screen lost its settings strip and gained a Settings entry.
   for(const id of ['quality','sensitivity','sound'])assert(!menu.contains(elements.get(id)),`${id} is off the title screen`);
   assert(menu.contains(elements.get('settingsMenu'))&&elements.get('settingsMenu').textContent.trim()==='SETTINGS','The title screen has a Settings entry');
+  // v147: the title reads Enter the Estate, Settings, Controls, Field Guide, Leaderboard; no mouse-lock text.
+  const titleList=[elements.get('start'),...menu.querySelectorAll('.menuLinks button:not([hidden])')].map(b=>b.textContent.replace('→','').trim());
+  assert.deepEqual(titleList,['ENTER THE ESTATE','SETTINGS','CONTROLS','FIELD GUIDE','LEADERBOARD']);
+  assert(!menu.querySelector('.intro')&&!/mouse/i.test(menu.textContent),'No mouse-lock or settings blurb on the title screen');
 
   // Settings opens over the list; Back and Esc return to it; pausing again starts on the list.
   qa.start();qa.holdSpawns();frames(2);listeners.keydown({code:'Escape',preventDefault(){}});assert.equal(qa.get().mode,'paused');
@@ -63,10 +69,10 @@ export function verifyPauseMenu(qa,frames,listeners,elements,gameCanvas){
   assert(pause.classList.contains('hidden')&&!menu.classList.contains('hidden'),'Esc closes title Settings back to the menu');assert.equal(qa.get().mode,'menu');
   elements.get('settingsMenu').onclick();elements.get('settingsBack').onclick();assert(pause.classList.contains('hidden'),'Back closes title Settings');
 
-  elements.get('start').onclick();assert.notEqual(qa.get().mode,'menu','Entering again starts a fresh run');assert.equal(qa.get().points,500);
+  enter();assert.notEqual(qa.get().mode,'menu','Entering again starts a fresh run');assert.equal(qa.get().points,500);
   // It also works from the end-of-run screen.
   qa.setHealth(100);qa.hurtPlayer(200000,qa.get().player);assert.equal(qa.get().mode,'dead');
   elements.get('mainMenuPause').onclick();assert.equal(qa.get().mode,'menu','After a death Main Menu goes straight there (nothing left to lose)');
-  elements.get('start').onclick();
+  enter();
   console.log('PASS: pause menu — are-you-sure prompts for New Run and Main Menu (cancel, Esc, confirm; none after death), graphics/sensitivity/sound moved into Settings and a title-screen Settings entry, Resume / Estate Map / Settings / Controls / Field Guide / New Run / Main Menu, all switches on a Settings page (Back and Esc return), no leaderboard entry, and Main Menu clearing the run back to a working title screen (also after death).');
 }
