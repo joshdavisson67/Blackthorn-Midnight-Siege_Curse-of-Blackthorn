@@ -27,6 +27,12 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Title screen menu (version 147)
+
+- **Cleaner list.** The title screen now reads Enter the Estate, Settings, Controls, Field Guide and Leaderboard, top to bottom, in the same type as before. Controls and Field Guide are separate entries, matching the pause menu.
+- **No curse picker until it matters.** The Blackthorn Curse selector is gone from the title screen. Until you unlock rank 1, Enter the Estate starts an uncursed run straight away. Once rank 1 is unlocked, Enter asks which rank to start with: each unlocked rank is listed with its effects, the last one you played is marked, and the next rank shows as locked. Back or Esc returns to the title.
+- **Less text.** The mouse-lock instructions and the settings description were removed from the title screen.
+
 ## Touch HUD layout (version 146)
 
 - **Stick clears the health panel.** The left movement stick now rests just above the health panel, 10 px clear of it. The game measures the panel (and the shield row when you own one, and the minimap when it is set to the bottom left), so the stick stays clear as the panel grows.

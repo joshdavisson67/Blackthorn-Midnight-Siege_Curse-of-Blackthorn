@@ -44,18 +44,29 @@ export function verifyCurse(qa,frames,listeners,elements,gameCanvas){
   }
 
   // ---- Title screen ---------------------------------------------------------------
-  const ladder=qa.get().curseLadder,select=elements.get('curseRank');
-  const optionsText=()=>[...select.querySelectorAll('option')].map(o=>[o.textContent,o.hasAttribute('disabled')||o.disabled===true]);
-  assert.deepEqual(optionsText(),[['RANK 0 · UNCURSED',false],['RANK 1 · LOCKED',true]],'A new player sees rank 0 and the next rank locked');
-  assert(elements.get('curseRankInfo').textContent.includes('Defeat Sir Blackthorn on this rank to unlock rank 1.'));
+  const ladder=qa.get().curseLadder;
+  // v147: no curse picker on the title screen. Enter starts an uncursed run
+  // until rank 1 unlocks; then it asks which unlocked rank to carry.
+  const chooser=elements.get('curseStart'),list=elements.get('curseStartList'),start=elements.get('start');
+  assert(!elements.get('curseRank')&&!elements.get('menuCurse'),'The title screen has no curse picker');
+  const options=()=>[...list.children].map(o=>[o.querySelector('strong').textContent,o.tagName==='BUTTON']);
+  qa.renderCurseMenu();assert.deepEqual(options(),[['RANK 0 · UNCURSED',true],['RANK 1 · LOCKED',false]]);
+  start.onclick();assert(chooser.classList.contains('hidden'),'A new player is never asked: Enter starts at once');assert.notEqual(qa.get().mode,'menu');assert.equal(qa.get().curse.rank,0);
+  qa.setHealth(100);qa.hurtPlayer(200000,qa.get().player);elements.get('mainMenuPause').onclick();assert.equal(qa.get().mode,'menu');
   while(ladder.unlocked<5)ladder.victory(ladder.unlocked);qa.renderCurseMenu();
-  assert.deepEqual(optionsText().map(([t])=>t),['RANK 0 · UNCURSED','RANK 1 · THE WHISPERED','RANK 2 · THE MARKED','RANK 3 · THE FORSAKEN','RANK 4 · THE DAMNED','RANK 5 · BLACKTHORN’S CHOSEN'.replace('’',"'"),'RANK 6 · LOCKED']);
-  select.value='2';select.onchange();assert.equal(ladder.selected,2);
-  assert.equal(elements.get('menuCurse').dataset.rank,'2');assert(!elements.get('curseRankInfo').textContent.includes('unlock'),'Lower ranks do not promise an unlock');
-  select.value='5';select.onchange();assert(elements.get('curseRankInfo').textContent.endsWith('Defeat Sir Blackthorn on this rank to unlock rank 6.'));
-
+  assert.deepEqual(options().map(([t])=>t),['RANK 0 · UNCURSED','RANK 1 · THE WHISPERED','RANK 2 · THE MARKED','RANK 3 · THE FORSAKEN','RANK 4 · THE DAMNED','RANK 5 · BLACKTHORN’S CHOSEN'.replace('’',"'"),'RANK 6 · LOCKED']);
+  assert(list.querySelector('[data-rank="5"] span').textContent.endsWith('Defeat Sir Blackthorn on this rank to unlock rank 6.'),'The top rank says how to unlock the next');
+  assert(!list.querySelector('[data-rank="2"] span').textContent.includes('unlock'),'Lower ranks do not promise an unlock');
+  ladder.select(2);start.disabled=true;start.onclick();
+  assert(!chooser.classList.contains('hidden'),'With a rank unlocked, Enter asks which curse to start with');assert.equal(qa.get().mode,'menu','Nothing starts until a rank is chosen');
+  assert(list.querySelector('[data-rank="2"]').hasAttribute('aria-current'),'The last rank played is marked');
+  listeners.keydown({code:'Escape',preventDefault(){}});assert(chooser.classList.contains('hidden'),'Esc backs out of the choice');assert.equal(start.disabled,false,'Enter works again after backing out');
+  start.onclick();elements.get('curseStartBack').onclick();assert(chooser.classList.contains('hidden'));assert.equal(qa.get().mode,'menu');
+  start.onclick();list.querySelector('[data-rank="3"]').onclick();
+  assert(chooser.classList.contains('hidden'));assert.notEqual(qa.get().mode,'menu','Choosing a rank enters the estate');assert.equal(qa.get().curse.rank,3,'The run carries the chosen rank');assert.equal(ladder.selected,3);
+  qa.holdSpawns();
   // ---- A run is played entirely at the chosen rank ----------------------------------
-  select.value='1';select.onchange();
+  ladder.select(Number('1'));
   qa.start();qa.holdSpawns();qa.setHealth(1e6);frames(2);
   assert.equal(qa.get().curse.rank,1,'The chosen rank applies from the first wave');
   assert.equal(elements.get('curseHud').textContent,'CURSE 1 · THE WHISPERED');assert(!elements.get('curseHud').classList.contains('hidden'));
@@ -78,7 +89,7 @@ export function verifyCurse(qa,frames,listeners,elements,gameCanvas){
 
   // Higher ranks raise health and population for the whole run.
   for(const rank of [3,4]){
-    select.value=String(rank);select.onchange();qa.start();qa.holdSpawns();
+    ladder.select(Number(String(rank)));qa.start();qa.holdSpawns();
     for(let n=0;n<14;n++)qa.startWave();
     const ordinary=waveConfig(14),config=curseWaveConfig(14,rank);assert.equal(qa.get().toSpawn,config.count);
     const zombie=qa.makeZombie(0,23);assert(Math.abs(zombie.maxHp-ordinary.health*(1+(rank-2)*.2))<1e-7,'Rank-three and later health penalties reach spawned enemies');qa.damageEnemy(zombie,1e6);
@@ -88,6 +99,6 @@ export function verifyCurse(qa,frames,listeners,elements,gameCanvas){
   for(let attempts=0;attempts<100&&qa.get().zombies.filter(e=>!e.dead).length<32;attempts++){qa.spawnEnemy();frames(1);}
   assert.equal(qa.get().zombies.filter(e=>!e.dead).length,32);const queued=qa.get().toSpawn;frames(100);assert.equal(qa.get().zombies.filter(e=>!e.dead).length,32);assert.equal(qa.get().toSpawn,queued,'A larger cursed wave never bypasses the living-enemy cap');
   assert.equal(CURSE_RULES.aliveLimit,32);
-  select.value='0';select.onchange();qa.start();assert.equal(qa.get().curse.rank,0);
+  ladder.select(Number('0'));qa.start();assert.equal(qa.get().curse.rank,0);
   console.log('PASS: curse ladder — saved unlocks and choice, locked ranks, title-screen options and summaries, whole-run rank from wave 1, no bell choices, normal restock after every clear, reward/speed/health/population penalties, 32-enemy cap and rank on the death record.');
 }
