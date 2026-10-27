@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {createWeaponModel} from './weapon-models.mjs?v=149';
+import {createWeaponModel} from './weapon-models.mjs?v=151';
 import {configureArmorStation} from './armor.mjs?v=94';
 import {configureForgeStation} from './soul-forge.mjs?v=118';
 

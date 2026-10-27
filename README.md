@@ -27,6 +27,13 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Smaller MP5 sight and a smooth reload (version 151)
+
+- **Smaller holographic sight.** The MP5's sight is scaled to 84% so it sits in proportion with the slim MP5. It sits a little lower so its base still rests on the claw mount, and the reticle, sight alignment and front-sight co-witness are unchanged.
+- **Smooth reload for every gun.** The gun now drops, rolls and tips its muzzle up, holds low through the magazine swap, then rises and settles back into the hip pose without snapping into place.
+  - The old reload subtracted its dip after the smoothing step every frame, so the dip piled up. It went about 0.5 deep at 30 fps, 0.85 at 60 fps and 1.7 at 120 fps, and every change in frame time jolted the gun as it came back up.
+  - The new pose depends only on how far through the reload you are. It looks the same at any frame rate and stays smooth when frame times vary, which is common on phones.
+
 ## Suppressed MP5 sound (version 150)
 
 - **The MP5 now sounds suppressed.** Each shot is a muffled gas puff, a soft low thump and the click of the bolt cycling, instead of the open crack the other guns use. It is about 4 dB quieter than an unsuppressed shot.

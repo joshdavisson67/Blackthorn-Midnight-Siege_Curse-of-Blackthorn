@@ -106,8 +106,10 @@ function opticWindow(w,h,r,Path=T.Shape){
   p.lineTo(x+r,y+h);p.quadraticCurveTo(x,y+h,x,y+h-r);
   p.lineTo(x,y+r);p.quadraticCurveTo(x,y,x+r,y);p.closePath();return p;
 }
-// The MP5's holographic sight rides low on its claw mount (v149).
-const SMG_SIGHT_HEIGHT=.158;
+// The MP5's holographic sight rides low on its claw mount (v149). In v151 it
+// was scaled to 84% to sit in proportion with the slim MP5, and lowered so its
+// base still rests on the mount (base at y .092 in gun space).
+const SMG_SIGHT_SCALE=.84,SMG_SIGHT_HEIGHT=.092+.066*SMG_SIGHT_SCALE;
 export function makeOptic(parent,type,metal){
   const optic=new T.Group(),housing=new T.Group(),m=opticMaterials(metal),rifle=type==='rifle';
   optic.name='open-optic';optic.position.set(0,.185,-.07);housing.name='Optic housing';optic.add(housing);parent.add(optic);
@@ -190,6 +192,10 @@ export function makeOptic(parent,type,metal){
     }
     box(-side-.0006,body,-.008,.001,.012,.028,m.warning,'Laser warning label');
     box(-side-.002,body-.016,.006,.006,.010,.040,m.housing,'Quick-detach mount lever');
+    // Scale the whole sight about the window centre (z .030), so the window,
+    // hood and electronics shrink together and the reticle stays centred.
+    const k=SMG_SIGHT_SCALE;housing.scale.setScalar(k);housing.position.z=.030*(1-k);
+    glass.scale.set(k,k,1);glass.position.z=.030+(glass.position.z-.030)*k;
   }else{
     // The lens and the actual aperture share one contour. This keeps the SMG
     // glass seated around its full edge instead of floating beside tilted posts.

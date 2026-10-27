@@ -274,3 +274,6 @@ verifyFloorLighting(qa);
 
 const {verifyGunAudio}=await import('./gun-audio.mjs');
 verifyGunAudio(qa,frames,elements,document);
+
+const {verifyReloadPose}=await import('./reload-pose.mjs');
+verifyReloadPose(qa,frames);
