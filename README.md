@@ -27,6 +27,12 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Suppressed MP5 sound (version 150)
+
+- **The MP5 now sounds suppressed.** Each shot is a muffled gas puff, a soft low thump and the click of the bolt cycling, instead of the open crack the other guns use. It is about 4 dB quieter than an unsuppressed shot.
+- **Clean bursts.** Each report fades out in about 40 ms, inside the MP5's 75 ms fire cycle, so full-auto fire stays a distinct rattle of shots instead of blurring into a hiss. Each shot varies slightly in pitch so long bursts don't repeat one sample.
+- Every other gun keeps its sound, and the sound setting mutes the MP5 like everything else.
+
 ## New MP5 model (version 149)
 
 - **Rebuilt from reference photos.** The submachine gun is now a proper MP5: a stamped receiver with its side rib and ejection port, a cocking tube with the charging handle parked forward on the left, a slim tapered handguard and a hooded front sight ring. It has a narrow, curved extended magazine with a paddle release, an ambidextrous trigger group with an ergonomic grip and red/white selector markings, a rear diopter drum and sling loops.

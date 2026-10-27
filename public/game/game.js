@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=143';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=149';
-import {createChangelog} from './changelog.mjs?v=149';
+import {createLeaderboard} from './leaderboard.mjs?v=150';
+import {createChangelog} from './changelog.mjs?v=150';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -21,6 +21,7 @@ import * as T from './three.module.js';
 import {createRenderScale} from './render-scale.mjs?v=120';
 import {createTouchControls,TOUCH} from './touch-controls.mjs?v=148';
 import {createControlScheme} from './input-scheme.mjs?v=142';
+import {suppressedShot} from './gun-audio.mjs?v=150';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 import {createStationBuilder} from './station-models.mjs?v=149';
@@ -315,6 +316,7 @@ $('best').textContent=bestWave?`PERSONAL BEST / WAVE ${bestWave} · ${bestKills}
 const soundOn=()=>$('sound').checked;let audio=null,noiseBuffer=null,ambience=null;
 function initAudio(){if(audio){if(audio.state==='suspended')audio.resume();return;}try{audio=new (window.AudioContext||window.webkitAudioContext)();noiseBuffer=audio.createBuffer(1,audio.sampleRate*2,audio.sampleRate);const data=noiseBuffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;const n=audio.createBufferSource();n.buffer=noiseBuffer;n.loop=true;const filter=audio.createBiquadFilter();filter.type='lowpass';filter.frequency.value=200;ambience=audio.createGain();ambience.gain.value=soundOn()?.018:0;n.connect(filter);filter.connect(ambience);ambience.connect(audio.destination);n.start();}catch{}}
 function tone(freq,dur=.1,volume=.06,type='sine',end=0){if(!audio||audio.state==='closed'||!soundOn())return;const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(end||freq*.65,audio.currentTime+dur);g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+dur);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+dur);}
+function suppressedReport(){if(!audio||audio.state==='closed'||!soundOn())return;suppressedShot(audio,audio.destination,noiseBuffer);}
 function noise(dur,volume=.15,frequency=1600){if(!audio||audio.state==='closed'||!soundOn())return;const n=audio.createBufferSource();n.buffer=noiseBuffer;const g=audio.createGain(),f=audio.createBiquadFilter();f.type='lowpass';f.frequency.value=frequency;g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);n.connect(f);f.connect(g);g.connect(audio.destination);n.start();n.stop(audio.currentTime+dur);}
 function notify(s,duration=2.6){$('toast').textContent=s;toastTime=duration;}
 function announce(title,sub=''){ $('banner').innerHTML=title+(sub?`<small>${sub}</small>`:'');bannerTime=3.2;}
@@ -388,7 +390,7 @@ const corpses=zombies.filter(z=>z.dead&&z.ragdoll.life>z.death);if(corpses.lengt
 function damageEnemy(e,amount,headshot=false,impact={}){if(e.dead||e.waking)return;if(e.warden&&impact.part==='shield'){amount*=WARDEN.shieldFactor;tone(900,.05,.02,'square',600);}e.hp-=amount;if(impact.part==='leg'&&!headshot&&noteLegDamage(e,amount)){e.bodyHeight=CRAWL.height;tone(55,.18,.05,'sine',38);noise(.12,.05,260);}addPoints(10);hitTime=headshot?.22:.14;const reaction=headshot&&impact.part!=='head'?{...impact,part:'head'}:impact;if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}reactToHit(e,reaction);if(!e.elite)registerStagger(e,reaction);if(e.hp<=0)killZombie(e,headshot,reaction);}
 function bloodBurst(pos,count){for(let i=0;i<count;i++){const sx=rand(.01,.025),sy=rand(.01,.03),sz=rand(.01,.025),vx=rand(-1.4,1.4),vy=rand(.5,2),vz=rand(-1.4,1.4),effect=bloodPool.acquire();if(!effect)continue;effect.mesh.position.copy(pos);effect.mesh.scale.set(sx,sy,sz);effect.vel.set(vx,vy,vz);effect.life=effect.max=.6;effects.push(effect);}}
 const raycaster=new T.Raycaster();const dir=new T.Vector3();let shotId=0;
-function shoot(){if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||shotTimer>0)return;const inv=inventory[weapon],w=weapons[weapon];if(inv.ammo<=0){shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;shotTimer=w.rate;{const r=SHOT_RUMBLE[weapon];if(r)padRumble(...r);}const id=++shotId;if(weapon==='glock')gunGroups.glock.userData.slideTime=.12;flashTime=.045;noise(weapon==='shotgun'?.22:.12,.18,weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
+function shoot(){if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||shotTimer>0)return;const inv=inventory[weapon],w=weapons[weapon];if(inv.ammo<=0){shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;shotTimer=w.rate;{const r=SHOT_RUMBLE[weapon];if(r)padRumble(...r);}const id=++shotId;if(weapon==='glock')gunGroups.glock.userData.slideTime=.12;flashTime=.045;if(weapon==='smg')suppressedReport();else{noise(weapon==='shotgun'?.22:.12,.18,weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);}const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
 camera.rotation.set(clamp(lookPitch+weaponRecoil.pitch,-1.3,1.3),lookYaw+weaponRecoil.yaw,0);camera.updateMatrixWorld();
 for(let i=0;i<w.pellets;i++){const spread=aiming?(w.aimSpread??w.spread*.28):w.spread;dir.set(rand(-spread,spread),rand(-spread,spread),-1).normalize().applyQuaternion(camera.quaternion);raycaster.set(camera.position,dir);const hits=raycaster.intersectObjects(hitObjects,true);if(hits.length){const h=hits[0],e=h.object.userData.enemy;if(e&&!e.dead){const head=h.object.userData.head;const damage=w.damage*(perkOwned.has('eye')?1.5:1)*forgeBonuses(inv.forgeRank).damageMultiplier*(head?2.6:1)*(doubleTime>0?2:1);damageEnemy(e,damage,head,{direction:dir.clone(),point:h.point.clone(),part:h.object.userData.part,side:h.object.userData.side,limb:h.object.userData.limb,force:COMBAT[weapon].force,source:weapon,shotId:id});bloodBurst(h.point,3);}else if(Math.random()<.5){const effect=markPool.acquire();if(effect){effect.mesh.position.copy(h.point);effect.mesh.scale.set(.025,.025,.025);effect.vel.set(0,0,0);effect.life=effect.max=6;effects.push(effect);}}}}
 weaponRecoil.fire(weapon,aiming);if(inv.ammo===0)notify('MAGAZINE EMPTY · PRESS R');updateHud();}
