@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=143';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=148';
-import {createChangelog} from './changelog.mjs?v=148';
+import {createLeaderboard} from './leaderboard.mjs?v=150';
+import {createChangelog} from './changelog.mjs?v=150';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -14,41 +14,42 @@ import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnM
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
 import {buildGraveyard} from './graveyard.mjs?v=131';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
-import {buildCellar,drawCellarMap} from './cellar.mjs?v=129';
+import {buildCellar,drawCellarMap} from './cellar.mjs?v=149';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
-import {buildShed} from './shed.mjs?v=129';
+import {buildShed} from './shed.mjs?v=149';
 import * as T from './three.module.js';
 import {createRenderScale} from './render-scale.mjs?v=120';
 import {createTouchControls,TOUCH} from './touch-controls.mjs?v=148';
 import {createControlScheme} from './input-scheme.mjs?v=142';
+import {suppressedShot} from './gun-audio.mjs?v=150';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
-import {createStationBuilder} from './station-models.mjs?v=129';
-import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=129';
+import {createStationBuilder} from './station-models.mjs?v=149';
+import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=149';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=87';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=129';
+import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=149';
 import {createEnemyAssets} from './enemy-assets.mjs?v=140';
-import {createCombatLights} from './combat-lights.mjs?v=129';
+import {createCombatLights} from './combat-lights.mjs?v=149';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=140';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=131';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=131';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=131';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=149';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=131';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=140';
 import {addEstateDetail} from './estate-detail.mjs?v=131';
-import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=131';
+import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=149';
 import {createReticleHud} from './reticles.mjs?v=116';
 import {createFurnishings} from './furnishings.mjs?v=59';
 import {createRugBuilder} from './rugs.mjs?v=59';
 import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses,configureForgeStation} from './soul-forge.mjs?v=118';
-import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=129';
+import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=149';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=131';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=149';
 import {buildRotundaBell} from './rotunda-bell.mjs?v=130';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=131';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=135';
@@ -315,6 +316,7 @@ $('best').textContent=bestWave?`PERSONAL BEST / WAVE ${bestWave} · ${bestKills}
 const soundOn=()=>$('sound').checked;let audio=null,noiseBuffer=null,ambience=null;
 function initAudio(){if(audio){if(audio.state==='suspended')audio.resume();return;}try{audio=new (window.AudioContext||window.webkitAudioContext)();noiseBuffer=audio.createBuffer(1,audio.sampleRate*2,audio.sampleRate);const data=noiseBuffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;const n=audio.createBufferSource();n.buffer=noiseBuffer;n.loop=true;const filter=audio.createBiquadFilter();filter.type='lowpass';filter.frequency.value=200;ambience=audio.createGain();ambience.gain.value=soundOn()?.018:0;n.connect(filter);filter.connect(ambience);ambience.connect(audio.destination);n.start();}catch{}}
 function tone(freq,dur=.1,volume=.06,type='sine',end=0){if(!audio||audio.state==='closed'||!soundOn())return;const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(end||freq*.65,audio.currentTime+dur);g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+dur);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+dur);}
+function suppressedReport(){if(!audio||audio.state==='closed'||!soundOn())return;suppressedShot(audio,audio.destination,noiseBuffer);}
 function noise(dur,volume=.15,frequency=1600){if(!audio||audio.state==='closed'||!soundOn())return;const n=audio.createBufferSource();n.buffer=noiseBuffer;const g=audio.createGain(),f=audio.createBiquadFilter();f.type='lowpass';f.frequency.value=frequency;g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);n.connect(f);f.connect(g);g.connect(audio.destination);n.start();n.stop(audio.currentTime+dur);}
 function notify(s,duration=2.6){$('toast').textContent=s;toastTime=duration;}
 function announce(title,sub=''){ $('banner').innerHTML=title+(sub?`<small>${sub}</small>`:'');bannerTime=3.2;}
@@ -323,7 +325,7 @@ function updateForgeStations(){for(const s of forgeStations)if(s.forgeRank!==inv
 function ammoCapacity(k=weapon){const multiplier=forgeBonuses(inventory[k].forgeRank).ammoMultiplier;return {mag:Math.ceil(weapons[k].mag*multiplier),reserve:Math.ceil(weapons[k].reserve*multiplier)};}
 function freshInventory(){return Object.fromEntries(Object.entries(weapons).map(([k,v])=>[k,{ammo:v.mag,reserve:v.reserve,owned:k==='glock',forgeRank:0}]));}
 inventory=freshInventory();let doubleTime=0,grenadeTime=0,grenadeCooldown=0;
-function selectWeapon(k){if(!inventory[k].owned||reloadLeft>0)return;if(weapon!==k){weaponRecoil.reset();camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();}weapon=k;reticleHud.select(k);recoil=.06;flash.position.copy(gunGroups[k].userData.muzzle);flash.scale.setScalar(k==='glock'?.58:1);flash.position.z-=.11*flash.scale.x;for(const t in gunGroups)gunGroups[t].visible=t===k;updateHud();}
+function selectWeapon(k){if(!inventory[k].owned||reloadLeft>0)return;if(weapon!==k){weaponRecoil.reset();camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();}weapon=k;reticleHud.select(k);recoil=.06;flash.position.copy(gunGroups[k].userData.muzzle);flash.scale.setScalar(k==='glock'?.58:k==='smg'?.32:1);flash.position.z-=.11*flash.scale.x;for(const t in gunGroups)gunGroups[t].visible=t===k;updateHud();}
 selectWeapon('glock');
 const crowd=createCrowd(zombies,player);
 const playerCanOccupy=(x,z,y)=>crowd.canOccupy(x,z,y,PLAYER_RADIUS,1.8,null,player);
@@ -388,7 +390,7 @@ const corpses=zombies.filter(z=>z.dead&&z.ragdoll.life>z.death);if(corpses.lengt
 function damageEnemy(e,amount,headshot=false,impact={}){if(e.dead||e.waking)return;if(e.warden&&impact.part==='shield'){amount*=WARDEN.shieldFactor;tone(900,.05,.02,'square',600);}e.hp-=amount;if(impact.part==='leg'&&!headshot&&noteLegDamage(e,amount)){e.bodyHeight=CRAWL.height;tone(55,.18,.05,'sine',38);noise(.12,.05,260);}addPoints(10);hitTime=headshot?.22:.14;const reaction=headshot&&impact.part!=='head'?{...impact,part:'head'}:impact;if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}reactToHit(e,reaction);if(!e.elite)registerStagger(e,reaction);if(e.hp<=0)killZombie(e,headshot,reaction);}
 function bloodBurst(pos,count){for(let i=0;i<count;i++){const sx=rand(.01,.025),sy=rand(.01,.03),sz=rand(.01,.025),vx=rand(-1.4,1.4),vy=rand(.5,2),vz=rand(-1.4,1.4),effect=bloodPool.acquire();if(!effect)continue;effect.mesh.position.copy(pos);effect.mesh.scale.set(sx,sy,sz);effect.vel.set(vx,vy,vz);effect.life=effect.max=.6;effects.push(effect);}}
 const raycaster=new T.Raycaster();const dir=new T.Vector3();let shotId=0;
-function shoot(){if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||shotTimer>0)return;const inv=inventory[weapon],w=weapons[weapon];if(inv.ammo<=0){shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;shotTimer=w.rate;{const r=SHOT_RUMBLE[weapon];if(r)padRumble(...r);}const id=++shotId;if(weapon==='glock')gunGroups.glock.userData.slideTime=.12;flashTime=.045;noise(weapon==='shotgun'?.22:.12,.18,weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
+function shoot(){if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||shotTimer>0)return;const inv=inventory[weapon],w=weapons[weapon];if(inv.ammo<=0){shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;shotTimer=w.rate;{const r=SHOT_RUMBLE[weapon];if(r)padRumble(...r);}const id=++shotId;if(weapon==='glock')gunGroups.glock.userData.slideTime=.12;flashTime=.045;if(weapon==='smg')suppressedReport();else{noise(weapon==='shotgun'?.22:.12,.18,weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);}const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
 camera.rotation.set(clamp(lookPitch+weaponRecoil.pitch,-1.3,1.3),lookYaw+weaponRecoil.yaw,0);camera.updateMatrixWorld();
 for(let i=0;i<w.pellets;i++){const spread=aiming?(w.aimSpread??w.spread*.28):w.spread;dir.set(rand(-spread,spread),rand(-spread,spread),-1).normalize().applyQuaternion(camera.quaternion);raycaster.set(camera.position,dir);const hits=raycaster.intersectObjects(hitObjects,true);if(hits.length){const h=hits[0],e=h.object.userData.enemy;if(e&&!e.dead){const head=h.object.userData.head;const damage=w.damage*(perkOwned.has('eye')?1.5:1)*forgeBonuses(inv.forgeRank).damageMultiplier*(head?2.6:1)*(doubleTime>0?2:1);damageEnemy(e,damage,head,{direction:dir.clone(),point:h.point.clone(),part:h.object.userData.part,side:h.object.userData.side,limb:h.object.userData.limb,force:COMBAT[weapon].force,source:weapon,shotId:id});bloodBurst(h.point,3);}else if(Math.random()<.5){const effect=markPool.acquire();if(effect){effect.mesh.position.copy(h.point);effect.mesh.scale.set(.025,.025,.025);effect.vel.set(0,0,0);effect.life=effect.max=6;effects.push(effect);}}}}
 weaponRecoil.fire(weapon,aiming);if(inv.ammo===0)notify('MAGAZINE EMPTY · PRESS R');updateHud();}
@@ -1189,7 +1191,7 @@ updatePistolSlide(gunGroups.glock,dt,inventory.glock.ammo);
 const ads=aiming&&!grenadeThrow.active&&reloadLeft===0?1:0;gunRoot.position.x=T.MathUtils.lerp(gunRoot.position.x,ads?0:.28,dt*14);gunRoot.position.y=T.MathUtils.lerp(gunRoot.position.y,(ads?-gunGroups[weapon].userData.sightHeight:-.26)-grenadeThrow.lower*.43,dt*14);gunRoot.position.z=T.MathUtils.lerp(gunRoot.position.z,(ads?(weapon==='glock'?-.39:-.34):-.48)+weaponRecoil.back*(ads?.6:1),dt*14)+recoil*dt*4;gunRoot.rotation.set((ads?0:weaponRecoil.lift+recoil*1.2)+grenadeThrow.lower*.25,0,weapons[weapon].zoom&&ads?0:Math.sin(walkPhase*.5)*(moving?(ads?.001:.012):.001));if(reloadLeft>0){const f=reloadLeft/reloadDuration;gunRoot.rotation.z=-Math.sin(f*Math.PI)*.6;gunRoot.position.y-=Math.sin(f*Math.PI)*.2;}if(sprint&&moving)gunRoot.rotation.z=-.25;for(const {type,sight} of scopedGuns){sight.mask.visible=weapon===type&&ads>0&&weaponViewFov<(sight.viewFov??16)+1;}setOpacity('crosshair',ads?0:1);
 hudTick-=dt;if(hudTick<=0){updateHud();drawRadar();hudTick=.1;}}
 else if(mode==='menu'){camera.position.set(11.8,2.1,24);camera.lookAt(-1,3.3,0);camera.position.x+=Math.sin(elapsed*.12)*.3;gunRoot.visible=false;rain.visible=true;}
-updateReloadHud();combatHud.update(dt,player,lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(gunGroups[weapon].userData.muzzle);muzzleLight.intensity=flashTime>0?15:0;hitTime=Math.max(0,hitTime-dt);setOpacity('hit',hitTime>0?1:0);damageFlash=Math.max(0,damageFlash-dt*.8);setOpacity('damage',Math.max(damageFlash,mode==='playing'&&health<30?.16:0));nukeFlashTime=Math.max(0,nukeFlashTime-dt*1.5);setOpacity('nukeFlash',nukeFlashTime);toastTime=Math.max(0,toastTime-dt);setOpacity('toast',toastTime>0?1:0);bannerTime=Math.max(0,bannerTime-dt);setOpacity('banner',bannerTime>0?1:0);
+updateReloadHud();combatHud.update(dt,player,lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(gunGroups[weapon].userData.muzzle);muzzleLight.intensity=flashTime>0?(weapon==='smg'?5:15):0;hitTime=Math.max(0,hitTime-dt);setOpacity('hit',hitTime>0?1:0);damageFlash=Math.max(0,damageFlash-dt*.8);setOpacity('damage',Math.max(damageFlash,mode==='playing'&&health<30?.16:0));nukeFlashTime=Math.max(0,nukeFlashTime-dt*1.5);setOpacity('nukeFlash',nukeFlashTime);toastTime=Math.max(0,toastTime-dt);setOpacity('toast',toastTime>0?1:0);bannerTime=Math.max(0,bannerTime-dt);setOpacity('banner',bannerTime>0?1:0);
 for(const l of lamps)l.light.intensity=l.base*(.95+Math.sin(elapsed*4+l.phase)*.04+Math.sin(elapsed*7.1+l.phase)*.015);fire.scale.y=.55+Math.sin(elapsed*8)*.08;stationBuilder.update(elapsed);for(const m of mist){m.position.x+=dt*.025;if(m.position.x>43)m.position.x=-43;}
 for(let i=0;i<rainPos.length;i+=3){rainPos[i+1]-=dt*9;if(rainPos[i+1]<0)rainPos[i+1]=18;if(rainPos[i]<player.x-22)rainPos[i]+=44;if(rainPos[i]>player.x+22)rainPos[i]-=44;if(rainPos[i+2]<player.z-22)rainPos[i+2]+=44;if(rainPos[i+2]>player.z+22)rainPos[i+2]-=44;}rainGeo.attributes.position.needsUpdate=true;
 lighting.setBlockerState((cellar.progress===1?'open':'closed')+':'+(graveyard.progress===1?'open':'closed')+(shed.progress===1?':shed-open':''));bloodPool.sync();markPool.sync();combatLights.update(effects,pickups,player);estateDetail.update(elapsed,dt);blackout.apply(worldEvents.darkness());environmentLights.update(camera.position,elapsed,player.y);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;lighting.prepare(elapsed);renderCleanFrame(renderer,scene,camera,viewCamera,rt,postScene,postCamera,gunRoot.visible||grenadeThrow.root.visible,world,weaponViewFov);}

@@ -271,3 +271,6 @@ verifyZombieMotion(qa,frames);
 
 const {verifyFloorLighting}=await import('./floor-lighting.mjs');
 verifyFloorLighting(qa);
+
+const {verifyGunAudio}=await import('./gun-audio.mjs');
+verifyGunAudio(qa,frames,elements,document);
