@@ -96,7 +96,8 @@ function opticMaterials(metal){
   const glass=new T.MeshBasicMaterial({color:0xc7e5e4,transparent:true,opacity:.025,depthTest:true,depthWrite:false,side:T.DoubleSide});
   const scopeGlass=glass.clone();scopeGlass.opacity=.018;
   const fiber=housing.clone();fiber.color.setHex(0xa54233);fiber.metalness=.12;fiber.roughness=.7;
-  const result={housing,rubber,glass,scopeGlass,fiber};opticFinishes.set(metal,result);return result;
+  const warning=rubber.clone();warning.color.setHex(0xd7b223);warning.roughness=.6;
+  const result={housing,rubber,glass,scopeGlass,fiber,warning};opticFinishes.set(metal,result);return result;
 }
 function opticWindow(w,h,r,Path=T.Shape){
   const p=new Path(),x=-w/2,y=-h/2;
@@ -105,6 +106,8 @@ function opticWindow(w,h,r,Path=T.Shape){
   p.lineTo(x+r,y+h);p.quadraticCurveTo(x,y+h,x,y+h-r);
   p.lineTo(x,y+r);p.quadraticCurveTo(x,y,x+r,y);p.closePath();return p;
 }
+// The MP5's holographic sight rides low on its claw mount (v149).
+const SMG_SIGHT_HEIGHT=.158;
 export function makeOptic(parent,type,metal){
   const optic=new T.Group(),housing=new T.Group(),m=opticMaterials(metal),rifle=type==='rifle';
   optic.name='open-optic';optic.position.set(0,.185,-.07);housing.name='Optic housing';optic.add(housing);parent.add(optic);
@@ -160,6 +163,33 @@ export function makeOptic(parent,type,metal){
     cylinder(0,.078,-.03,.022,.022,m.housing,'Elevation adjustment');cylinder(0,.091,-.03,.023,.006,m.rubber,'Elevation cap');
     for(const z of [-.094,-.078])rim(z,.064,.0015,'Sight tube seam');
     glass=add(opticGeometry('rifle-glass',()=>new T.CircleGeometry(.056,48)),m.glass,0,0,.050,'clear-optic-glass',optic);
+  }else if(type==='smg'){
+    // Holographic sight (v149), after the reference: a deep flat-topped hood
+    // round a squarer window, a long electronics body, side adjustment dials,
+    // rear buttons, a transverse battery cap and a warning label. Everything
+    // below or around the window stays outside the sight picture.
+    const [w,h,r]=[.106,.076,.012];optic.position.y=SMG_SIGHT_HEIGHT;
+    const frame=opticGeometry('holo-frame',()=>{
+      const shape=opticWindow(w+.020,h+.018,r+.008);shape.holes.push(opticWindow(w,h,r,T.Path));
+      const geo=new T.ExtrudeGeometry(shape,{depth:.052,steps:1,bevelEnabled:false,curveSegments:10});geo.translate(0,0,-.026);return geo;
+    });
+    add(frame,m.housing,0,0,.030,'Reflex sight hood');
+    glass=add(opticGeometry('holo-glass',()=>new T.ShapeGeometry(opticWindow(w,h,r),10)),m.glass,0,0,.044,'clear-optic-glass',optic);
+    box(0,h/2+.012,.028,w+.020,.006,.058,m.housing,'Holographic hood top plate');
+    const lip=box(0,h/2+.009,-.004,w+.020,.006,.012,m.housing,'Hood sloped front lip');lip.rotation.x=-.5;
+    const body=-h/2-.016;
+    box(0,body,.012,w+.012,.024,.120,m.housing,'Holographic sight body');
+    box(0,body-.004,.074,w*.7,.016,.008,m.housing,'Rear control panel');
+    for(const x of [-.016,.016])box(x,body-.004,.079,.012,.008,.004,m.rubber,'Rear control button');
+    const side=w/2+.006;
+    cylinder(side+.006,body,-.032,.011,.010,m.rubber,'Transverse battery cap','x');
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;box(side+.006,body+Math.sin(a)*.011,-.032+Math.cos(a)*.011,.009,.0025,.0025,m.housing,'Battery cap knurl');}
+    for(const z of [.034,.060]){
+      cylinder(side+.004,body+.002,z,.0085,.008,m.housing,'Holographic adjustment dial','x');
+      for(let i=0;i<6;i++){const a=i*Math.PI/3;box(side+.004,body+.002+Math.sin(a)*.0085,z+Math.cos(a)*.0085,.007,.002,.002,m.rubber,'Dial knurl');}
+    }
+    box(-side-.0006,body,-.008,.001,.012,.028,m.warning,'Laser warning label');
+    box(-side-.002,body-.016,.006,.006,.010,.040,m.housing,'Quick-detach mount lever');
   }else{
     // The lens and the actual aperture share one contour. This keeps the SMG
     // glass seated around its full edge instead of floating beside tilted posts.
@@ -176,7 +206,7 @@ export function makeOptic(parent,type,metal){
     for(const x of [-.014,.014])box(x,-h/2-.008,.060,.009,.008,.003,m.rubber,'Brightness button');
   }
   const reticle=createOpticReticle(type,.054);optic.add(...reticle.marks);
-  return {group:optic,housing,glass,...reticle,height:.185};
+  return {group:optic,housing,glass,...reticle,height:type==='smg'?SMG_SIGHT_HEIGHT:.185};
 }
 // A single current-frame resolve: no history buffer, displaced color channels,
 // ring-sampled bloom, animated noise, or depth halos around moving silhouettes.

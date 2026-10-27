@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=143';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=148';
-import {createChangelog} from './changelog.mjs?v=148';
+import {createLeaderboard} from './leaderboard.mjs?v=149';
+import {createChangelog} from './changelog.mjs?v=149';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -14,41 +14,41 @@ import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnM
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
 import {buildGraveyard} from './graveyard.mjs?v=131';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
-import {buildCellar,drawCellarMap} from './cellar.mjs?v=129';
+import {buildCellar,drawCellarMap} from './cellar.mjs?v=149';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
-import {buildShed} from './shed.mjs?v=129';
+import {buildShed} from './shed.mjs?v=149';
 import * as T from './three.module.js';
 import {createRenderScale} from './render-scale.mjs?v=120';
 import {createTouchControls,TOUCH} from './touch-controls.mjs?v=148';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
-import {createStationBuilder} from './station-models.mjs?v=129';
-import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=129';
+import {createStationBuilder} from './station-models.mjs?v=149';
+import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=149';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=87';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=129';
+import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=149';
 import {createEnemyAssets} from './enemy-assets.mjs?v=140';
-import {createCombatLights} from './combat-lights.mjs?v=129';
+import {createCombatLights} from './combat-lights.mjs?v=149';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=140';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=131';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=131';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=131';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=149';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=131';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=140';
 import {addEstateDetail} from './estate-detail.mjs?v=131';
-import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=131';
+import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=149';
 import {createReticleHud} from './reticles.mjs?v=116';
 import {createFurnishings} from './furnishings.mjs?v=59';
 import {createRugBuilder} from './rugs.mjs?v=59';
 import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses,configureForgeStation} from './soul-forge.mjs?v=118';
-import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=129';
+import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=149';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=131';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=149';
 import {buildRotundaBell} from './rotunda-bell.mjs?v=130';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=131';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=135';
@@ -323,7 +323,7 @@ function updateForgeStations(){for(const s of forgeStations)if(s.forgeRank!==inv
 function ammoCapacity(k=weapon){const multiplier=forgeBonuses(inventory[k].forgeRank).ammoMultiplier;return {mag:Math.ceil(weapons[k].mag*multiplier),reserve:Math.ceil(weapons[k].reserve*multiplier)};}
 function freshInventory(){return Object.fromEntries(Object.entries(weapons).map(([k,v])=>[k,{ammo:v.mag,reserve:v.reserve,owned:k==='glock',forgeRank:0}]));}
 inventory=freshInventory();let doubleTime=0,grenadeTime=0,grenadeCooldown=0;
-function selectWeapon(k){if(!inventory[k].owned||reloadLeft>0)return;if(weapon!==k){weaponRecoil.reset();camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();}weapon=k;reticleHud.select(k);recoil=.06;flash.position.copy(gunGroups[k].userData.muzzle);flash.scale.setScalar(k==='glock'?.58:1);flash.position.z-=.11*flash.scale.x;for(const t in gunGroups)gunGroups[t].visible=t===k;updateHud();}
+function selectWeapon(k){if(!inventory[k].owned||reloadLeft>0)return;if(weapon!==k){weaponRecoil.reset();camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();}weapon=k;reticleHud.select(k);recoil=.06;flash.position.copy(gunGroups[k].userData.muzzle);flash.scale.setScalar(k==='glock'?.58:k==='smg'?.32:1);flash.position.z-=.11*flash.scale.x;for(const t in gunGroups)gunGroups[t].visible=t===k;updateHud();}
 selectWeapon('glock');
 const crowd=createCrowd(zombies,player);
 const playerCanOccupy=(x,z,y)=>crowd.canOccupy(x,z,y,PLAYER_RADIUS,1.8,null,player);
@@ -1189,7 +1189,7 @@ updatePistolSlide(gunGroups.glock,dt,inventory.glock.ammo);
 const ads=aiming&&!grenadeThrow.active&&reloadLeft===0?1:0;gunRoot.position.x=T.MathUtils.lerp(gunRoot.position.x,ads?0:.28,dt*14);gunRoot.position.y=T.MathUtils.lerp(gunRoot.position.y,(ads?-gunGroups[weapon].userData.sightHeight:-.26)-grenadeThrow.lower*.43,dt*14);gunRoot.position.z=T.MathUtils.lerp(gunRoot.position.z,(ads?(weapon==='glock'?-.39:-.34):-.48)+weaponRecoil.back*(ads?.6:1),dt*14)+recoil*dt*4;gunRoot.rotation.set((ads?0:weaponRecoil.lift+recoil*1.2)+grenadeThrow.lower*.25,0,weapons[weapon].zoom&&ads?0:Math.sin(walkPhase*.5)*(moving?(ads?.001:.012):.001));if(reloadLeft>0){const f=reloadLeft/reloadDuration;gunRoot.rotation.z=-Math.sin(f*Math.PI)*.6;gunRoot.position.y-=Math.sin(f*Math.PI)*.2;}if(sprint&&moving)gunRoot.rotation.z=-.25;for(const {type,sight} of scopedGuns){sight.mask.visible=weapon===type&&ads>0&&weaponViewFov<(sight.viewFov??16)+1;}setOpacity('crosshair',ads?0:1);
 hudTick-=dt;if(hudTick<=0){updateHud();drawRadar();hudTick=.1;}}
 else if(mode==='menu'){camera.position.set(11.8,2.1,24);camera.lookAt(-1,3.3,0);camera.position.x+=Math.sin(elapsed*.12)*.3;gunRoot.visible=false;rain.visible=true;}
-updateReloadHud();combatHud.update(dt,player,lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(gunGroups[weapon].userData.muzzle);muzzleLight.intensity=flashTime>0?15:0;hitTime=Math.max(0,hitTime-dt);setOpacity('hit',hitTime>0?1:0);damageFlash=Math.max(0,damageFlash-dt*.8);setOpacity('damage',Math.max(damageFlash,mode==='playing'&&health<30?.16:0));nukeFlashTime=Math.max(0,nukeFlashTime-dt*1.5);setOpacity('nukeFlash',nukeFlashTime);toastTime=Math.max(0,toastTime-dt);setOpacity('toast',toastTime>0?1:0);bannerTime=Math.max(0,bannerTime-dt);setOpacity('banner',bannerTime>0?1:0);
+updateReloadHud();combatHud.update(dt,player,lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(gunGroups[weapon].userData.muzzle);muzzleLight.intensity=flashTime>0?(weapon==='smg'?5:15):0;hitTime=Math.max(0,hitTime-dt);setOpacity('hit',hitTime>0?1:0);damageFlash=Math.max(0,damageFlash-dt*.8);setOpacity('damage',Math.max(damageFlash,mode==='playing'&&health<30?.16:0));nukeFlashTime=Math.max(0,nukeFlashTime-dt*1.5);setOpacity('nukeFlash',nukeFlashTime);toastTime=Math.max(0,toastTime-dt);setOpacity('toast',toastTime>0?1:0);bannerTime=Math.max(0,bannerTime-dt);setOpacity('banner',bannerTime>0?1:0);
 for(const l of lamps)l.light.intensity=l.base*(.95+Math.sin(elapsed*4+l.phase)*.04+Math.sin(elapsed*7.1+l.phase)*.015);fire.scale.y=.55+Math.sin(elapsed*8)*.08;stationBuilder.update(elapsed);for(const m of mist){m.position.x+=dt*.025;if(m.position.x>43)m.position.x=-43;}
 for(let i=0;i<rainPos.length;i+=3){rainPos[i+1]-=dt*9;if(rainPos[i+1]<0)rainPos[i+1]=18;if(rainPos[i]<player.x-22)rainPos[i]+=44;if(rainPos[i]>player.x+22)rainPos[i]-=44;if(rainPos[i+2]<player.z-22)rainPos[i+2]+=44;if(rainPos[i+2]>player.z+22)rainPos[i+2]-=44;}rainGeo.attributes.position.needsUpdate=true;
 lighting.setBlockerState((cellar.progress===1?'open':'closed')+':'+(graveyard.progress===1?'open':'closed')+(shed.progress===1?':shed-open':''));bloodPool.sync();markPool.sync();combatLights.update(effects,pickups,player);estateDetail.update(elapsed,dt);blackout.apply(worldEvents.darkness());environmentLights.update(camera.position,elapsed,player.y);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;lighting.prepare(elapsed);renderCleanFrame(renderer,scene,camera,viewCamera,rt,postScene,postCamera,gunRoot.visible||grenadeThrow.root.visible,world,weaponViewFov);}

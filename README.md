@@ -27,6 +27,14 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## New MP5 model (version 149)
+
+- **Rebuilt from reference photos.** The submachine gun is now a proper MP5: a stamped receiver with its side rib and ejection port, a cocking tube with the charging handle parked forward on the left, a slim tapered handguard and a hooded front sight ring. It has a narrow, curved extended magazine with a paddle release, an ambidextrous trigger group with an ergonomic grip and red/white selector markings, a rear diopter drum and sling loops.
+- **Suppressor and folding stock.** A full-length suppressor with a knurled mounting collar, machined seams and an end cap, and a skeletal folding stock with an open-loop buttplate.
+- **Holographic sight on a claw mount.** A wide-window holographic sight with a flat-topped hood, side dials, rear buttons, a battery cap and a warning label, sitting low on a claw mount. The front sight ring co-witnesses in the bottom of the window. Aiming alignment and the circle-dot reticle are unchanged.
+- **Suppressed muzzle flash.** The SMG's muzzle flash and light are much smaller, to match the suppressor.
+- Satin black steel and matte polymer finishes; the model stays under the M4's length and within the view-model budget (14 draw calls, about 7,800 triangles).
+
 ## Double-tap left to aim (version 148)
 
 - **New touch control.** Double-tap the left side of the screen (the movement side) to look down your gun sights. It works like the AIM button: double-tap again to lower the gun. The second tap still grabs the movement stick, so you can keep walking while aiming.

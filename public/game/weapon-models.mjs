@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {makeOptic} from './graphics.mjs?v=129';
+import {makeOptic} from './graphics.mjs?v=149';
 import {GLOCK_GRIP,glockSlideGeometry,glockStippleGeometry,glockGripPoint,glockRearPlateGeometry} from './glock-model-parts.mjs?v=117';
 import {weaponSurfaces,weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=87';
 
@@ -15,8 +15,11 @@ function getAssets(){
   m.canvas.color.setHex(0xffffff);m.canvas.vertexColors=true;
   m.pistolSlide=mat(0x373c3e,.48,.53);m.pistolFrame=mat(0x303436,.03,.9);
   m.sightMark=new T.MeshBasicMaterial({color:0xdce8df});
+  // MP5 finishes (v149): satin black stamped steel, matte black polymer, and
+  // the painted fire-control markings beside the selector.
+  m.hkSteel=mat(0x2a3135,.6,.46);m.hkPolymer=mat(0x22282b,.04,.78);m.markRed=mat(0xb1281e,0,.6);m.markWhite=mat(0xd8d4c8,0,.7);
   const surface=weaponSurfaces();
-  for(const material of [m.metal,m.edge,m.pistolSlide,m.brass,m.copper]){material.map=surface.metal;material.roughnessMap=surface.metalFinish;}
+  for(const material of [m.metal,m.edge,m.pistolSlide,m.brass,m.copper,m.hkSteel]){material.map=surface.metal;material.roughnessMap=surface.metalFinish;}
   m.wood.color.setHex(0xffffff);m.wood.map=surface.wood;m.wood.roughnessMap=surface.woodFinish;m.wood.bumpMap=surface.woodFinish;m.wood.bumpScale=.00018;
   assets={m,box:new T.BoxGeometry(1,1,1),sphere:new T.SphereGeometry(1,14,10),circle:new T.CircleGeometry(1,16),cylinder:new T.CylinderGeometry(1,1,1,20),cone:new T.ConeGeometry(1,1,12),profiles:new Map(),contours:new Map(),rings:new Map(),tubes:new Map(),openMaterials:new Map()};
   return assets;
@@ -275,37 +278,83 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
     }
     muzzlePoint=muzzle(-.81,.022,.026);forehand=-.427;
   }else if(type==='smg'){
-    cylinder(0,.014,-.102,.049,.30,m.metal,'Stamped tubular receiver');
-    profile('MP5 trigger housing',[[-.17,-.011],[.105,-.011],[.117,-.074],[.042,-.077],[.014,-.10],[-.148,-.104]],.088,m.polymer,.004);
-    grip(.052);trigger(.002);pins([-.136,.087],-.055,.047);
-    cylinder(0,.04,-.348,.022,.225,m.metal,'Cocking tube');
-    box(-.042,.041,-.363,.009,.014,.073,m.black,'Charging handle slot');
-    cylinder(-.054,.036,-.351,.01,.046,m.edge,'MP5 charging handle','x');
-    profile('Tapered polymer forearm',[[-.445,.013],[-.232,.014],[-.231,-.073],[-.264,-.11],[-.421,-.09],[-.451,-.055]],.094,m.polymer,.006);
-    for(const side of [-1,1])for(let i=0;i<7;i++)box(side*.049,-.06,-.415+i*.024,.004,.05,.005,m.rubber,'Forearm grip rib');
-    ejection(-.025,.075,.018,.052);
-    box(-.049,-.021,.079,.008,.029,.010,m.edge,'MP5 selector lever').rotation.x=-.43;
-    cylinder(0,-.109,-.091,.007,.063,m.metal,'Ambidextrous paddle magazine release','x');
-    box(0,-.124,-.077,.018,.018,.027,m.black,'Magazine release paddle');
+    // MP5 (v149), after the reference photos: stamped receiver with its side
+    // rib, cocking tube and hooded front sight, slim tapered handguard, narrow
+    // curved extended (40-round) magazine, ambidextrous trigger group, a full-length
+    // suppressor, a skeletal folding stock and a claw-mounted holographic sight.
+    const S=m.hkSteel,P=m.hkPolymer;
+    contour('MP5 stamped receiver',[[-.232,.030,.034,.044],[-.222,.027,.050,.064],[-.205,.026,.053,.068],[.066,.026,.053,.068],[.078,.026,.047,.060]],S);
     for(const side of [-1,1]){
-      box(side*.046,-.010,-.106,.002,.003,.244,m.black,'Stamped receiver seam');
-      screw(side*.047,-.040,.094,'Trigger pack retaining pin');
-      screw(side*.048,-.044,-.421,'Forearm retaining pin');
+      box(side*.0262,.036,-.075,.002,.007,.255,m.black,'Stamped receiver rib');
+      box(side*.0262,.012,-.075,.0016,.002,.255,m.black,'Receiver lower seam');
+      screw(side*.0266,.002,-.205,'Front trunnion rivet');screw(side*.0266,.002,.058,'Rear receiver rivet');
     }
-    for(const side of [-1,1])cylinder(side*.047,-.004,.194,.01,.231,m.metal,'Retractable stock rail');
-    profile('Retractable stock butt',[[.282,.024],[.322,.024],[.337,-.139],[.306,-.156],[.287,-.119]],.093,m.polymer,.005);
-    box(0,-.062,.34,.1,.18,.017,m.rubber,'Curved stock pad');
-    for(let i=0;i<5;i++)box(0,-.121+i*.030,.350,.074,.004,.003,m.black,'SMG buttpad groove');
-    cylinder(0,-.009,.071,.051,.010,m.black,'Stock locking collar');sling(-.052,-.047,.305,'SMG stock sling loop');
-    profile('Extended magazine',[[-.16,-.077],[-.097,-.077],[-.095,-.159],[-.122,-.249],[-.163,-.314],[-.231,-.298],[-.176,-.20]],.047,m.black,.004);
-    for(const side of [-1,1])for(let i=0;i<3;i++)cylinder(side*.024,-.151-i*.047,-.139-i*.017,.003,.002,m.edge,'Magazine witness hole','x');
-    box(0,-.302,-.191,.057,.016,.068,m.metal,'Curved SMG magazine floorplate').rotation.x=-.38;
-    cylinder(0,.008,-.469,.016,.075,m.metal,'Tri-lug barrel');for(let i=0;i<3;i++)box(Math.sin(i*2*Math.PI/3)*.022,.008+Math.cos(i*2*Math.PI/3)*.022,-.486,.012,.011,.012,m.edge,'Barrel lug');
-    ring(0,.083,-.451,.023,.003,m.metal,'Front sight hood');box(0,.047,-.451,.012,.048,.025,m.black,'Front sight base');
-    box(0,.072,-.451,.005,.023,.008,m.black,'Hooded front sight post');
-    cylinder(0,.074,.025,.017,.022,m.black,'Rear diopter drum');box(0,.060,.025,.045,.012,.045,m.metal,'Diopter sight saddle');
-    add(a.circle,m.rubber,0,.079,.0425,[.004,.004,1],'Diopter rear aperture');
-    rail(-.066,.148,.084,.053);muzzlePoint=muzzle(-.536,.021,.008);forehand=-.337;
+    ejection(-.062,.058,.030,.0255);
+    // Cocking tube over the barrel, with the charging handle parked forward on the left.
+    cylinder(0,.046,-.348,.0155,.244,S,'Cocking tube');
+    box(-.0152,.046,-.322,.003,.006,.17,m.black,'Charging handle slot');
+    cylinder(-.028,.046,-.398,.0045,.026,m.edge,'MP5 charging handle stem','x');
+    ell(-.043,.048,-.401,.008,.010,.008,P,'MP5 charging handle knob');
+    // Slim tapered polymer handguard: waisted in the middle, lipped at both ends.
+    contour('MP5 slim handguard',[[-.432,.006,.040,.066],[-.424,.007,.051,.083],[-.400,.007,.052,.085],[-.330,.008,.048,.080],[-.262,.009,.050,.082],[-.240,.010,.055,.086],[-.236,.012,.050,.078]],P);
+    for(const side of [-1,1])screw(side*.026,-.012,-.405,'Handguard retaining pin');
+    // Front sight: a post inside a round hood on the cocking tube.
+    box(0,.020,-.460,.028,.060,.022,S,'Front sight housing');
+    box(0,.066,-.460,.008,.014,.012,S,'Front sight hood stem');
+    ring(0,.078,-.460,.0145,.0028,S,'Front sight hood ring',8,28);
+    box(0,.074,-.460,.003,.018,.004,m.black,'Front sight post');
+    cylinder(0,.006,-.476,.010,.020,S,'Tri-lug barrel stub');
+    for(let i=0;i<3;i++){const a=i*2*Math.PI/3;box(Math.sin(a)*.012,.006+Math.cos(a)*.012,-.476,.006,.005,.012,m.edge,'Barrel lug');}
+    // Suppressor: knurled mounting collar, long can with machined seams, end cap.
+    cylinder(0,.006,-.497,.0205,.032,m.black,'Suppressor mounting collar');
+    for(let i=0;i<10;i++){const a=i*Math.PI/5;box(Math.sin(a)*.0208,.006+Math.cos(a)*.0208,-.497,.003,.003,.024,m.edge,'Collar knurling');}
+    cylinder(0,.006,-.618,.0235,.210,m.black,'Suppressor tube');
+    for(const z of [-.530,-.690])ring(0,.006,z,.0236,.0009,P,'Suppressor tube seam',4,32);
+    cylinder(0,.006,-.729,.0222,.012,m.black,'Suppressor end cap');
+    ring(0,.006,-.735,.0185,.0016,m.edge,'Suppressor cap chamfer',4,28);
+    cylinder(0,.006,-.7355,.0065,.002,m.rubber,'Suppressor exit bore');
+    // Magazine well, paddle release and the narrow curved magazine (the
+    // game's SMG holds 40, so it keeps its 'Extended magazine' name).
+    box(0,-.020,-.052,.037,.030,.054,S,'Magazine well');
+    const paddle=box(0,-.040,-.020,.020,.007,.016,P,'Paddle magazine release');paddle.rotation.x=.35;
+    cylinder(.022,-.020,-.026,.0045,.006,m.edge,'Push-button magazine release','x');
+    profile('Extended magazine',[[-.074,-.032],[-.032,-.032],[-.033,-.100],[-.040,-.160],[-.053,-.218],[-.066,-.266],[-.110,-.262],[-.097,-.214],[-.085,-.155],[-.078,-.096]],.026,S,.003);
+    for(const side of [-1,1])profile('Magazine side rib',[[-.064,-.050],[-.046,-.050],[-.050,-.150],[-.064,-.215],[-.078,-.212],[-.066,-.150]],.004,S,.0008).position.x=side*.0125;
+    const floor=box(0,-.268,-.088,.030,.010,.050,m.black,'Magazine floorplate');floor.rotation.x=.12;
+    // Ambidextrous polymer trigger group with an ergonomic grip.
+    profile('MP5 trigger housing',[[-.030,-.005],[.078,-.005],[.085,-.013],[.085,-.044],[.074,-.051],[-.030,-.051]],.049,P,.004);
+    profile('MP5 ergonomic pistol grip',[[.034,-.046],[.079,-.046],[.093,-.072],[.105,-.122],[.114,-.176],[.112,-.198],[.098,-.208],[.066,-.205],[.058,-.188],[.058,-.165],[.050,-.148],[.051,-.128],[.044,-.108],[.045,-.088],[.034,-.066]],.044,P,.006);
+    for(const side of [-1,1])for(let i=0;i<4;i++)box(side*.0225,-.112-i*.024,.081+i*.006,.002,.003,.034,m.rubber,'Grip stippling band');
+    profile('Moulded trigger guard',[[-.031,-.046],[.036,-.046],[.036,-.058],[.025,-.101],[-.020,-.101],[-.031,-.075]],.020,P,.002,[[[-.022,-.054],[.027,-.054],[.018,-.093],[-.014,-.093],[-.022,-.072]]]);
+    const blade=box(0,-.070,.004,.008,.034,.008,m.edge,'Curved trigger');blade.rotation.x=-.25;
+    for(const side of [-1,1]){
+      cylinder(side*.026,-.024,.058,.006,.004,m.edge,'Selector pivot','x');
+      const lever=box(side*.028,-.032,.051,.004,.024,.010,m.edge,'Ambidextrous selector lever');lever.rotation.x=.55;
+      box(side*.0248,-.040,.032,.0012,.007,.006,m.markRed,'Red fire marking');
+      box(side*.0248,-.014,.040,.0012,.006,.005,m.markWhite,'White safe marking');
+      screw(side*.025,-.030,-.020,'Front trigger-group push pin');screw(side*.025,-.030,.074,'Rear trigger-group push pin');
+    }
+    // Rear diopter drum ahead of the stock hinge.
+    cylinder(0,.068,.060,.012,.014,S,'Rear diopter drum','y');
+    for(let i=0;i<6;i++){const a=i*Math.PI/3;box(Math.sin(a)*.0122,.068,.060+Math.cos(a)*.0122,.003,.012,.003,m.edge,'Diopter drum detent');}
+    // Claw mount clamping the receiver dimples, topped by the sight's base.
+    box(0,.069,-.060,.030,.020,.222,m.black,'Claw scope mount');
+    for(const z of [.028,-.012,-.108,-.148]){
+      box(0,.073,z,.064,.012,.017,m.black,'Claw mount bridge');
+      for(const side of [-1,1])box(side*.029,.058,z,.007,.028,.015,m.black,'Receiver claw');
+    }
+    cylinder(-.035,.071,-.060,.006,.010,m.edge,'Claw mount locking knob','x');
+    // Folding skeleton stock: hinge block, cut-out arm and an open-loop butt.
+    box(0,.022,.094,.054,.058,.022,m.black,'Stock hinge block');
+    for(const y of [.002,.042])cylinder(.028,y,.104,.006,.016,m.edge,'Stock hinge knuckle','y');
+    profile('Skeleton stock arm',[[.102,.038],[.296,.028],[.306,.016],[.306,-.012],[.102,-.024]],.016,m.black,.002,[
+      [[.120,.024],[.160,.023],[.150,-.012],[.114,-.012]],[[.176,.022],[.214,.021],[.204,-.013],[.168,-.013]],[[.230,.020],[.268,.019],[.260,-.011],[.222,-.012]]]);
+    for(let i=0;i<7;i++)box(0,.034-i*.0007,.150+i*.012,.018,.004,.004,m.edge,'Stock arm grip ridge');
+    profile('Open-loop buttplate',[[.290,.044],[.318,.044],[.327,.022],[.329,-.116],[.318,-.139],[.294,-.139],[.288,-.116],[.293,-.010]],.040,m.black,.003,[
+      [[.300,.020],[.315,.019],[.318,.002],[.318,-.108],[.311,-.124],[.300,-.122],[.298,-.100],[.302,-.030]]]);
+    box(0,-.048,.331,.034,.150,.005,m.rubber,'Buttplate pad');
+    sling(-.030,.020,.090,'Rear sling loop',true);sling(-.027,.012,-.425,'Front sling loop',true);
+    muzzlePoint=new T.Vector3(0,.006,-.742);forehand=-.337;
   }else{
     // Reference-inspired squad LMG: stamped receiver, belt tray, ventilated
     // shroud, soft ammunition pouch and collapsing stock. Static parts share
@@ -417,7 +466,7 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
       profile('LMG scope mount',[[-.192,.112],[-.192,.163],[-.158,.167],[-.080,.171],[-.041,.171],[-.041,.112]],.077,m.black,.001);
       for(const side of [-1,1])for(const z of [-.170,-.065])screw(side*.041,.145,z,'LMG quick-detach clamp');
     }else{
-      const [bottom,top]=({rifle:[.078,.130],shotgun:[.067,.130],smg:[.086,.132]})[type];
+      const [bottom,top]=({rifle:[.078,.130],shotgun:[.067,.130],smg:[.079,.094]})[type];
       box(0,(bottom+top)/2,-.07,.068,top-bottom,.098,m.black,'Optic riser');
       for(const side of [-1,1])for(const z of [-.101,-.04])screw(side*.037,(bottom+top)/2,z,'Optic clamp bolt');
     }
