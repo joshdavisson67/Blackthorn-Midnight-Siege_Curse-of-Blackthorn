@@ -25,7 +25,7 @@ function verifyLensSeating(model,repeat,type){
   // frame intruding into a corner (or a mismatched rectangular pane) fails here.
   const vertices=lens.geometry.attributes.position,forward=new T.Vector3(0,0,-1).applyQuaternion(sight.group.getWorldQuaternion(new T.Quaternion()));
   for(let i=0;type!=='bushmaster'&&i<vertices.count;i++){
-    const origin=sight.group.localToWorld(new T.Vector3(vertices.getX(i)*.96,vertices.getY(i)*.96,.15));
+    const edge=sight.group.worldToLocal(lens.localToWorld(new T.Vector3(vertices.getX(i)*.96,vertices.getY(i)*.96,0))),origin=sight.group.localToWorld(edge.setZ(.15));
     const hits=new T.Raycaster(origin,forward,0,.50).intersectObject(housing,true);
     assert.equal(hits.length,0,`${type} housing leaves its fitted lens perimeter open`);
   }
