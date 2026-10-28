@@ -27,6 +27,16 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Heavier shotgun build (version 155)
+
+- **A chunkier 12-gauge.** The combat shotgun was so slim it read as a rifle. It keeps the same length and layout, but is now built heavier:
+  - a wider receiver and a deeper lower receiver
+  - a taller, wider handguard
+  - a fatter ribbed muzzle device
+  - a broader, deeper box magazine and a bigger magazine well
+  - a thicker stock and butt pad
+- **Iron sights rise with the rail.** The flip-up sights still stand on the rail and the sight line moves up with them, so the glowing post dot still sits right under the point of aim.
+
 ## Faster shotgun (version 154)
 
 - **The shotgun fires 15% faster.** The delay between shots drops from 0.72 s to 0.626 s (1.39 → 1.60 shots per second). Damage, pellets, spread, magazine, reload and recoil are unchanged, so its damage per second rises by 15%.
