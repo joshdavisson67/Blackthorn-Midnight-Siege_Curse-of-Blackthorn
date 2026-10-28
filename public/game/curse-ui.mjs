@@ -1,4 +1,4 @@
-import {curseTitle,curseModifiers} from './curse.mjs?v=130';
+import {curseTitle,curseModifiers} from './curse.mjs?v=154';
 const percent=multiplier=>`+${Math.round((multiplier-1)*100)}%`;
 const effects=[['Enemy speed','speed'],['Essence & score earned','reward'],['Special enemy frequency','special'],['Enemy health','health'],['Enemies per wave','population']];
 // In-run curse readouts: the HUD badge and the pause-menu modifier panel.

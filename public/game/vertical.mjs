@@ -1,6 +1,6 @@
 import {MAUSOLEUM,inMausoleum,sarcophagusSupport} from './graveyard-layout.mjs?v=28';
 import {CELLAR,isCellarOpen,inCellar,cellarStairHeight,cellarSupport} from './cellar-layout.mjs?v=28';
-import {isBlocked,buildNavigation,colliderTop,COLLISION_SKIN} from './core.mjs?v=116';
+import {isBlocked,buildNavigation,colliderTop,COLLISION_SKIN} from './core.mjs?v=154';
 import {ESTATE_BOUNDS} from './estate-layout.mjs?v=28';
 export const UPPER_Y=4.3;
 export const PREVIOUS_UPPER_HEIGHT=2.32;

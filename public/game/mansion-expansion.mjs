@@ -1,10 +1,10 @@
-import {drawGraveyardMap} from './graveyard.mjs?v=131';
+import {drawGraveyardMap} from './graveyard.mjs?v=154';
 import * as T from './three.module.js';
 import {drawStationMarker} from './station-models.mjs?v=153';
 import {ESTATE_ROOMS} from './estate-layout.mjs?v=28';
 import {CELLAR} from './cellar-layout.mjs?v=28';
 import {SHED,SHED_FRONT} from './shed-layout.mjs?v=76';
-import {EXTERIOR_STAIRS} from './vertical.mjs?v=131';
+import {EXTERIOR_STAIRS} from './vertical.mjs?v=154';
 
 export function buildMansionExpansion({scene,world,M,box,mesh,cylinder,sphere,painting,sofa,bookcase,label,station,colliders,furnishings,rugs}){
   const fixtures=[],doors=[];
