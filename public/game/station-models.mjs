@@ -74,9 +74,9 @@ export function createModelKit(){
 export function createStationBuilder({world,colliders,solidMeshes,interactables,label}){
   const kit=createModelKit(),{m,b,ell,cy,ring}=kit,visuals=[];
   function add(def){
-    const {x,z,y=0,rotation=0,type,id}=def,weapon=type==='shotgun'||type==='smg'||type==='bushmaster',kind=type==='perk'?id:type==='powerup'?def.power:type;
+    const {x,z,y=0,rotation=0,type,id}=def,weapon=type==='shotgun'||type==='smg'||type==='bushmaster'||type==='glock',kind=type==='perk'?id:type==='powerup'?def.power:type;
     const g=new T.Group();g.name=def.name;g.position.set(x,y,z);g.rotation.y=rotation;world.add(g);
-    const accent=({iron:m.red,quick:m.green,eye:m.gold,stride:m.blue,ammo:m.green,armor:m.blue,shotgun:m.gold,smg:m.blue,bushmaster:m.gold,double:m.gold,grenades:m.violet,upgrade:m.violet})[kind];
+    const accent=({iron:m.red,quick:m.green,eye:m.gold,stride:m.blue,ammo:m.green,armor:m.blue,shotgun:m.gold,smg:m.blue,bushmaster:m.gold,glock:m.red,double:m.gold,grenades:m.violet,upgrade:m.violet})[kind];
     const bareForge=kind==='upgrade'&&def.pedestal===false,forgeOffset=bareForge?-.635:0;
     const w=weapon?1.7:type==='ammo'?1.45:type==='upgrade'?1.65:1.0,d=type==='upgrade'?(bareForge?.56:1.2):type==='ammo'?.65:weapon?.9:.8,h=weapon?1.85:type==='ammo'?1.65:type==='upgrade'?2.5+forgeOffset:2.3;
     if(!bareForge){
@@ -90,8 +90,19 @@ export function createStationBuilder({world,colliders,solidMeshes,interactables,
     function exhibit(model,pos,scale=1){model.position.set(...pos);model.scale.setScalar(scale);g.add(model);return model;}
     let core=null,collectible=null,nanoModel=null,nanoRank2Model=null,nanoRank3Model=null;const plates=[];
     if(weapon){
-      b(g,0,1.29,-.30,1.62,1.04,.10,m.wood,'Weapon rack back');for(const x of [-.52,.50])b(g,x,1.13,-.06,.07,.18,.34,m.brass,'Rack hook');exhibit(kit.gun(type),[0,1.35,.08],1.02);
+      b(g,0,1.29,-.30,1.62,1.04,.10,m.wood,'Weapon rack back');
+      if(type==='glock'){
+        // The pistol is shown larger than life so it reads at the same distance
+        // as the long guns, resting on two pegs with spare magazines below.
+        // Pegs sit under the frame ahead of the grip (frame underside is .133 below
+        // the exhibit centre at this scale), clear of the magazines below.
+        for(const x of [.07,.27])b(g,x,1.287,-.075,.05,.05,.35,m.brass,'Pistol rack peg');
+        exhibit(kit.gun(type),[0,1.45,.02],2.15);
+        for(let i=0;i<3;i++){const mag=b(g,-.26+i*.26,.885,.20,.085,.17,.05,m.iron,'Spare pistol magazine');mag.rotation.z=.12;b(g,-.26+i*.26-.01,.975,.20,.05,.02,.035,m.brass,'Pistol magazine round');}
+      }else{
+      for(const x of [-.52,.50])b(g,x,1.13,-.06,.07,.18,.34,m.brass,'Rack hook');exhibit(kit.gun(type),[0,1.35,.08],1.02);
       const rounds=type==='shotgun'?4:2;for(let i=0;i<rounds;i++)if(type==='shotgun')cy(g,-.3+i*.14,.87,.22,.043,.17,m.red,'Spare shell');else b(g,-.18+i*.3,.91,.23,.12,.24,.12,m.iron,'Spare magazine');
+      }
     }else if(kind==='ammo')exhibit(kit.ammo(),[0,.96,0],1.65);
     else if(kind==='armor'){
       collectible=exhibit(kit.armor(),[0,1.38,0],1.25);collectible.rotation.y=Math.PI;
@@ -157,6 +168,6 @@ export function createStationBuilder({world,colliders,solidMeshes,interactables,
   return {add,visuals,update,reset};
 }
 export function drawStationMarker(c,s,x,z){
-  const symbol=s.type==='bell'?'BL':s.type==='kennel'?'B':s.type==='mausoleumDoor'?'T':s.type==='nuke'?'NU':s.type==='lmg'?'LM':s.type==='armor'?(s.armorTier>0?'N'+Math.min(s.armorTier,3):'AR'):s.type==='cellarDoor'?'↓':s.type==='perk'?s.icon:s.type==='shotgun'?'SG':s.type==='smg'?'SM':s.type==='bushmaster'?'BM':s.type==='ammo'?'A':s.type==='upgrade'?'F':s.power==='double'?'×2':'∞';
+  const symbol=s.type==='bell'?'BL':s.type==='kennel'?'B':s.type==='mausoleumDoor'?'T':s.type==='nuke'?'NU':s.type==='lmg'?'LM':s.type==='armor'?(s.armorTier>0?'N'+Math.min(s.armorTier,3):'AR'):s.type==='cellarDoor'?'↓':s.type==='perk'?s.icon:s.type==='shotgun'?'SG':s.type==='smg'?'SM':s.type==='bushmaster'?'BM':s.type==='glock'?'GL':s.type==='ammo'?'A':s.type==='upgrade'?'F':s.power==='double'?'×2':'∞';
   c.fillStyle='#09151e';c.fillRect(x-8,z-7,16,14);c.strokeStyle=s.hex||'#d4b77a';c.lineWidth=1;c.strokeRect(x-8,z-7,16,14);c.fillStyle=s.hex||'#d4b77a';c.font='bold 9px Arial';c.textAlign='center';c.fillText(symbol,x,z+3);
 }

@@ -1,6 +1,6 @@
 import {drawGraveyardMap} from './graveyard.mjs?v=131';
 import * as T from './three.module.js';
-import {drawStationMarker} from './station-models.mjs?v=151';
+import {drawStationMarker} from './station-models.mjs?v=152';
 import {ESTATE_ROOMS} from './estate-layout.mjs?v=28';
 import {CELLAR} from './cellar-layout.mjs?v=28';
 import {SHED,SHED_FRONT} from './shed-layout.mjs?v=76';
@@ -196,5 +196,5 @@ export function drawEstateMap(canvas,player,interactables,lookYaw){
   c.fillStyle='#8ee0df';c.fillRect(px(CELLAR.x-CELLAR.stairWidth/2),pz(CELLAR.topZ),CELLAR.stairWidth*scale,(CELLAR.bottomZ-CELLAR.topZ)*scale);c.font='11px Arial';c.textAlign='left';c.fillText('STORM CELLAR · WAVE 10',px(CELLAR.x+3),pz(CELLAR.topZ));
   c.save();c.translate(px(player.x),pz(player.z));c.rotate(-lookYaw);c.fillStyle='#82f5df';c.beginPath();c.moveTo(0,-9);c.lineTo(-6,6);c.lineTo(6,6);c.closePath();c.fill();c.restore();
   c.fillStyle='#82f5df';c.textAlign='center';c.font='13px Arial';c.fillText('YOU',px(player.x),pz(player.z)+23);
-  c.fillStyle='#bdbbaa';c.font='12px Arial';c.fillText('FRONT COURTYARD',px(0),pz(24));c.fillStyle='#d7c6a4';c.font='16px Arial';c.fillText('GROUND FLOOR · BLACKTHORN ESTATE',canvas.width/2,24);c.font='12px Arial';c.fillText('A AMMO · SG SHOTGUN · SM SMG · F FORGE · NU NUKE · ×2 DAMAGE · ∞ GRENADES',canvas.width/2,canvas.height-18);
+  c.fillStyle='#bdbbaa';c.font='12px Arial';c.fillText('FRONT COURTYARD',px(0),pz(24));c.fillStyle='#d7c6a4';c.font='16px Arial';c.fillText('GROUND FLOOR · BLACKTHORN ESTATE',canvas.width/2,24);c.font='12px Arial';c.fillText('A AMMO · GL PISTOL · SG SHOTGUN · SM SMG · F FORGE · NU NUKE · ×2 DAMAGE · ∞ GRENADES',canvas.width/2,canvas.height-18);
 }

@@ -27,6 +27,13 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Courtyard pistol bench (version 152)
+
+- **New pistol bench beside the front door.** It mirrors the courtyard ammunition crate across the entrance, at the same distance from the door and the facade, under the east windows. The rack shows the Glock 21 on brass pegs above three spare magazines.
+- **Restocks the Glock for 250 essence.** Ammo works like every other ammo purchase: your current magazine is unchanged, any reload in progress continues, and the reserve includes enough rounds to leave the magazine and reserve full after reloading. Buying also switches you to the pistol.
+- **Free when full.** If the Glock is already topped up, the prompt shows FULL and the bench just switches you to the pistol without charging.
+- The bench appears on the ground-floor map as **GL**, and the Field Guide mentions it.
+
 ## Smaller MP5 sight and a smooth reload (version 151)
 
 - **Smaller holographic sight.** The MP5's sight is scaled to 84% so it sits in proportion with the slim MP5. It sits a little lower so its base still rests on the claw mount, and the reticle, sight alignment and front-sight co-witness are unchanged.
