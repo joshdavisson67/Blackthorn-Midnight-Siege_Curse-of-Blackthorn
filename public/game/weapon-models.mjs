@@ -11,6 +11,9 @@ let assets;
 const IRON_SIGHTS=new Set(['glock','shotgun']);
 // Rail top .026 (v155, chunkier receiver) plus the .036 flip-up sight height.
 export const SHOTGUN_SIGHT_HEIGHT=.062;
+// Whole-gun scale, applied once the model is built (v156: the MP5 is 15% larger,
+// same model). Sight height, muzzle and support-hand points scale with it.
+export const WEAPON_SCALE=Object.freeze({smg:1.15});
 function getAssets(){
   if(assets)return assets;
   const mat=(color,metalness,roughness)=>new T.MeshStandardMaterial({color,metalness,roughness});
@@ -534,7 +537,11 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
     for(const x of [-.035,-.012,.011])ell(x,-.133,forehand,.009,.008,.036,m.black,'Glove reinforcement');
   }
   const sight=optic&&!IRON_SIGHTS.has(type)?makeOptic(g,type,m.metal):null;
-  g.userData={weaponType:type,reference:references[type],body,parts,optic:sight,sightHeight:type==='glock'?.100:type==='shotgun'?SHOTGUN_SIGHT_HEIGHT:sight?.height??0,muzzle:muzzlePoint,forehand,slide,slideTime:0};
+  const k=WEAPON_SCALE[type]??1;g.scale.setScalar(k);
+  // Keep reticle marks at their usual on-screen size inside the larger sight.
+  if(k!==1&&sight)for(const mark of sight.marks)mark.scale.multiplyScalar(1/k);
+  const sightHeight=(type==='glock'?.100:type==='shotgun'?SHOTGUN_SIGHT_HEIGHT:sight?.height??0)*k;
+  g.userData={weaponType:type,reference:references[type],body,parts,optic:sight,sightHeight,muzzle:muzzlePoint.clone().multiplyScalar(k),forehand:forehand*k,scale:k,slide,slideTime:0};
   return g;
 }
 

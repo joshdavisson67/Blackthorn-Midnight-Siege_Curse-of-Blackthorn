@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {CELLAR,isCellarOpen} from './cellar-layout.mjs?v=28';
-import {createModelKit,drawStationMarker} from './station-models.mjs?v=155';
+import {createModelKit,drawStationMarker} from './station-models.mjs?v=156';
 import {configureArmorStation} from './armor.mjs?v=94';
 export function buildCellar({world,M,box,mesh,cylinder,label,colliders,solidMeshes,interactables,batchArticulated}){
   const {x:cx,z:cz,w,d,y,topZ,bottomZ,entryZ,stairWidth}=CELLAR;

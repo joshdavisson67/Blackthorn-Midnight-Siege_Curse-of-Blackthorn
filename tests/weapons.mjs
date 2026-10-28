@@ -63,7 +63,9 @@ export function verifyWeaponModels(qa,frames,listeners,gameCanvas){
     assert(sight.glass.material.opacity<=.04&&sight.glass.material.depthWrite===false);
     reports.push({type,meshes,triangles});listeners.mouseup({button:2});
   }
-  assert(lengths.smg<lengths.rifle&&lengths.rifle<lengths.shotgun&&lengths.shotgun<lengths.lmg,'Compact SMG, carbine, combat shotgun and heavy LMG have distinct proportions');
+  // v156: the MP5 was enlarged 15% at Josh's request, so it now outsizes the M4.
+  assert(lengths.rifle<lengths.shotgun&&lengths.shotgun<lengths.lmg&&lengths.smg<lengths.shotgun,'Carbine, combat shotgun and heavy LMG keep distinct proportions; the enlarged MP5 stays shorter than the shotgun');
+  const smg=createWeaponModel('smg');assert(Math.abs(smg.scale.x-1.15)<1e-9&&Math.abs(smg.userData.sightHeight/smg.userData.optic.height-1.15)<1e-9,'The MP5 is drawn 15% larger, with its sight height scaled to match');
   console.log('PASS: five distinct weapon silhouettes, matching centered exhibits, shared model/optic geometry, fitted lens contours and perimeter rays, seated optic mounts, 36 unobstructed optic aim rays, aligned shotgun iron sights, muzzle alignment and bounded view-model draw calls:',JSON.stringify(reports));qa.start();
 }
 
