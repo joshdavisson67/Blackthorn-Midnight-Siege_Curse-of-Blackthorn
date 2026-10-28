@@ -1,5 +1,5 @@
 import {enemyKind} from './core.mjs?v=154';
-export const FERAL=Object.freeze({unlockWave:7,chance:1/8,speedMultiplier:3,damageMultiplier:2});
+export const FERAL=Object.freeze({unlockWave:7,chance:1/8,speedMultiplier:1.75,damageMultiplier:2});
 export function chooseEnemyKind(wave,slot,roll=Math.random()){
   const kind=enemyKind(wave,slot);
   if(wave<FERAL.unlockWave||kind==='brute'||kind==='ashfang')return kind;

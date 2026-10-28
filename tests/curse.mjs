@@ -80,7 +80,7 @@ export function verifyCurse(qa,frames,listeners,elements,gameCanvas){
   try{
     const variants=[{}, {dog:true},{dog:true,rareDog:true},{feral:true},{brute:true}];
     for(const [i,flags] of variants.entries()){
-      const enemy=qa.makeZombie(-28+i*8,23,!!flags.brute,!!flags.dog,!!flags.rareDog,0,!!flags.feral),speed=flags.feral?3:flags.rareDog?RARE_DOG_SPEED_MULTIPLIER:flags.dog?DOG_SPEED_MULTIPLIER:flags.brute?.77:null;
+      const enemy=qa.makeZombie(-28+i*8,23,!!flags.brute,!!flags.dog,!!flags.rareDog,0,!!flags.feral),speed=flags.feral?1.75:flags.rareDog?RARE_DOG_SPEED_MULTIPLIER:flags.dog?DOG_SPEED_MULTIPLIER:flags.brute?.77:null;
       if(speed)assert(Math.abs(enemy.speed-base.speed*1.15*speed)<1e-7,'The speed bonus applies to every enemy type');else assert(enemy.speed>=base.speed*1.15*.85&&enemy.speed<=base.speed*1.15*1.15);
       const score=qa.get().totalScore,points=qa.get().points;qa.damageEnemy(enemy,100000,false);const earned=13+(flags.brute?138:63);assert.equal(qa.get().totalScore-score,earned);assert.equal(qa.get().points-points,earned,'All kills, including dogs/ferals/brutes, use the newly earned reward multiplier');
     }

@@ -1,5 +1,5 @@
 import {waveConfig} from './core.mjs?v=154';
-import {FERAL,chooseEnemyKind} from './feral.mjs?v=154';
+import {FERAL,chooseEnemyKind} from './feral.mjs?v=157';
 
 // The curse is a ladder (v130): each run is played at one chosen rank, and
 // defeating Sir Blackthorn at the highest unlocked rank unlocks the next.

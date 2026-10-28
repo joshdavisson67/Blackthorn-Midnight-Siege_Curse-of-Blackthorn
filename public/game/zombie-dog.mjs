@@ -5,7 +5,9 @@ import {ENEMY_SURFACE,markEnemySurface} from './enemy-surfaces.mjs?v=134';
 import {paint,tube,sweep,shard,uvWindow,pooledLump} from './enemy-sculpt.mjs?v=140';
 const clamp=T.MathUtils.clamp;
 export const DOG_SPEED_MULTIPLIER=1.25;
-export const RARE_DOG_SPEED_MULTIPLIER=1.5;
+// v157: Ashfang hounds and feral stalkers both run at 1.75x the wave's standard
+// zombie speed, so they climb with the same wave and curse progression.
+export const RARE_DOG_SPEED_MULTIPLIER=1.75;
 
 export function createZombieDogRig({rng=Math.random,rare=false}={}){
   const group=new T.Group(),root=new T.Group();group.add(root);root.position.set(0,.56,-.28);
