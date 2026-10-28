@@ -277,3 +277,6 @@ verifyGunAudio(qa,frames,elements,document);
 
 const {verifyReloadPose}=await import('./reload-pose.mjs');
 verifyReloadPose(qa,frames);
+
+const {verifyPistolBench}=await import('./pistol-bench.mjs');
+verifyPistolBench(qa,frames,elements);

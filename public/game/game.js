@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=143';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=151';
-import {createChangelog} from './changelog.mjs?v=151';
+import {createLeaderboard} from './leaderboard.mjs?v=152';
+import {createChangelog} from './changelog.mjs?v=152';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -14,7 +14,7 @@ import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnM
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
 import {buildGraveyard} from './graveyard.mjs?v=131';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
-import {buildCellar,drawCellarMap} from './cellar.mjs?v=151';
+import {buildCellar,drawCellarMap} from './cellar.mjs?v=152';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
 import {buildShed} from './shed.mjs?v=151';
 import * as T from './three.module.js';
@@ -25,20 +25,20 @@ import {suppressedShot} from './gun-audio.mjs?v=150';
 import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
-import {createStationBuilder} from './station-models.mjs?v=151';
+import {createStationBuilder} from './station-models.mjs?v=152';
 import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=151';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=87';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=151';
+import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=152';
 import {createEnemyAssets} from './enemy-assets.mjs?v=140';
-import {createCombatLights} from './combat-lights.mjs?v=151';
+import {createCombatLights} from './combat-lights.mjs?v=152';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=140';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=131';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=131';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=151';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=152';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=131';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=140';
 import {addEstateDetail} from './estate-detail.mjs?v=131';
@@ -50,7 +50,7 @@ import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses,configureForgeStation} from './soul-forge.mjs?v=118';
 import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=151';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=151';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=152';
 import {buildRotundaBell} from './rotunda-bell.mjs?v=130';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=131';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=135';
@@ -169,9 +169,11 @@ const stationBuilder=createStationBuilder({world,colliders,solidMeshes,interacta
 function perkStation(def,x=def.x,z=def.z,y=0){return stationBuilder.add({...def,x,z,y,type:'perk',modelCaption:def.desc});}
 // Quickhands backs onto the library partition; the previously aligned perks retain their facing.
 for(const def of perkDefs)perkStation({...def,rotation:def.id==='quick'?-Math.PI/2:def.id==='iron'?Math.PI/2:(def.id==='eye'||def.id==='stride')?Math.PI:0});
-function station(x,z,name,type,price,y=0,rotation=0){return stationBuilder.add({x,z,y,rotation,name,type,price,hex:type==='smg'?'#7aaff0':type==='ammo'?'#67efbb':'#e6bf61',modelCaption:type==='ammo'?'RESTOCK · ALL WEAPONS':type==='shotgun'?'M12 · CLOSE-RANGE STOPPING POWER':type==='bushmaster'?'15 ROUNDS · SEMI-AUTO · 10× SCOPE':'RAVEN · RAPID FIRE'});}
+function station(x,z,name,type,price,y=0,rotation=0){return stationBuilder.add({x,z,y,rotation,name,type,price,hex:type==='smg'?'#7aaff0':type==='ammo'?'#67efbb':type==='glock'?'#ef7969':'#e6bf61',modelCaption:type==='ammo'?'RESTOCK · ALL WEAPONS':type==='glock'?'.45 SIDEARM · RESTOCK PISTOL AMMO':type==='shotgun'?'M12 · CLOSE-RANGE STOPPING POWER':type==='bushmaster'?'15 ROUNDS · SEMI-AUTO · 10× SCOPE':'RAVEN · RAPID FIRE'});}
 function powerStation(x,z,power,y=0,rotation=0){const def=POWERUPS[power];return stationBuilder.add({x,z,y,rotation,type:'powerup',power,name:def.name,price:power==='double'?800:900,hex:def.hex,modelCaption:power==='double'?'THE TWOFOLD RELIC · 20 SECONDS':'THE ENDLESS ARSENAL · 12 SECONDS'});}
 station(-7,13.2,'AMMUNITION','ammo',350);
+// The pistol bench mirrors the courtyard ammunition crate across the front door (v152).
+station(7,13.2,'GLOCK 21 PISTOL','glock',250);
 station(-6.315,-8,'M12 SHOTGUN','shotgun',1200,0,-Math.PI/2);
 station(6.31,-5.3,'RAVEN SMG','smg',1500,0,Math.PI/2);
 const groundForge=stationBuilder.add({x:4.15,z:-10.65,name:'THE SOUL FORGE',type:'upgrade',pedestal:false,price:FORGE.prices[0],hex:'#c1a1ff',modelCaption:'2× BASE DAMAGE · +25% AMMO · 25% FASTER RELOAD'});point(4.15,2,-10.65,0xa474ff,8,8);
@@ -399,13 +401,13 @@ function reload(){const inv=inventory[weapon],w=weapons[weapon];if(mode!=='playi
 function finishReload(){const inv=inventory[weapon],needed=Math.max(0,ammoCapacity().mag-inv.ammo),n=Math.min(needed,inv.reserve);inv.ammo+=n;inv.reserve-=n;tone(500,.1,.05,'square');}
 
 function dropPickup(x,z,type,y=0){const m=powerupAssets.create(type);m.userData.lightingTransient=true;m.position.set(x,y+.85,z);world.add(m);pickups.push({mesh:m,type,y,life:20,phase:rand(0,6)});}
+// Include the missing magazine rounds in reserve, so a normal reload leaves
+// both compartments full. Repeated refills replace this allowance, not stack it.
+function restockTarget(k){const inv=inventory[k],capacity=ammoCapacity(k);return capacity.reserve+Math.max(0,capacity.mag-inv.ammo);}
+function restockWeapon(k){inventory[k].reserve=restockTarget(k);}
+function ammoFull(k){return inventory[k].reserve>=restockTarget(k);}
 function refillAmmo(){
-  for(const k in inventory)if(inventory[k].owned){
-    const inv=inventory[k],capacity=ammoCapacity(k);
-    // Include the missing magazine rounds in reserve, so a normal reload leaves
-    // both compartments full. Repeated refills replace this allowance, not stack it.
-    inv.reserve=capacity.reserve+Math.max(0,capacity.mag-inv.ammo);
-  }
+  for(const k in inventory)if(inventory[k].owned)restockWeapon(k);
   grenades=Math.min(4,grenades+1);
 }
 function grenade(){
@@ -720,7 +722,7 @@ function armorStationDescription(){
   const recharge=rank.regenDelay?`Regenerates ${rank.regenRate} shield/s after ${rank.regenDelay}s without a hit`:`Regenerates ${rank.regenRate} shield/s continuously · No hit delay`;
   return `${armorTier===maximum?'ACTIVE':'UPGRADE'} · ${recharge}${armorTier<maximum?' · Keeps current shield':''}`;
 }
-function stationDescription(s){if(s.type==='olivia')return bella.dragon?'Bella is a rat dragon now · Olivia is very proud':bella.unlocked?`She can turn Bella into a fire-breathing rat dragon · Bring ${EASTER_EGG.chips} bone chips from Bella’s kills`:'Free Bella from her kennel first';if(s.type==='kennel')return 'BELLA · White Maltipoo · Immortal companion · Follows you and bites undead within 12 yards of you';if(s.shedWeapon)return s.purchased?'M4 PURCHASED · PRESS 6 TO EQUIP':'30-ROUND FULL-AUTO · Includes full magazine and reserve · Keeps Soul Forge ranks';if(s.type==='shedDoor')return shed.open?'OPEN · Explore the groundskeeper’s workshop':'SEALED · Opens automatically at wave 7';if(s.type==='nuke')return s.used?'DEVICE SPENT':'ONE USE · Destroys all active undead across the estate · Wakes Sir Blackthorn';if(s.type==='mausoleumDoor')return graveyard.open?'OPEN · Enter the Blackthorn family tomb':'SEALED · Clear wave 20 to unlock';if(s.type==='cellarDoor')return isCellarOpen()?'OPEN · Descend to the underground armory':'LOCKED · Opens automatically at wave 10';if(s.type==='bushmaster')return inventory.bushmaster.owned?'WEAPON OWNED · PRESS 5 TO EQUIP':'15-round semi-auto · 2× M4 damage · 10× precision scope';if(s.type==='lmg')return '100-round belt · 3× combat scope · Taking it triggers frenzy for the rest of this wave';if(s.type==='armor')return armorStationDescription();if(s.type==='powerup')return s.power==='double'?'Double bullet damage for 20 seconds':'Unlimited throws for 12 seconds · 0.5s recovery after each throw';if(s.type==='perk')return perkOwned.has(s.id)?'PERK ACTIVE':s.desc;if(s.type==='ammo')return 'Restock every owned weapon · Reload to fill magazines · +1 grenade';if(s.type==='upgrade')return s.forgeMaximum?'FORGED 3/3 · '+forgeBonuses(FORGE.maxRank).damageMultiplier+'× base damage · Maximum rank · Switch weapons to forge another':'RANK '+(inventory[weapon].forgeRank+1)+' OF 3 · '+forgeBonuses(inventory[weapon].forgeRank+1).damageMultiplier+'× base damage · 25% faster reload · +25% magazine and reserve capacity';return inventory[s.type].owned?'WEAPON OWNED · USE NUMBER KEYS':'Unlock a new weapon for this run';}
+function stationDescription(s){if(s.type==='olivia')return bella.dragon?'Bella is a rat dragon now · Olivia is very proud':bella.unlocked?`She can turn Bella into a fire-breathing rat dragon · Bring ${EASTER_EGG.chips} bone chips from Bella’s kills`:'Free Bella from her kennel first';if(s.type==='kennel')return 'BELLA · White Maltipoo · Immortal companion · Follows you and bites undead within 12 yards of you';if(s.shedWeapon)return s.purchased?'M4 PURCHASED · PRESS 6 TO EQUIP':'30-ROUND FULL-AUTO · Includes full magazine and reserve · Keeps Soul Forge ranks';if(s.type==='shedDoor')return shed.open?'OPEN · Explore the groundskeeper’s workshop':'SEALED · Opens automatically at wave 7';if(s.type==='nuke')return s.used?'DEVICE SPENT':'ONE USE · Destroys all active undead across the estate · Wakes Sir Blackthorn';if(s.type==='mausoleumDoor')return graveyard.open?'OPEN · Enter the Blackthorn family tomb':'SEALED · Clear wave 20 to unlock';if(s.type==='cellarDoor')return isCellarOpen()?'OPEN · Descend to the underground armory':'LOCKED · Opens automatically at wave 10';if(s.type==='bushmaster')return inventory.bushmaster.owned?'WEAPON OWNED · PRESS 5 TO EQUIP':'15-round semi-auto · 2× M4 damage · 10× precision scope';if(s.type==='lmg')return '100-round belt · 3× combat scope · Taking it triggers frenzy for the rest of this wave';if(s.type==='armor')return armorStationDescription();if(s.type==='powerup')return s.power==='double'?'Double bullet damage for 20 seconds':'Unlimited throws for 12 seconds · 0.5s recovery after each throw';if(s.type==='perk')return perkOwned.has(s.id)?'PERK ACTIVE':s.desc;if(s.type==='ammo')return 'Restock every owned weapon · Reload to fill magazines · +1 grenade';if(s.type==='glock')return ammoFull('glock')?'PISTOL AMMO FULL · PRESS 1 TO EQUIP':'Restock the Glock 21 · Reload to fill the magazine';if(s.type==='upgrade')return s.forgeMaximum?'FORGED 3/3 · '+forgeBonuses(FORGE.maxRank).damageMultiplier+'× base damage · Maximum rank · Switch weapons to forge another':'RANK '+(inventory[weapon].forgeRank+1)+' OF 3 · '+forgeBonuses(inventory[weapon].forgeRank+1).damageMultiplier+'× base damage · 25% faster reload · +25% magazine and reserve capacity';return inventory[s.type].owned?'WEAPON OWNED · USE NUMBER KEYS':'Unlock a new weapon for this run';}
 function interact(){
   if(mode!=='playing')return;
   updateForgeStations();const s=closestStation();if(!s)return;
@@ -733,6 +735,7 @@ function interact(){
   if(s.type==='upgrade'&&s.forgeMaximum){notify('SOUL FORGE RANK 3 · THIS WEAPON IS FULLY FORGED');return;}
   if((s.type==='shotgun'||s.type==='smg'||s.type==='bushmaster')&&inventory[s.type].owned){selectWeapon(s.type);return;}
   if(s.shedWeapon&&s.purchased){selectWeapon('rifle');return;}
+  if(s.type==='glock'&&ammoFull('glock')){selectWeapon('glock');notify('PISTOL AMMUNITION IS FULL');return;}
   if(points<s.price){notify(`NEED ${s.price-points} MORE ESSENCE`);tone(110,.2,.03,'square');return;}
   points-=s.price;
   if(s.type==='kennel'){bella.unlock();nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('BELLA IS FREE · IMMORTAL COMPANION · 12-YARD GUARD RADIUS',5);tone(740,.12,.045,'triangle',1000);tone(940,.18,.035,'triangle',680);updateHud();return;}
@@ -747,6 +750,7 @@ function interact(){
   if(s.type==='perk'){perkOwned.add(s.id);if(s.id==='iron'){if(armorMax>0){armor*=200/maxHealth;armorMax=200;}maxHealth=200;health=200;}notify(`${s.name} ACQUIRED`);}
   else if(s.type==='powerup'){grantPowerup(s.power);}
   else if(s.type==='ammo'){refillAmmo();notify('AMMUNITION RESTOCKED');}
+  else if(s.type==='glock'){restockWeapon('glock');selectWeapon('glock');notify('GLOCK 21 AMMUNITION RESTOCKED');}
   else if(s.type==='upgrade'){inventory[weapon].forgeRank++;if(reloadLeft>0){reloadLeft*=FORGE.reloadMultiplier;reloadDuration*=FORGE.reloadMultiplier;}notify(`SOUL FORGE RANK ${inventory[weapon].forgeRank}/3 · ${forgeBonuses(inventory[weapon].forgeRank).damageMultiplier}× DAMAGE · +25% AMMO · 25% FASTER RELOAD`);}
   else {inventory[s.type].owned=true;reloadLeft=0;selectWeapon(s.type);notify(`${s.name} ACQUIRED`);}
   tone(440,.3,.09,'triangle',880);updateHud();
@@ -1185,7 +1189,7 @@ const vertical=updateActorHeight(player,jumpV,dt,grounded,1.8,PLAYER_RADIUS,coll
 if(mode==='playing'&&armorTier>=2&&armor<armorMax){const rank=armorRank(armorTier),regenSeconds=rank.regenDelay===0?dt:Math.min(dt,Math.max(0,runTime-lastHurt-rank.regenDelay));armor=Math.min(armorMax,armor+regenSeconds*rank.regenRate);}
 if(runTime-lastHurt>6&&health<maxHealth)health=Math.min(maxHealth,health+dt*11);doubleTime=Math.max(0,doubleTime-dt);grenadeTime=Math.max(0,grenadeTime-dt);
 if(mode==='playing'){if(waveDelay>0){waveDelay-=dt;if(waveDelay<=1e-9)startWave();}else{spawnTimer-=dt;if(toSpawn>0&&spawnTimer<=0&&!blackthornHoldsSpawns()&&zombies.filter(e=>!e.dead).length<CURSE_RULES.aliveLimit){spawnEnemy();spawnTimer=waveConfig(wave).interval*(frenzyWave===wave?.4:1);}if(toSpawn===0&&worldEvents.pendingSpawns===0&&boss.stage!=='waking'&&!zombies.some(e=>!e.dead)){if(wave===5&&!waveFiveFinale){beginWaveFiveFinale();}else{completeWave();}}}}
-const s=closestStation(),interaction=s?`<strong>${padPlay()?'B':touchControls?.enabled?'USE':'E'}</strong> ${s.name} <span style="color:#d4b77a">${s.type==='olivia'?(bella.dragon?'RAT DRAGON':`${Math.min(boneChips,EASTER_EGG.chips)}/${EASTER_EGG.chips} BONE CHIPS`):s.type==='bell'?'DORMANT':s.type==='mausoleumDoor'?(graveyard.open?'OPEN':'CLEAR WAVE 20'):s.type==='cellarDoor'?(isCellarOpen()?'OPEN':'WAVE 10'):s.type==='shedDoor'?(shed.open?'OPEN':'WAVE 7'):s.shedWeapon&&s.purchased?'OWNED':s.type==='upgrade'&&s.forgeMaximum?'MAX RANK':(s.type==='perk'&&perkOwned.has(s.id))||(s.type==='armor'&&s.used)?'ACTIVE':s.price===0?'FREE':s.price.toLocaleString()+' ESSENCE'}</span><small>${stationDescription(s)}</small>`:'';setMarkup('interaction',interaction);touchControls?.update({playing:true,aiming,canInteract:!!s,flashlight:flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>inventory[k]?.owned).length>1});
+const s=closestStation(),interaction=s?`<strong>${padPlay()?'B':touchControls?.enabled?'USE':'E'}</strong> ${s.name} <span style="color:#d4b77a">${s.type==='olivia'?(bella.dragon?'RAT DRAGON':`${Math.min(boneChips,EASTER_EGG.chips)}/${EASTER_EGG.chips} BONE CHIPS`):s.type==='bell'?'DORMANT':s.type==='mausoleumDoor'?(graveyard.open?'OPEN':'CLEAR WAVE 20'):s.type==='cellarDoor'?(isCellarOpen()?'OPEN':'WAVE 10'):s.type==='shedDoor'?(shed.open?'OPEN':'WAVE 7'):s.shedWeapon&&s.purchased?'OWNED':s.type==='glock'&&ammoFull('glock')?'FULL':s.type==='upgrade'&&s.forgeMaximum?'MAX RANK':(s.type==='perk'&&perkOwned.has(s.id))||(s.type==='armor'&&s.used)?'ACTIVE':s.price===0?'FREE':s.price.toLocaleString()+' ESSENCE'}</span><small>${stationDescription(s)}</small>`:'';setMarkup('interaction',interaction);touchControls?.update({playing:true,aiming,canInteract:!!s,flashlight:flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>inventory[k]?.owned).length>1});
 const indoors=player.y<-.3||inMausoleum(player.x,player.z)||inShed(player.x,player.z)||!!roomAt(player.x,player.z);const flight=stairAt(player.x,player.z);const location=inShed(player.x,player.z)&&player.y>-.3?'GROUNDSKEEPER’S SHED':player.y<-.3?'STORM CELLAR / UNDERGROUND ARMORY':flight?.side?upperLocation(player.x,player.z):player.y>2.15?'2ND FLOOR / '+upperLocation(player.x,player.z):flight?'GRAND STAIRCASE':estateLocation(player.x,player.z);const locationMarkup=`BLACKTHORN ESTATE <span> / ${location}</span>`;setMarkup('location',locationMarkup);rain.visible=!indoors;gunRoot.visible=true;
 scene.fog.density=baseFogDensity+(indoors?0:worldEvents.fogStrength()*(inGraveyard(player.x,player.z)?.049:.038));setOpacity('eventPulse',worldEvents.active('surge')?Math.max(0,1-worldEvents.age/1.4)*.24:0);
 updatePistolSlide(gunGroups.glock,dt,inventory.glock.ammo);

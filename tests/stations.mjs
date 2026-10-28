@@ -12,7 +12,7 @@ export function verifyStations(qa,frames,elements){
   assert(!upper.some(s=>s.type==='upgrade'),'The upstairs forge has moved to the storm cellar');
   assert.equal(upper.filter(s=>s.type==='ammo').length,2);
   assert.equal(upper.filter(s=>s.type==='armor').length,1);
-  const kinds=new Set(state.stationBuilder.visuals.map(v=>v.station.modelKind));assert.equal(kinds.size,12,'Perks, weapons, ammunition, armor, timed powers and forge each need a model theme');
+  const kinds=new Set(state.stationBuilder.visuals.map(v=>v.station.modelKind));assert.equal(kinds.size,13,'Perks, weapons (including the pistol bench), ammunition, armor, timed powers and forge each need a model theme');
   const titles=state.stationBuilder.visuals.map(v=>v.parts.map(p=>p.name).join('|')).join('|');
   for(const part of ['Heart lobe','Quick-change magazine','Deadeye target','Wing feather','Ribbed pump','Extended magazine','Cartridge','Pull ring','Raised numeral 2','Anvil face','Armor plate'])assert(titles.includes(part),`Missing themed exhibit: ${part}`);
   state.nav.rebuild(STAIR.x,-10.5,UPPER_Y);
