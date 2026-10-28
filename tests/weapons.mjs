@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from '../public/game/three.module.js';
 import {createWeaponModel,SHOTGUN_SIGHT_HEIGHT} from '../public/game/weapon-models.mjs';
+import {weapons} from '../public/game/core.mjs';
 import {createModelKit} from '../public/game/station-models.mjs';
 
 function verifyLensSeating(model,repeat,type){
@@ -73,6 +74,8 @@ function verifyShotgunIrons(qa,frames,listeners,gameCanvas,kit,lengths,reports){
   const model=createWeaponModel('shotgun'),repeat=createWeaponModel('shotgun');model.updateMatrixWorld(true);
   assert(model.userData.parts.every((p,i)=>p.geometry===repeat.userData.parts[i].geometry),'Repeated shotguns reuse cached geometry');
   assert(!model.userData.optic,'The shotgun has no red dot');
+  // v154: fire rate +15% (0.72 s between shots → 0.626 s, 1.39 → 1.60 shots/s).
+  assert(Math.abs(.72/weapons.shotgun.rate-1.15)<.002,'Shotgun fires 15% faster than its original 0.72 s cycle');
   assert(!model.userData.parts.some(p=>/Optic riser|Optic clamp/.test(p.name)),'No optic riser is left on the rail');
   assert.equal(model.userData.sightHeight,SHOTGUN_SIGHT_HEIGHT);
   const part=name=>model.userData.parts.find(p=>p.name===name),bounds=name=>new T.Box3().setFromObject(part(name));

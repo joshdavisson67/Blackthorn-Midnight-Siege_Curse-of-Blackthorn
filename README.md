@@ -27,6 +27,10 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Faster shotgun (version 154)
+
+- **The shotgun fires 15% faster.** The delay between shots drops from 0.72 s to 0.626 s (1.39 → 1.60 shots per second). Damage, pellets, spread, magazine, reload and recoil are unchanged, so its damage per second rises by 15%.
+
 ## New combat shotgun with iron sights (version 153)
 
 - **Rebuilt from reference photos.** The M12 is now a magazine-fed combat shotgun:

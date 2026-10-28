@@ -5,7 +5,7 @@ export const weapons={
   glock:{name:'GLOCK 21 / .45 PISTOL',mag:13,reserve:78,damage:32,rate:.24,reload:1.8,pellets:1,spread:.018,aimSpread:.002,semiAuto:true},
   lmg:{name:'WARDEN / BELT-FED LMG',mag:100,reserve:500,damage:62,rate:.09,reload:5.2,pellets:1,spread:.021,zoom:3},
   rifle:{name:'M4 / ASSAULT RIFLE',mag:30,reserve:180,damage:36,rate:.12,reload:2.3,pellets:1,spread:.013},
-  shotgun:{name:'M12 / COMBAT SHOTGUN',mag:8,reserve:56,damage:25,rate:.72,reload:2.8,pellets:8,spread:.072},
+  shotgun:{name:'M12 / COMBAT SHOTGUN',mag:8,reserve:56,damage:25,rate:.626,reload:2.8,pellets:8,spread:.072},
   smg:{name:'RAVEN / SUBMACHINE GUN',mag:40,reserve:240,damage:29,rate:.075,reload:2.0,pellets:1,spread:.02},
   bushmaster:{name:'AR-15 / .450 BUSHMASTER',mag:15,reserve:90,damage:72,rate:.25,reload:2.8,pellets:1,spread:.009,aimSpread:.0005,semiAuto:true,zoom:10}
 };

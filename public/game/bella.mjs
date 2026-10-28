@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
-import {isBlocked} from './core.mjs?v=116';
-import {UPPER_Y,moveActor,updateActorHeight,supportBelow,stairHeight} from './vertical.mjs?v=131';
+import {isBlocked} from './core.mjs?v=154';
+import {UPPER_Y,moveActor,updateActorHeight,supportBelow,stairHeight} from './vertical.mjs?v=154';
 import {cellarStairHeight} from './cellar-layout.mjs?v=28';
 
 export const BELLA=Object.freeze({price:670,radius:12*.9144,bodyRadius:.22,height:.82,damage:48,biteInterval:.9,biteReach:.95,x:-30.3,z:-10.8,y:UPPER_Y,
