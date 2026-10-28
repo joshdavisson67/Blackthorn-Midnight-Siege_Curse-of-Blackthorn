@@ -1,16 +1,19 @@
 import * as T from './three.module.js';
-import {makeOptic} from './graphics.mjs?v=151';
+import {makeOptic} from './graphics.mjs?v=153';
 import {GLOCK_GRIP,glockSlideGeometry,glockStippleGeometry,glockGripPoint,glockRearPlateGeometry} from './glock-model-parts.mjs?v=117';
-import {weaponSurfaces,weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=87';
+import {weaponSurfaces,weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=153';
 
 // One set of meshes/materials supplies both the first-person guns and exhibits.
 // The profiles are visual game assets, with forward along negative Z.
-const references={glock:'Glock 21 .45 pistol',rifle:'M4 carbine',shotgun:'Walnut pump shotgun',smg:'MP5-style submachine gun',lmg:'M249-style squad automatic weapon',bushmaster:'AR-15 .450 Bushmaster precision rifle'};
+const references={glock:'Glock 21 .45 pistol',rifle:'M4 carbine',shotgun:'Magazine-fed combat shotgun',smg:'MP5-style submachine gun',lmg:'M249-style squad automatic weapon',bushmaster:'AR-15 .450 Bushmaster precision rifle'};
 let assets;
+// Guns aimed with their own iron sights instead of a mounted optic (the shotgun since v153).
+const IRON_SIGHTS=new Set(['glock','shotgun']);
+export const SHOTGUN_SIGHT_HEIGHT=.054;
 function getAssets(){
   if(assets)return assets;
   const mat=(color,metalness,roughness)=>new T.MeshStandardMaterial({color,metalness,roughness});
-  const m={metal:mat(0x47515a,.78,.42),edge:mat(0x68747b,.8,.36),black:mat(0x171e23,.25,.7),polymer:mat(0x303a3d,.08,.8),rubber:mat(0x1d2729,0,.92),wood:mat(0x946647,.02,.64),brass:mat(0xb39558,.7,.37),copper:mat(0x977254,.62,.44),shell:mat(0x873a2b,.1,.66),canvas:mat(0x59624b,0,.95),glove:mat(0x465048,0,.94)};
+  const m={metal:mat(0x47515a,.78,.42),edge:mat(0x68747b,.8,.36),black:mat(0x171e23,.25,.7),polymer:mat(0x303a3d,.08,.8),rubber:mat(0x1d2729,0,.92),brass:mat(0xb39558,.7,.37),copper:mat(0x977254,.62,.44),shell:mat(0x873a2b,.1,.66),canvas:mat(0x59624b,0,.95),glove:mat(0x465048,0,.94)};
   m.olive=mat(0x62684d,.12,.72);
   m.canvas.color.setHex(0xffffff);m.canvas.vertexColors=true;
   m.pistolSlide=mat(0x373c3e,.48,.53);m.pistolFrame=mat(0x303436,.03,.9);
@@ -18,9 +21,10 @@ function getAssets(){
   // MP5 finishes (v149): satin black stamped steel, matte black polymer, and
   // the painted fire-control markings beside the selector.
   m.hkSteel=mat(0x2a3135,.6,.46);m.hkPolymer=mat(0x22282b,.04,.78);m.markRed=mat(0xb1281e,0,.6);m.markWhite=mat(0xd8d4c8,0,.7);
+  // Combat shotgun finishes (v153): black anodised aluminium and matte stock polymer.
+  m.anodized=mat(0x23282b,.35,.56);m.stockPolymer=mat(0x202528,.03,.84);
   const surface=weaponSurfaces();
-  for(const material of [m.metal,m.edge,m.pistolSlide,m.brass,m.copper,m.hkSteel]){material.map=surface.metal;material.roughnessMap=surface.metalFinish;}
-  m.wood.color.setHex(0xffffff);m.wood.map=surface.wood;m.wood.roughnessMap=surface.woodFinish;m.wood.bumpMap=surface.woodFinish;m.wood.bumpScale=.00018;
+  for(const material of [m.metal,m.edge,m.pistolSlide,m.brass,m.copper,m.hkSteel,m.anodized]){material.map=surface.metal;material.roughnessMap=surface.metalFinish;}
   assets={m,box:new T.BoxGeometry(1,1,1),sphere:new T.SphereGeometry(1,14,10),circle:new T.CircleGeometry(1,16),cylinder:new T.CylinderGeometry(1,1,1,20),cone:new T.ConeGeometry(1,1,12),profiles:new Map(),contours:new Map(),rings:new Map(),tubes:new Map(),openMaterials:new Map()};
   return assets;
 }
@@ -243,40 +247,81 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
     for(const side of [-1,1])box(side*.060,-.025,-.046,.002,.003,.269,m.black,'Upper and lower receiver seam');
     sling(-.061,-.032,start+.020,'Front handguard sling socket');
   }else if(type==='shotgun'){
-    profile('Rounded pump shotgun receiver',[[-.222,-.066],[-.222,.045],[-.187,.068],[.081,.068],[.13,.037],[.116,-.058],[.045,-.073]],.11,m.metal,.006);
-    contour('Walnut shoulder stock',[[.095,-.006,.066,.062],[.13,-.027,.071,.12],[.17,-.063,.074,.156],[.203,-.088,.071,.162],[.24,-.066,.077,.138],[.28,-.062,.087,.156],[.36,-.066,.097,.188],[.42,-.089,.10,.236],[.444,-.092,.098,.22]],m.wood);
-    box(0,-.093,.451,.098,.228,.021,m.rubber,'Stock recoil pad').rotation.x=-.11;trigger(.047);
-    for(let i=0;i<7;i++)box(0,-.178+i*.028,.464,.076,.004,.003,m.black,'Recoil pad traction groove');
+    // Magazine-fed combat shotgun (v153), after the reference photos: flat-top
+    // receiver with a full-length rail, a slim slotted handguard, a long ribbed
+    // muzzle device, a 12-gauge box magazine, a squared trigger guard, a
+    // left-side knurled charging handle and a hunter-style stock with an
+    // adjustable cheek riser. Flip-up iron sights replace the old red dot.
+    const A=m.anodized,P=m.stockPolymer,S=SHOTGUN_SIGHT_HEIGHT;
+    profile('Shotgun upper receiver',[[.064,.006],[-.242,.006],[-.242,-.030],[.064,-.030]],.058,A,.003);
+    profile('Shotgun lower receiver',[[.060,-.028],[-.232,-.028],[-.232,-.058],[-.218,-.072],[.060,-.072]],.056,A,.003);
+    rail(-.301,.718,.012,.040);
     for(const side of [-1,1]){
-      const panel=profile('Walnut grip checkering inset',[[.135,-.040],[.177,-.068],[.199,-.124],[.170,-.125],[.143,-.097]],.001,m.black,.0003);panel.position.x=side*.037;
-      for(let i=0;i<6;i++)box(side*.039,-.066-i*.008,.164+i*.003,.001,.003,.019,m.wood,'Fine stock checkering');
+      box(side*.0295,-.029,-.085,.0015,.003,.29,m.black,'Receiver split line');
+      box(side*.0295,-.009,-.112,.0015,.009,.17,m.black,'Charging handle slot');
     }
-    ejection(-.083,.133,.001,.057);pins([-.142,.029],-.03,.058);
-    cylinder(0,.026,-.513,.021,.565,m.metal,'Shotgun barrel');
-    cylinder(0,-.038,-.491,.024,.53,m.black,'Tubular magazine');
-    cylinder(0,-.038,-.763,.029,.028,m.edge,'Magazine cap');
-    contour('Ribbed pump',[[-.579,-.055,.077,.077],[-.563,-.055,.097,.101],[-.543,-.055,.108,.119],[-.33,-.055,.108,.119],[-.309,-.055,.097,.101],[-.296,-.055,.077,.077]],m.wood);
-    for(let i=0;i<10;i++){
-      const r=ring(0,-.05,-.55+i*.023,.056,.0025,m.black,'Pump groove');r.scale.y=.94;
+    ejection(-.070,.072,-.008,.0295);pins([.040,-.205],-.042,.0285);
+    // Knurled charging handle on the left, riding in its slot.
+    cylinder(-.038,-.009,-.040,.004,.018,m.edge,'Charging handle stem','x');
+    cylinder(-.053,-.009,-.040,.0085,.022,m.edge,'Knurled charging handle','x');
+    for(const x of [-.047,-.053,-.059])ring(x,-.009,-.040,.0088,.0011,m.black,'Charging handle knurl').rotation.y=Math.PI/2;
+    // Controls: ambidextrous safety, bolt release, paddle magazine release.
+    for(const side of [-1,1]){cylinder(side*.030,-.046,.036,.007,.004,m.edge,'Safety selector','x');box(side*.032,-.040,.030,.003,.004,.016,m.edge,'Safety selector lever');}
+    box(-.0305,-.050,-.080,.003,.022,.010,m.edge,'Bolt release lever');
+    const paddle=box(0,-.083,-.092,.016,.020,.006,m.edge,'Paddle magazine release');paddle.rotation.x=.35;
+    // Flared magazine well and a ribbed 12-gauge box magazine.
+    box(0,-.079,-.157,.066,.014,.126,A,'Flared magazine well');
+    profile('Shotgun box magazine',[[-.104,-.080],[-.212,-.080],[-.217,-.258],[-.099,-.258]],.046,P,.003);
+    for(const side of [-1,1])for(let i=0;i<4;i++)box(side*.0235,-.165,-.124-i*.024,.003,.150,.007,P,'Magazine side rib');
+    box(0,-.263,-.158,.052,.010,.126,m.black,'Magazine floorplate');
+    // Squared trigger guard and trigger.
+    profile('Squared trigger guard',[[.058,-.072],[.058,-.124],[-.014,-.124],[-.014,-.072],[-.006,-.072],[-.006,-.116],[.050,-.116],[.050,-.072]],.012,m.black,.0015);
+    box(0,-.088,.018,.007,.028,.006,m.edge,'Shotgun trigger').rotation.x=-.2;
+    // Hunter-style stock: sloped comb, integral grip, deep butt, cheek riser.
+    profile('Hunter-style shoulder stock',[[.058,.004],[.100,-.002],[.160,-.026],[.215,-.034],[.270,-.025],[.340,-.020],[.462,-.018],[.474,-.026],[.474,-.204],[.462,-.214],[.400,-.208],[.320,-.170],[.262,-.130],[.205,-.120],[.172,-.134],[.152,-.168],[.140,-.186],[.104,-.184],[.088,-.150],[.072,-.105],[.062,-.076]],.060,P,.008);
+    for(const side of [-1,1])for(let i=0;i<5;i++)box(side*.031,-.104-i*.014,.096+i*.009,.002,.004,.034,m.rubber,'Grip texture band');
+    box(0,-.115,.479,.064,.188,.012,m.rubber,'Stock butt pad');
+    for(let i=0;i<8;i++)box(0,-.030-i*.022,.486,.058,.004,.003,m.black,'Butt pad rib');
+    box(0,-.012,.385,.050,.012,.17,P,'Adjustable cheek riser');
+    for(const side of [-1,1])for(const z of [.340,.405]){
+      cylinder(side*.034,-.040,z,.0075,.008,m.black,'Cheek riser knob','x');
+      box(side*.0305,-.070,z,.002,.044,.008,m.black,'Cheek riser adjustment slot');
     }
-    for(const side of [-1,1])box(side*.042,-.052,-.258,.01,.012,.19,m.edge,'Pump action bar');
-    box(0,.07,-.595,.01,.006,.41,m.metal,'Barrel sight rib');
-    for(const z of [-.405,-.525,-.65,-.76])box(0,.055,z,.009,.026,.008,m.metal,'Vented rib support');
-    ell(0,.077,-.785,.003,.004,.003,m.brass,'Front brass bead');
-    box(0,-.075,-.047,.070,.002,.105,m.black,'Recessed loading port');
-    box(0,-.077,-.043,.051,.002,.078,m.edge,'Cartridge elevator');
-    cylinder(-.063,-.071,.045,.006,.012,m.edge,'Pump action release','x');
-    box(0,.071,.088,.014,.006,.015,m.black,'Tang safety');
-    for(const [yy,r] of [[.026,.024],[-.038,.027]])ring(0,yy,-.689,r,.003,m.metal,'Barrel and magazine clamp');
-    box(0,-.004,-.689,.020,.037,.007,m.metal,'Barrel clamp bridge');
-    sling(-.026,-.052,-.760,'Magazine cap sling swivel');sling(-.047,-.145,.366,'Stock sling swivel');
-    box(-.064,-.002,-.088,.022,.081,.23,m.black,'Shell carrier');
-    for(let i=0;i<5;i++){
-      cylinder(-.079,0,-.188+i*.047,.017,.072,m.shell,'Shell side saddle','y');
-      cylinder(-.079,-.039,-.188+i*.047,.018,.008,m.brass,'Shot shell base','y');
-      box(-.098,0,-.188+i*.047,.010,.018,.028,m.metal,'Shell carrier retaining clip');
+    sling(-.034,-.190,.440,'Stock QD sling swivel');
+    box(0,-.200,.370,.016,.016,.016,m.black,'Stock accessory stud');
+    // Slim slotted handguard with M-LOK slots and a barrel nut.
+    contour('Slim M-LOK handguard',[[-.240,-.0215,.058,.055],[-.640,-.0215,.058,.055],[-.652,-.0215,.052,.049],[-.660,-.0215,.044,.040]],A);
+    box(0,-.0215,-.244,.060,.057,.006,m.black,'Handguard barrel nut');
+    for(const side of [-1,1]){
+      for(const y of [-.007,-.033])for(const z of [-.570,-.606])box(side*.0292,y,z,.002,.008,.026,m.black,'M-LOK slot');
+      for(const z of [-.330,-.400,-.470])box(side*.0292,-.020,z,.002,.009,.044,m.black,'Handguard lightening slot');
+      screw(side*.0300,-.014,-.262,'Handguard clamp screw');
     }
-    muzzlePoint=muzzle(-.81,.022,.026);forehand=-.427;
+    for(const z of [-.40,-.47,-.54,-.61])box(0,-.0492,z,.012,.002,.026,m.black,'Underside M-LOK slot');
+    // Barrel shank and the long ribbed muzzle device.
+    cylinder(0,0,-.668,.0165,.020,A,'Barrel shank');
+    cylinder(0,0,-.745,.0235,.140,A,'Ribbed muzzle device');
+    for(let i=0;i<6;i++)ring(0,0,-.693-i*.022,.0235,.0016,m.black,'Muzzle device groove');
+    ring(0,0,-.815,.0205,.0032,m.edge,'Muzzle crown');
+    cylinder(0,0,-.8152,.0115,.002,m.black,'Shotgun bore');
+    // Flip-up iron sights on the rail (rail top .018). The rear aperture ring
+    // and the front post tip share the sight line at SHOTGUN_SIGHT_HEIGHT; the
+    // post stops just below it so the shot lands right above the post.
+    box(0,.024,.040,.040,.012,.034,m.black,'Rear sight base');
+    cylinder(.026,.024,.040,.006,.010,m.edge,'Rear sight clamp knob','x');
+    for(const side of [-1,1])box(side*.0143,.047,.040,.005,.034,.010,m.black,'Rear sight protective wing');
+    box(0,.0375,.040,.006,.015,.008,m.black,'Rear aperture stem');
+    ring(0,S,.040,.0105,.0018,m.black,'Rear aperture ring');
+    cylinder(.019,.033,.040,.0035,.007,m.edge,'Rear windage drum','x');
+    box(0,.024,-.632,.040,.012,.030,m.black,'Front sight base');
+    box(0,.036,-.632,.012,.012,.014,m.black,'Front sight tower');
+    for(const side of [-1,1])box(side*.0105,.046,-.632,.004,.032,.010,m.black,'Front sight protective ear');
+    box(0,(.042+S-.0008)/2,-.632,.0032,S-.0008-.042,.0035,m.black,'Front sight post');
+    cylinder(0,.033,-.632,.002,.044,m.edge,'Front sight cross pin','x');
+    // A small glowing dot on the post's rear face keeps the tip readable in the
+    // dark manor, just under the point of aim.
+    box(0,S-.0024,-.632+.0019,.0026,.0026,.0006,m.sightMark,'Front sight glow dot');
+    muzzlePoint=new T.Vector3(0,0,-.818);forehand=-.400;
   }else if(type==='smg'){
     // MP5 (v149), after the reference photos: stamped receiver with its side
     // rib, cocking tube and hooded front sight, slim tapered handguard, narrow
@@ -456,7 +501,7 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
   }
 
   // An opaque mount never crosses the existing open reticle sightline.
-  if(optic&&type!=='glock'){
+  if(optic&&!IRON_SIGHTS.has(type)){
     if(type==='bushmaster'){
       for(const z of [-.125,-.015]){
         box(0,.125,z,.072,.098,.029,m.black,'Precision scope mount');ring(0,.214,z,.048,.005,m.metal,'Scope mounting ring');
@@ -466,7 +511,7 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
       profile('LMG scope mount',[[-.192,.112],[-.192,.163],[-.158,.167],[-.080,.171],[-.041,.171],[-.041,.112]],.077,m.black,.001);
       for(const side of [-1,1])for(const z of [-.170,-.065])screw(side*.041,.145,z,'LMG quick-detach clamp');
     }else{
-      const [bottom,top]=({rifle:[.078,.130],shotgun:[.067,.130],smg:[.079,.094]})[type];
+      const [bottom,top]=({rifle:[.078,.130],smg:[.079,.094]})[type];
       box(0,(bottom+top)/2,-.07,.068,top-bottom,.098,m.black,'Optic riser');
       for(const side of [-1,1])for(const z of [-.101,-.04])screw(side*.037,(bottom+top)/2,z,'Optic clamp bolt');
     }
@@ -483,8 +528,8 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
     const arm=cylinder(-.12,-.223,forehand+.042,.043,.237,m.glove,'Support forearm','y');arm.rotation.z=-.55;
     for(const x of [-.035,-.012,.011])ell(x,-.133,forehand,.009,.008,.036,m.black,'Glove reinforcement');
   }
-  const sight=optic&&type!=='glock'?makeOptic(g,type,m.metal):null;
-  g.userData={weaponType:type,reference:references[type],body,parts,optic:sight,sightHeight:type==='glock'?.100:sight?.height??0,muzzle:muzzlePoint,forehand,slide,slideTime:0};
+  const sight=optic&&!IRON_SIGHTS.has(type)?makeOptic(g,type,m.metal):null;
+  g.userData={weaponType:type,reference:references[type],body,parts,optic:sight,sightHeight:type==='glock'?.100:type==='shotgun'?SHOTGUN_SIGHT_HEIGHT:sight?.height??0,muzzle:muzzlePoint,forehand,slide,slideTime:0};
   return g;
 }
 

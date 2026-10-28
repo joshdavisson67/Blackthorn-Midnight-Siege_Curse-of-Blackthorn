@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {createOpticReticle} from './reticles.mjs?v=116';
-import {weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=87';
+import {weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=153';
 export const VISUAL_BRIGHTNESS=1.15;
 export function stabilizeTexture(t){t.minFilter=T.LinearMipmapLinearFilter;t.magFilter=T.LinearFilter;t.generateMipmaps=true;t.anisotropy=16;return t;}
 export const TILE_METERS={wood:1.6,floor:1.6,stone:1.8,plaster:2.4,brick:1.8,cloth:.65,skin:.6,metal:.8,roof:1.8};

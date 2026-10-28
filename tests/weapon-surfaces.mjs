@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as T from '../public/game/three.module.js';
-import {weaponSurfaces,weaponSurfaceGeometry,WEAPON_SURFACE_BUDGET} from '../public/game/weapon-surfaces.mjs?v=87';
+import {weaponSurfaces,weaponSurfaceGeometry,WEAPON_SURFACE_BUDGET} from '../public/game/weapon-surfaces.mjs?v=153';
 import {createWeaponModel} from '../public/game/weapon-models.mjs';
 import {createModelKit} from '../public/game/station-models.mjs';
 
@@ -23,8 +23,9 @@ export function verifyWeaponSurfaces(qa,frames){
     for(let y=0;y<height;y++)for(let c=0;c<4;c++)assert.equal(data[y*width*4+c],data[(y*width+width-1)*4+c],'Left and right tile edges meet');
   }
   assert(bytes<=1024*1024&&bytes<=WEAPON_SURFACE_BUDGET.bytes,'All weapon maps including mipmaps fit within 1MiB');
-  for(const map of [surface.metal,surface.wood])assert.equal(map.colorSpace,T.SRGBColorSpace);
-  for(const map of [surface.metalFinish,surface.woodFinish])assert.equal(map.colorSpace,T.NoColorSpace,'Roughness and relief data remain linear');
+  assert.equal(surface.metal.colorSpace,T.SRGBColorSpace);
+  assert.equal(surface.metalFinish.colorSpace,T.NoColorSpace,'Roughness data remains linear');
+  assert.deepEqual(surface.textures,[surface.metal,surface.metalFinish],'Only the metal pair is built once the walnut shotgun is retired (v153)');
 
   const seen=new Set();
   for(const type of ['glock','rifle','shotgun','smg','lmg','bushmaster']){
@@ -35,9 +36,8 @@ export function verifyWeaponSurfaces(qa,frames){
       const material=mesh.material;
       assert(!material.displacementMap&&!material.normalMap,'Surface pass adds no geometry displacement or extra normal map');
       const maps=['map','roughnessMap','bumpMap'].map(k=>material[k]).filter(Boolean);
-      for(const map of maps){assert(textures.has(map),'Held guns and exhibits reuse the same four surface maps');seen.add(map);}
+      for(const map of maps){assert(textures.has(map),'Held guns and exhibits reuse the same shared surface maps');seen.add(map);}
       if(material.map===surface.metal)assert(material.roughnessMap===surface.metalFinish&&!material.bumpMap,'Metal uses only color and roughness samplers');
-      if(material.map===surface.wood)assert(material.roughnessMap===surface.woodFinish&&material.bumpMap===surface.woodFinish,'Walnut reuses its finish map for the existing shallow relief');
       assert(mesh.geometry.attributes.uv.array.every(Number.isFinite),'Updated grain UVs remain finite');
     });
     if(held.userData.optic)assert(!held.userData.optic.glass.material.map&&!held.userData.optic.dot.material.map,'Sight glass and aiming marks stay clean');
@@ -60,5 +60,5 @@ export function verifyWeaponSurfaces(qa,frames){
     const versions=[...actual].map(t=>t.version);qa.start();qa.holdSpawns();frames(120);
     assert.deepEqual([...actual].map(t=>t.version),versions,'Gameplay does not regenerate or re-upload surface data');
   }
-  console.log(`PASS: four shared opaque, seamless, mipmapped weapon maps (${(bytes/1024/1024).toFixed(3)}MiB), linear finish data, sampler limits, metric/cached UVs without extra triangles, matching displays, clean sights and startup upload.`);
+  console.log(`PASS: two shared opaque, seamless, mipmapped weapon maps (${(bytes/1024/1024).toFixed(3)}MiB), linear finish data, sampler limits, metric/cached UVs without extra triangles, matching displays, clean sights and startup upload.`);
 }

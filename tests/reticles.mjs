@@ -19,7 +19,7 @@ export function verifyReticles(qa,frames,listeners,elements,canvas){
     frames(1);canvas.events.mousedown({button:2});frames(100);qa.get().scene.updateMatrixWorld(true);
     assert.equal(Number(crosshair.style.opacity),0,'Aiming removes the HUD mark in favor of the fitted weapon sight');
     const sight=qa.get().gunGroups[type].userData.optic;
-    if(type==='glock'){assert(!sight,'Keep the Glock factory iron sights');}
+    if(type==='glock'||type==='shotgun'){assert(!sight,type==='glock'?'Keep the Glock factory iron sights':'The shotgun aims with flip-up iron sights instead of a red dot (v153)');}
     else{
       assert.equal(sight.name,p.name);assert.equal(sight.marks.length,2,'Each optic uses just two small meshes');
       const repeat=createOpticReticle(type,sight.dot.position.z),again=createOpticReticle(type,sight.dot.position.z);assert.equal(again.dot.geometry,repeat.dot.geometry);assert.equal(again.outline.geometry,repeat.outline.geometry,'Optic marks reuse cached geometry');
@@ -48,7 +48,7 @@ export function verifyReticles(qa,frames,listeners,elements,canvas){
     const remaining=qa.get().reloadLeft;listeners.keydown({code:'Escape'});frames(5);assert.equal(qa.get().reloadLeft,remaining);assert.equal(qa.get().reticleHud.weapon,type);elements.get('resume').onclick();
     frames(Math.ceil(remaining*60)+2);assert(elements.get('reloadProgress').classList.contains('hidden'));assert.equal(qa.get().reticleHud.weapon,type);
   }
-  assert.equal(signatures.size,5,'All five optic patterns are distinct');
+  assert.equal(signatures.size,4,'All four optic patterns are distinct');
   qa.start();assert.equal(qa.get().reticleHud.weapon,'glock');listeners.keydown({code:'Digit4',repeat:false});assert.equal(qa.get().reticleHud.weapon,'glock','Locked weapon keys cannot change the reticle');
-  console.log('PASS: six distinct reusable HUD reticles, five unique cached/fitted optical patterns, retained Glock irons, live weapon-key selection and actual hits, precise aim centers, clear reload-bar spacing, ADS/reload/pause/locked-switch/reset behavior; two meshes per optic with no added textures or lights.');
+  console.log('PASS: six distinct reusable HUD reticles, four unique cached/fitted optical patterns, Glock and shotgun iron sights, live weapon-key selection and actual hits, precise aim centers, clear reload-bar spacing, ADS/reload/pause/locked-switch/reset behavior; two meshes per optic with no added textures or lights.');
 }

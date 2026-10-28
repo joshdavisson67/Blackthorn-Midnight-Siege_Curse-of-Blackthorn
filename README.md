@@ -27,6 +27,18 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## New combat shotgun with iron sights (version 153)
+
+- **Rebuilt from reference photos.** The M12 is now a magazine-fed combat shotgun:
+  - a flat-top black receiver with a full-length rail and a left-side knurled charging handle
+  - a slim slotted handguard and a long ribbed muzzle device
+  - a ribbed 12-gauge box magazine in a flared well, with a paddle release
+  - a squared trigger guard and an ambidextrous safety
+  - a hunter-style stock with an angled grip, an adjustable cheek riser with side knobs, a ribbed butt pad and sling mounts
+- **Iron sights instead of the red dot.** Flip-up sights stand on the rail: a ghost-ring rear aperture between two wings, and a protected front post with a small glowing dot on its tip so it stays readable in the dark. Aiming puts the post right under the point of aim. The shotgun's aiming pose brings your eye in just behind the rear ring, so the stock stays out of the sight picture.
+- Hip-fire still uses the shotgun's pellet-ring crosshair, and its damage, spread and handling are unchanged.
+- The old walnut wood texture is no longer built or loaded, because no gun uses wood now.
+
 ## Courtyard pistol bench (version 152)
 
 - **New pistol bench beside the front door.** It mirrors the courtyard ammunition crate across the entrance, at the same distance from the door and the facade, under the east windows. The rack shows the Glock 21 on brass pegs above three spare magazines.
