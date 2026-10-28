@@ -27,6 +27,11 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Larger MP5 (version 156)
+
+- **The MP5 is 15% larger.** Same model, drawn 15% bigger in your hands and on its weapon racks. It is now slightly longer than the M4 and still shorter than the shotgun.
+- Aiming is unchanged. The holographic sight's line, the muzzle flash and the support-hand point scale with the gun, and the red circle-dot reticle keeps its usual on-screen size inside the larger sight window.
+
 ## Heavier shotgun build (version 155)
 
 - **A chunkier 12-gauge.** The combat shotgun was so slim it read as a rifle. It keeps the same length and layout, but is now built heavier:
