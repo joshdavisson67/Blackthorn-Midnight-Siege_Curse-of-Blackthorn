@@ -27,6 +27,12 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Feral stalkers and Ashfang hounds at 1.75× speed (version 157)
+
+- **Both specials now move 75% faster than a standard zombie in the same wave.** Ferals were 3× (now 1.75×); Ashfang hounds were 1.5× (now 1.75×).
+- **Same speed progression.** Their speed is still the wave's standard zombie speed times this multiplier, so they speed up wave by wave, hit the same late-wave cap, and scale with curse rank exactly like every other zombie.
+- An enraged feral now reaches 3.5× speed (Blood Rage still doubles it). Feral damage and Ashfang health are unchanged, and regular dogs stay at 1.25×. The Field Guide entries are updated.
+
 ## Larger MP5 (version 156)
 
 - **The MP5 is 15% larger.** Same model, drawn 15% bigger in your hands and on its weapon racks. It is now slightly longer than the M4 and still shorter than the shotgun.

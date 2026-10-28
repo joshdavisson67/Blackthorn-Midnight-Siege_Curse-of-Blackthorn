@@ -21,12 +21,12 @@ export function verifyFeral(qa,frames){
     qa.start();for(let i=0;i<wave;i++)qa.startWave();qa.setSeed(2000);
     const before=qa.get().toSpawn;assert(qa.spawnEnemy());const e=qa.get().zombies[0];
     assert.equal(!!e.feral,wave===7);assert.equal(qa.get().toSpawn,before-1);
-    if(e.feral){assert.equal(e.speed,waveConfig(wave).speed*3);assert.equal(e.hp,waveConfig(wave).health);}
+    if(e.feral){assert.equal(e.speed,waveConfig(wave).speed*1.75);assert.equal(e.hp,waveConfig(wave).health);}
   }
   console.log('PASS: actual wave-7 unlock, ~12.5% total rarity and retained brute/Ashfang slots.');
 
   qa.start();for(let wave=1;wave<=40;wave++){
-    qa.startWave();const e=make(0,17);assert.equal(e.speed,waveConfig(wave).speed*3);
+    qa.startWave();const e=make(0,17);assert.equal(e.speed,waveConfig(wave).speed*1.75);
     qa.get().world.remove(e.group);qa.get().zombies.splice(qa.get().zombies.indexOf(e),1);
   }
   qa.start();const feral=make(0,17),normal=qa.makeZombie(8,17),feral2=make(-8,17);
@@ -45,7 +45,7 @@ export function verifyFeral(qa,frames){
     if(rage)enrageNearby({dead:true,walkPos:e.walkPos},[e],()=>0,qa.get().enemyAssets.enrage);
     frames(10);return e.walkPos.z-17;
   }
-  const baseTravel=travel(false);assert(Math.abs(travel(true)/baseTravel-3)<.01);assert(Math.abs(travel(true,true)/baseTravel-6)<.01);
+  const baseTravel=travel(false);assert(Math.abs(travel(true)/baseTravel-1.75)<.01);assert(Math.abs(travel(true,true)/baseTravel-3.5)<.01);
   function hit(isFeral,rage=false){
     qa.start();for(let i=0;i<7;i++)qa.startWave();qa.setHealth(10000);qa.setPlayer(0,23);
     const e=isFeral?make(0,22.1):qa.makeZombie(0,22.1);e.attack=0;
@@ -57,6 +57,6 @@ export function verifyFeral(qa,frames){
   qa.start();qa.setHealth(10000);qa.setPlayer(0,-10.4,UPPER_Y);const stair=make(0,-10.4);qa.get().nav.rebuild(0,-10.4,UPPER_Y);
   for(let i=0;i<1500&&stair.floorY<UPPER_Y-.02;i++)frames(1);assert(stair.floorY>UPPER_Y-.02,'Feral climbs stairs at its actual speed');
   qa.setPlayer(0,0);qa.get().nav.rebuild(0,0);for(let i=0;i<1500&&stair.floorY>.02;i++)frames(1);assert(stair.floorY<.02,'Feral descends safely');
-  assert.equal(FERAL.speedMultiplier,3);qa.start();
-  console.log('PASS: actual 3x travel, 2x melee damage, 6x/2.5x Blood Rage, wave scaling and two-way stair pursuit.');
+  assert.equal(FERAL.speedMultiplier,1.75);qa.start();
+  console.log('PASS: actual 1.75x travel, 2x melee damage, 3.5x/2.5x Blood Rage, wave scaling and two-way stair pursuit.');
 }
