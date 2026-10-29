@@ -68,7 +68,7 @@ export function verifyOliviaEasterEgg(qa,frames,listeners,elements){
   assert(breathed,'A rat dragon breathes fire at nearby undead');
   frames(30);assert(bella.flames.active>10,'Flames pour from her mouth');assert(victim.hp<1e5,'The fire burns');
   assert.equal(bella.activity,'BREATHING FIRE');
-  const dps=(40+7*st().wave)*BELLA.fire.pulse;
+  const dps=(40+7*st().wave)*1.25*BELLA.fire.pulse;
   // Walls stop the fire.
   const behind=qa.makeZombie(-26.5,-6,false,false,false,4.3);behind.speed=0;const hp=behind.hp;
   qa.bellaBreath(new T.Vector3(-29.6,4.75,-6),new T.Vector3(1,0,0),BELLA.fire.range,BELLA.fire.angle);assert.equal(behind.hp,hp,'Fire does not pass through walls');

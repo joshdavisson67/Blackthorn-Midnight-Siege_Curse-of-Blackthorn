@@ -3,10 +3,13 @@ import {isBlocked} from './core.mjs?v=154';
 import {UPPER_Y,moveActor,updateActorHeight,supportBelow,stairHeight} from './vertical.mjs?v=154';
 import {cellarStairHeight} from './cellar-layout.mjs?v=28';
 
-export const BELLA=Object.freeze({price:670,radius:12*.9144,bodyRadius:.22,height:.82,damage:48,biteInterval:.9,biteReach:.95,x:-30.3,z:-10.8,y:UPPER_Y,
+// v158: a 15-yard guard radius (was 12) and 25% more bite reach (was .95).
+export const BELLA=Object.freeze({price:670,radius:15*.9144,bodyRadius:.22,height:.82,damage:48,biteInterval:.9,biteReach:.95*1.25,x:-30.3,z:-10.8,y:UPPER_Y,
   // Rat dragon (v131 Easter egg): a cone of fire, pulsed so every enemy in it
-  // burns four times a second; the game decides how hard each pulse hits.
-  fire:Object.freeze({range:4.6,angle:.5,duration:1.2,cooldown:2.4,pulse:.25})});
+  // burns four times a second. v158: twice as long (4.6 -> 9.2) and twice as
+  // wide at every distance (half-angle .5 -> atan(2 tan .5)), and 25% hotter:
+  // each second burns (base + perWave x wave) x scale.
+  fire:Object.freeze({range:9.2,angle:Math.atan(2*Math.tan(.5)),duration:1.2,cooldown:2.4,pulse:.25,base:40,perWave:7,scale:1.25})});
 
 // Wings, a spiked tail and little horns, hidden until Olivia's upgrade.
 function createDragonParts(rig){
@@ -40,12 +43,14 @@ function createDragonParts(rig){
 
 // Pooled flame puffs, recoloured from white-hot to ember red as they age.
 function createFlames(world){
-  const geo=new T.SphereGeometry(1,8,6),hot=new T.Color(0xfff2b0),mid=new T.Color(0xff8a2a),ember=new T.Color(0xb3200f);
-  const puffs=Array.from({length:36},()=>{const m=new T.Mesh(geo,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending}));m.visible=false;m.castShadow=false;m.raycast=()=>{};m.userData.dynamic=true;world.add(m);return {mesh:m,vel:new T.Vector3(),life:0,max:.42};});
+  const geo=new T.SphereGeometry(1,12,8),hot=new T.Color(0xfff2b0),mid=new T.Color(0xff8a2a),ember=new T.Color(0xb3200f);
+  const puffs=Array.from({length:72},()=>{const m=new T.Mesh(geo,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending}));m.visible=false;m.castShadow=false;m.raycast=()=>{};m.userData.dynamic=true;world.add(m);return {mesh:m,vel:new T.Vector3(),life:0,max:.42};});
   let next=0;
   return {
-    emit(from,dir){const p=puffs[next++%puffs.length];p.life=p.max;p.mesh.position.copy(from);p.vel.copy(dir).multiplyScalar(6.5+Math.random()*2);p.vel.x+=(Math.random()-.5)*1.6;p.vel.y+=(Math.random()-.2)*.9;p.vel.z+=(Math.random()-.5)*1.6;p.mesh.visible=true;},
-    update(dt){for(const p of puffs){if(p.life<=0)continue;p.life-=dt;const f=1-Math.max(0,p.life)/p.max;p.mesh.position.addScaledVector(p.vel,dt);p.vel.multiplyScalar(1-dt*2.2);p.vel.y+=dt*1.5;p.mesh.scale.setScalar(.05+f*.32);
+    // v158: twice the throw (forward speed x2) and twice the width at every
+    // distance (side spread x4), so the plume is double length and width.
+    emit(from,dir){const p=puffs[next++%puffs.length];p.life=p.max;p.mesh.position.copy(from);p.vel.copy(dir).multiplyScalar(13+Math.random()*4);p.vel.x+=(Math.random()-.5)*6.4;p.vel.y+=(Math.random()-.2)*1.8;p.vel.z+=(Math.random()-.5)*6.4;p.mesh.visible=true;},
+    update(dt){for(const p of puffs){if(p.life<=0)continue;p.life-=dt;const f=1-Math.max(0,p.life)/p.max;p.mesh.position.addScaledVector(p.vel,dt);p.vel.multiplyScalar(1-dt*2.2);p.vel.y+=dt*1.5;p.mesh.scale.setScalar(.08+f*.48);
       p.mesh.material.color.copy(f<.35?hot.clone().lerp(mid,f/.35):mid.clone().lerp(ember,(f-.35)/.65));p.mesh.material.opacity=.85*(1-f);if(p.life<=0)p.mesh.visible=false;}},
     clear(){for(const p of puffs){p.life=0;p.mesh.visible=false;}},
     get active(){return puffs.filter(p=>p.life>0).length;}
@@ -239,7 +244,7 @@ export function createBellaCompanion(options){
       if(companion.breath>=0){
         companion.breath+=dt;
         rig.jaw.getWorldPosition(mouth);breathDir.set(Math.sin(rig.group.rotation.y),0,Math.cos(rig.group.rotation.y));mouth.addScaledVector(breathDir,.12);
-        for(let i=0;i<3;i++)flames.emit(mouth,breathDir);
+        for(let i=0;i<5;i++)flames.emit(mouth,breathDir);
         breathPulse-=dt;if(breathPulse<=0){breathPulse=BELLA.fire.pulse;onBreath(mouth.clone(),breathDir.clone(),BELLA.fire.range,BELLA.fire.angle);}
         if(companion.breath>=BELLA.fire.duration)companion.breath=-1;
       }

@@ -27,6 +27,12 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Bella upgrades (version 158)
+
+- **Wider guard and longer bite.** Bella now defends undead within 15 yards of you (was 12), and her bite reaches 25% farther.
+- **Bitten zombies turn on her.** Any zombie Bella bites turns, closes in and fights her until it dies, instead of attacking you, even if it is standing right next to you. When it has no clear way to her, it follows the usual route toward you, which is where she fights. She still cannot be hurt; its blows land with a dull thud. Sir Blackthorn and the elite guardians ignore her and keep hunting you.
+- **Bigger rat-dragon fire.** The fire cone reaches twice as far (9.2 m) and is twice as wide at every distance, and the flame plume is drawn twice as long and wide to match. It burns 25% hotter, (40 + 7 × wave) × 1.25 per second, and still grows every wave.
+
 ## Feral stalkers and Ashfang hounds at 1.75× speed (version 157)
 
 - **Both specials now move 75% faster than a standard zombie in the same wave.** Ferals were 3× (now 1.75×); Ashfang hounds were 1.5× (now 1.75×).

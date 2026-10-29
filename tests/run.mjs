@@ -280,3 +280,6 @@ verifyReloadPose(qa,frames);
 
 const {verifyPistolBench}=await import('./pistol-bench.mjs');
 verifyPistolBench(qa,frames,elements);
+
+const {verifyBellaUpgrades}=await import('./bella-upgrades.mjs');
+verifyBellaUpgrades(qa,frames,elements);
