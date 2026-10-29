@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=157';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=157';
-import {createChangelog} from './changelog.mjs?v=157';
+import {createLeaderboard} from './leaderboard.mjs?v=158';
+import {createChangelog} from './changelog.mjs?v=158';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -39,7 +39,7 @@ import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from '.
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=154';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=154';
 import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=156';
-import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=154';
+import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=158';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=140';
 import {addEstateDetail} from './estate-detail.mjs?v=154';
 import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=154';
@@ -699,7 +699,7 @@ function atticRoute(x,z,y,goalInAttic){
 }
 // Rat-dragon fire: every pulse burns each enemy inside the cone, through no walls.
 function bellaBreath(origin,dir,range,angle){
-  const damage=(40+7*Math.max(1,wave))*BELLA.fire.pulse;
+  const F=BELLA.fire,damage=(F.base+F.perWave*Math.max(1,wave))*F.scale*F.pulse;
   for(const e of zombies){
     if(e.dead||e.waking||e.emergeLeft>0)continue;const p=e.walkPos;if(Math.abs(p.y-(origin.y-.45))>1.1)continue;
     const dx=p.x-origin.x,dz=p.z-origin.z,d=Math.hypot(dx,dz);if(d>range+(e.radius||.3))continue;
@@ -727,7 +727,7 @@ function armorStationDescription(){
   const recharge=rank.regenDelay?`Regenerates ${rank.regenRate} shield/s after ${rank.regenDelay}s without a hit`:`Regenerates ${rank.regenRate} shield/s continuously · No hit delay`;
   return `${armorTier===maximum?'ACTIVE':'UPGRADE'} · ${recharge}${armorTier<maximum?' · Keeps current shield':''}`;
 }
-function stationDescription(s){if(s.type==='olivia')return bella.dragon?'Bella is a rat dragon now · Olivia is very proud':bella.unlocked?`She can turn Bella into a fire-breathing rat dragon · Bring ${EASTER_EGG.chips} bone chips from Bella’s kills`:'Free Bella from her kennel first';if(s.type==='kennel')return 'BELLA · White Maltipoo · Immortal companion · Follows you and bites undead within 12 yards of you';if(s.shedWeapon)return s.purchased?'M4 PURCHASED · PRESS 6 TO EQUIP':'30-ROUND FULL-AUTO · Includes full magazine and reserve · Keeps Soul Forge ranks';if(s.type==='shedDoor')return shed.open?'OPEN · Explore the groundskeeper’s workshop':'SEALED · Opens automatically at wave 7';if(s.type==='nuke')return s.used?'DEVICE SPENT':'ONE USE · Destroys all active undead across the estate · Wakes Sir Blackthorn';if(s.type==='mausoleumDoor')return graveyard.open?'OPEN · Enter the Blackthorn family tomb':'SEALED · Clear wave 20 to unlock';if(s.type==='cellarDoor')return isCellarOpen()?'OPEN · Descend to the underground armory':'LOCKED · Opens automatically at wave 10';if(s.type==='bushmaster')return inventory.bushmaster.owned?'WEAPON OWNED · PRESS 5 TO EQUIP':'15-round semi-auto · 2× M4 damage · 10× precision scope';if(s.type==='lmg')return '100-round belt · 3× combat scope · Taking it triggers frenzy for the rest of this wave';if(s.type==='armor')return armorStationDescription();if(s.type==='powerup')return s.power==='double'?'Double bullet damage for 20 seconds':'Unlimited throws for 12 seconds · 0.5s recovery after each throw';if(s.type==='perk')return perkOwned.has(s.id)?'PERK ACTIVE':s.desc;if(s.type==='ammo')return 'Restock every owned weapon · Reload to fill magazines · +1 grenade';if(s.type==='glock')return ammoFull('glock')?'PISTOL AMMO FULL · PRESS 1 TO EQUIP':'Restock the Glock 21 · Reload to fill the magazine';if(s.type==='upgrade')return s.forgeMaximum?'FORGED 3/3 · '+forgeBonuses(FORGE.maxRank).damageMultiplier+'× base damage · Maximum rank · Switch weapons to forge another':'RANK '+(inventory[weapon].forgeRank+1)+' OF 3 · '+forgeBonuses(inventory[weapon].forgeRank+1).damageMultiplier+'× base damage · 25% faster reload · +25% magazine and reserve capacity';return inventory[s.type].owned?'WEAPON OWNED · USE NUMBER KEYS':'Unlock a new weapon for this run';}
+function stationDescription(s){if(s.type==='olivia')return bella.dragon?'Bella is a rat dragon now · Olivia is very proud':bella.unlocked?`She can turn Bella into a fire-breathing rat dragon · Bring ${EASTER_EGG.chips} bone chips from Bella’s kills`:'Free Bella from her kennel first';if(s.type==='kennel')return 'BELLA · White Maltipoo · Immortal companion · Follows you and bites undead within 15 yards of you · Bitten undead turn and fight her';if(s.shedWeapon)return s.purchased?'M4 PURCHASED · PRESS 6 TO EQUIP':'30-ROUND FULL-AUTO · Includes full magazine and reserve · Keeps Soul Forge ranks';if(s.type==='shedDoor')return shed.open?'OPEN · Explore the groundskeeper’s workshop':'SEALED · Opens automatically at wave 7';if(s.type==='nuke')return s.used?'DEVICE SPENT':'ONE USE · Destroys all active undead across the estate · Wakes Sir Blackthorn';if(s.type==='mausoleumDoor')return graveyard.open?'OPEN · Enter the Blackthorn family tomb':'SEALED · Clear wave 20 to unlock';if(s.type==='cellarDoor')return isCellarOpen()?'OPEN · Descend to the underground armory':'LOCKED · Opens automatically at wave 10';if(s.type==='bushmaster')return inventory.bushmaster.owned?'WEAPON OWNED · PRESS 5 TO EQUIP':'15-round semi-auto · 2× M4 damage · 10× precision scope';if(s.type==='lmg')return '100-round belt · 3× combat scope · Taking it triggers frenzy for the rest of this wave';if(s.type==='armor')return armorStationDescription();if(s.type==='powerup')return s.power==='double'?'Double bullet damage for 20 seconds':'Unlimited throws for 12 seconds · 0.5s recovery after each throw';if(s.type==='perk')return perkOwned.has(s.id)?'PERK ACTIVE':s.desc;if(s.type==='ammo')return 'Restock every owned weapon · Reload to fill magazines · +1 grenade';if(s.type==='glock')return ammoFull('glock')?'PISTOL AMMO FULL · PRESS 1 TO EQUIP':'Restock the Glock 21 · Reload to fill the magazine';if(s.type==='upgrade')return s.forgeMaximum?'FORGED 3/3 · '+forgeBonuses(FORGE.maxRank).damageMultiplier+'× base damage · Maximum rank · Switch weapons to forge another':'RANK '+(inventory[weapon].forgeRank+1)+' OF 3 · '+forgeBonuses(inventory[weapon].forgeRank+1).damageMultiplier+'× base damage · 25% faster reload · +25% magazine and reserve capacity';return inventory[s.type].owned?'WEAPON OWNED · USE NUMBER KEYS':'Unlock a new weapon for this run';}
 function interact(){
   if(mode!=='playing')return;
   updateForgeStations();const s=closestStation();if(!s)return;
@@ -743,7 +743,7 @@ function interact(){
   if(s.type==='glock'&&ammoFull('glock')){selectWeapon('glock');notify('PISTOL AMMUNITION IS FULL');return;}
   if(points<s.price){notify(`NEED ${s.price-points} MORE ESSENCE`);tone(110,.2,.03,'square');return;}
   points-=s.price;
-  if(s.type==='kennel'){bella.unlock();nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('BELLA IS FREE · IMMORTAL COMPANION · 12-YARD GUARD RADIUS',5);tone(740,.12,.045,'triangle',1000);tone(940,.18,.035,'triangle',680);updateHud();return;}
+  if(s.type==='kennel'){bella.unlock();nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('BELLA IS FREE · IMMORTAL COMPANION · 15-YARD GUARD RADIUS',5);tone(740,.12,.045,'triangle',1000);tone(940,.18,.035,'triangle',680);updateHud();return;}
   if(s.shedWeapon){const capacity=ammoCapacity('rifle');inventory.rifle.owned=true;inventory.rifle.ammo=capacity.mag;inventory.rifle.reserve=capacity.reserve;reloadLeft=0;s.purchased=true;selectWeapon('rifle');notify('M4 ASSAULT RIFLE ACQUIRED');tone(440,.3,.09,'triangle',880);updateHud();return;}
   if(s.type==='lmg'){s.used=true;s.model.visible=false;inventory.lmg.owned=true;reloadLeft=0;selectWeapon('lmg');triggerFrenzy();updateHud();return;}
   if(s.type==='armor'){
@@ -1115,7 +1115,8 @@ if(e.emergeLeft>0){
   animateZombie(e,dt,99,0);continue;
 }
 advanceStagger(e,dt);
-const routes=e.brute?nav.brutes:nav,p=e.walkPos,dist=Math.hypot(player.x-p.x,player.z-p.z),oldX=p.x,oldZ=p.z,sameFloor=Math.abs(player.y-p.y)<.55;
+const onBella=!!(e.bellaAggro&&bella.unlocked),hunt=onBella?bella.pos:player;
+const routes=e.brute?nav.brutes:nav,p=e.walkPos,dist=Math.hypot(hunt.x-p.x,hunt.z-p.z),oldX=p.x,oldZ=p.z,sameFloor=Math.abs(hunt.y-p.y)<.55;
 if(e.brute){
   // Duck ahead of the upper landing and mausoleum, before their lower headers.
   const crouch=bruteCrouchAt(p.x,p.z,p.y)?1:0;e.crouch=T.MathUtils.damp(e.crouch||0,crouch,12,dt);if(e.boss)e.crouch=Math.min(e.crouch,.3);/* Sir Blackthorn only stoops; his walker rig clears the tomb door. */
@@ -1123,32 +1124,33 @@ if(e.brute){
 }
 e.pathTimer-=dt;
 if(e.pathTimer<=0){
-  e.clearPath=sameFloor&&dist<12&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y,e.brute?e.radius:.35,e.brute?e.bodyHeight:1.8);
+  e.clearPath=sameFloor&&dist<12&&hasClearPath(p.x,p.z,hunt.x,hunt.z,p.y,hunt.y,e.brute?e.radius:.35,e.brute?e.bodyHeight:1.8);
   e.flankClear=false;
-  if(e.clearPath&&dist>2.5){const flank=e.flank*Math.min(1,(dist-2.5)/4);e.flankClear=hasClearPath(p.x,p.z,player.x-(player.z-p.z)/dist*flank,player.z+(player.x-p.x)/dist*flank,p.y,player.y,e.brute?e.radius:.35,e.brute?e.bodyHeight:1.8);}
+  if(!onBella&&e.clearPath&&dist>2.5){const flank=e.flank*Math.min(1,(dist-2.5)/4);e.flankClear=hasClearPath(p.x,p.z,player.x-(player.z-p.z)/dist*flank,player.z+(player.x-p.x)/dist*flank,p.y,player.y,e.brute?e.radius:.35,e.brute?e.bodyHeight:1.8);}
   e.waypoint=routes.direction(p.x,p.z,p.y,e.navigation);
   // Keep a shared-out slot only if it is open floor with a clear walk to it.
   e.slotScale=0;
-  if(e.clearPath&&e.engaged)for(const scale of [1,.5]){
+  if(!onBella&&e.clearPath&&e.engaged)for(const scale of [1,.5]){
     const t=crowd.slotTarget(e,scale),r=e.brute?e.radius:.35;
     if(!isBlocked(t.x,t.z,r,colliders,undefined,p.y,e.bodyHeight)&&hasClearPath(p.x,p.z,t.x,t.z,p.y,p.y,r,e.brute?e.bodyHeight:1.8)){e.slotScale=scale;break;}
   }
   e.pathTimer=.22+(e.phase%1)*.10;
 }
 const casting=e.boss&&updateBlackthorn(e,dt,dist,sameFloor);
-let tx=player.x,tz=player.z;const climbTo=!e.brute&&isAtticOpen()?atticRoute(p.x,p.z,p.y,playerInAttic()):null;
+// Out of sight of Bella, follow the usual route toward the player, where she fights.
+let tx=hunt.x,tz=hunt.z;const climbTo=!onBella&&!e.brute&&isAtticOpen()?atticRoute(p.x,p.z,p.y,playerInAttic()):null;
 if((dist>1.3||!sameFloor)&&(!sameFloor||!e.clearPath)){
   if(!e.waypoint||Math.hypot(e.waypoint.x-p.x,e.waypoint.z-p.z)<.18)e.waypoint=routes.direction(p.x,p.z,p.y,e.navigation);
   if(e.waypoint){tx=e.waypoint.x;tz=e.waypoint.z;}
-}else if(e.engaged&&e.slotScale>0){
+}else if(!onBella&&e.engaged&&e.slotScale>0){
   const t=crowd.slotTarget(e,e.slotScale);tx=t.x;tz=t.z;
-}else if(dist>2.5&&e.flankClear){
+}else if(!onBella&&dist>2.5&&e.flankClear){
   const flank=e.flank*Math.min(1,(dist-2.5)/4);
   const fx=tx-(player.z-p.z)/dist*flank,fz=tz+(player.x-p.x)/dist*flank;
   tx=fx;tz=fz;
 }
 if(climbTo){tx=climbTo.x;tz=climbTo.z;}
-let dx=tx-p.x,dz=tz-p.z,len=Math.hypot(dx,dz),heading=Math.atan2(player.x-p.x,player.z-p.z);
+let dx=tx-p.x,dz=tz-p.z,len=Math.hypot(dx,dz),heading=Math.atan2(hunt.x-p.x,hunt.z-p.z);
 if(len>.1&&(dist>1.03||!sameFloor)&&!casting){
   dx/=len;dz/=len;crowd.steer(e,dx,dz,elapsed);dx=e.steerX;dz=e.steerZ;
   // v139: ease the walking direction (~0.14s) so grid-cell routes curve
@@ -1175,11 +1177,16 @@ if(len>.1&&(dist>1.03||!sameFloor)&&!casting){
 // Turn at a limited, eased rate (v136): bodies swing round with weight rather
 // than snapping to every steering wobble; the head leads, tracking the player.
 const turn=Math.atan2(Math.sin(heading-e.group.rotation.y),Math.cos(heading-e.group.rotation.y)),maxTurn=(e.dog?6:e.feral?5:e.brute?2.4:3.2)*dt,yawStep=clamp(turn*(1-Math.exp(-dt*6)),-maxTurn,maxTurn);e.group.rotation.y+=yawStep;e.turnRate=T.MathUtils.lerp(e.turnRate||0,yawStep/Math.max(dt,1e-4),1-Math.exp(-dt*10));
-e.floorY=p.y;e.group.position.set(p.x,Math.abs(p.y)>.1?p.y-.02:enemyFloorHeight(p.x,p.z)-.02,p.z);e.attack-=dt*worldEvents.attackRate(e);const contact=(e.dog?animateZombieDog:animateZombie)(e,dt,sameFloor?dist:99,Math.hypot(p.x-oldX,p.z-oldZ),camera.position);if(casting)poseBlackthorn(e);
-if(contact&&!casting&&!(e.staggerLeft>0)&&dist<1.7&&Math.abs(player.y-p.y)<.7&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y)){
+e.floorY=p.y;e.group.position.set(p.x,Math.abs(p.y)>.1?p.y-.02:enemyFloorHeight(p.x,p.z)-.02,p.z);e.attack-=dt*worldEvents.attackRate(e);const contact=(e.dog?animateZombieDog:animateZombie)(e,dt,sameFloor?dist:99,Math.hypot(p.x-oldX,p.z-oldZ),onBella?bellaLook.set(hunt.x,hunt.y+.45,hunt.z):camera.position);if(casting)poseBlackthorn(e);
+// Bella cannot be hurt: blows aimed at her only land with a dull thud.
+if(onBella){if(contact&&!(e.staggerLeft>0)&&dist<1.7&&sameFloor){e.bellaSwings=(e.bellaSwings||0)+1;tone(150,.06,.02,'triangle',110);}}
+else if(contact&&!casting&&!(e.staggerLeft>0)&&dist<1.7&&Math.abs(player.y-p.y)<.7&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y)){
 hurtPlayer(waveConfig(wave).damage*(e.boss?BOSS.meleeMultiplier:e.warden?1.4*WARDEN.damageMultiplier:e.feral?FERAL.damageMultiplier:e.dog?.85:e.brute?1.4:1)*(e.enraged&&!e.elite?ENRAGE.damageMultiplier:1)*(e.warCry>0?BOSS.cry.damage:1),p);noise(.15,.08,600);tone(70,.14,.06,'sine');if(health<=0)gameOver();}
 e.groan-=dt;if(e.groan<=0){if(dist<12)tone(e.feral?210:e.rareDog?155:e.dog?105:e.brute?45:rand(60,100),e.dog?.22:.6,.035*(1-dist/14),'sawtooth',35);e.groan=rand(6,15);}}}
-function bellaBite(enemy,damage,direction){damageEnemy(enemy,damage,false,{direction:direction.clone(),part:enemy.dog?'head':'leg',force:.45,source:'Bella'});tone(460,.08,.018,'triangle',620);}
+// v158: a zombie Bella bites turns on her and fights her until it dies.
+// Bosses and elite guardians ignore her and keep hunting the player.
+function bellaBite(enemy,damage,direction){if(!enemy.boss&&!enemy.elite)enemy.bellaAggro=true;damageEnemy(enemy,damage,false,{direction:direction.clone(),part:enemy.dog?'head':'leg',force:.45,source:'Bella'});tone(460,.08,.018,'triangle',620);}
+const bellaLook=new T.Vector3();
 const effectNext=new T.Vector3();
 function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+.12;if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;}e.mesh.rotation.x+=step*4;}if(e.type==='blast'){e.mesh.scale.setScalar(1+(1-e.life/e.max)*12);e.mesh.material.opacity=e.life/e.max*.75;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else world.remove(e.mesh);if(e.type==='blast')e.mesh.material.dispose();effects.splice(i,1);}}}
 function grantPowerup(type){if(type==='ammo'){refillAmmo();notify('MAX AMMO · RESERVES RESTOCKED');}else if(type==='double'){doubleTime=POWERUPS.double.duration;notify('×2 · DOUBLE DAMAGE FOR 20s');}else if(type==='grenades'){grenadeTime=POWERUPS.grenades.duration;notify('INFINITE GRENADES · 12s · PRESS G');}}

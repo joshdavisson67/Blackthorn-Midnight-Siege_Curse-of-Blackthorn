@@ -45,8 +45,8 @@ export function verifyBella(qa,frames,listeners,elements,document){
   console.log('PASS: Bella bites walkers, brutes, both hostile hounds and ferals; kills give normal body-kill rewards, hit essence and shared score.');
 
   ({s,b}=prepare());qa.setPlayer(0,20);advance(s,b,25,[]);
-  const outside=qa.makeZombie(BELLA.radius+.001,20);outside.hp=10000;b.pos.set(BELLA.radius-.1,0,20);advance(s,b,.5,[outside]);assert.equal(outside.hp,10000,'An enemy just beyond 12 yards is not attacked even when beside Bella');
-  const boundary=qa.makeZombie(BELLA.radius,20);boundary.hp=10000;b.pos.set(BELLA.radius-.2,0,20);advance(s,b,.5,[boundary]);assert.equal(boundary.hp,10000-BELLA.damage,'Exactly 12 yards is inside the guard radius');
+  const outside=qa.makeZombie(BELLA.radius+.001,20);outside.hp=10000;b.pos.set(BELLA.radius-.1,0,20);advance(s,b,.5,[outside]);assert.equal(outside.hp,10000,'An enemy just beyond 15 yards is not attacked even when beside Bella');
+  const boundary=qa.makeZombie(BELLA.radius,20);boundary.hp=10000;b.pos.set(BELLA.radius-.2,0,20);advance(s,b,.5,[boundary]);assert.equal(boundary.hp,10000-BELLA.damage,'Exactly 15 yards is inside the guard radius');
   const wall={x:1,z:20,w:.18,d:6,minY:0,maxY:3};s.colliders.push(wall);indexColliders(s.colliders);b.setNavigation(buildVerticalNavigation(s.colliders,{radius:BELLA.bodyRadius,groundHeight:BELLA.height,upperHeight:BELLA.height}));
   const behindWall=qa.makeZombie(1.4,20);behindWall.hp=10000;b.pos.set(.6,0,20);b.target=null;b.attackTime=-1;b.cooldown=0;qa.setPlayer(-1,20);
   advance(s,b,.4,[behindWall]);assert.equal(behindWall.hp,10000,'A nearby enemy cannot be bitten through a wall');
@@ -54,7 +54,7 @@ export function verifyBella(qa,frames,listeners,elements,document){
   s.colliders.splice(s.colliders.indexOf(wall),1);indexColliders(s.colliders);
   b.setNavigation(buildVerticalNavigation(s.colliders,{radius:BELLA.bodyRadius,groundHeight:BELLA.height,upperHeight:BELLA.height}));
   const upstairs=qa.makeZombie(-33,-6,false,false,false,UPPER_Y);upstairs.hp=10000;qa.setPlayer(-33,-6,UPPER_Y);b.pos.set(-33,0,-6);b.target=null;b.attackTime=-1;b.cooldown=0;advance(s,b,.4,[upstairs]);assert.equal(upstairs.hp,10000,'Bites cannot pass through a floor');
-  console.log('PASS: exact 12-yard boundary, no attacks outside the player radius or through walls/floors, and reachable enemies approached around obstacles.');
+  console.log('PASS: exact 15-yard boundary, no attacks outside the player radius or through walls/floors, and reachable enemies approached around obstacles.');
 
   ({s,b}=prepare());qa.setPlayer(0,20);advance(s,b,25,[]);qa.setHealth(10000);
   const near=qa.makeZombie(b.pos.x+.5,b.pos.z);near.hp=10000;
@@ -65,7 +65,7 @@ export function verifyBella(qa,frames,listeners,elements,document){
   const oldGate=b.kennel.gate.rotation.y;qa.start();assert(!b.unlocked&&!b.station.used&&!b.target);assert(!b.kennel.doorCollider.disabled);assert.equal(b.kennel.gate.rotation.y,0);assert(oldGate!==0);assert.equal(b.attackTime,-1);assert(b.pos.distanceTo(new T.Vector3(BELLA.x,BELLA.y+.17,BELLA.z))<.001);
   b.rig.group.traverse(o=>{if(o.isMesh){assert(geo.has(o.geometry)&&mat.has(o.material),'Restarts reuse warmed geometry/materials');}});
   assert(geo.size<32,'The small companion stays below 32 batched meshes');
-  assert(elements.get('guideEstate').textContent.includes('670 essence')&&elements.get('guideEstate').textContent.includes('12 yards'));
+  assert(elements.get('guideEstate').textContent.includes('670 essence')&&elements.get('guideEstate').textContent.includes('15 yards'));
   assert(!elements.get('powerups').textContent.includes('BELLA'),'New runs remove the companion HUD badge');
   console.log('PASS: pause/resume, grenade immunity, no hostile health/rage membership, dynamic joint transforms, reset/relock, cached batched model and field-guide instructions.');
   qa.start();
