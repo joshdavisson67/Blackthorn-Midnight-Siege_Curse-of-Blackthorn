@@ -6,7 +6,7 @@ export function verifyPistolBench(qa,frames,elements){
   const state=qa.get(),ground=state.interactables.filter(s=>(s.y||0)===0);
   const bench=ground.find(s=>s.type==='glock'),crate=ground.find(s=>s.type==='ammo'&&s.name==='AMMUNITION');
   assert(bench,'The courtyard has a pistol bench');
-  assert.equal(bench.name,'GLOCK 21 PISTOL');assert.equal(bench.price,250);
+  assert.equal(bench.name,'GLOCK 21 PISTOL');assert.equal(bench.price,2000,'A fresh run offers pistol Rank I (v159)');
 
   // Placement: the ammunition crate's mirror image across the front door.
   assert.equal(bench.x,-crate.x,'Pistol bench mirrors the ammunition crate across the door');
@@ -29,6 +29,9 @@ export function verifyPistolBench(qa,frames,elements){
   for(const part of ['Weapon rack back','Pistol rack peg','Spare pistol magazine'])assert(names.includes(part),`Pistol bench shows ${part}`);
   let gun=false;visual.group.traverse(o=>{if(o.userData.weaponType==='glock')gun=true;});assert(gun,'Pistol bench displays the Glock model');
 
+  // v159: the bench sells the four pistol ranks first; restocking follows.
+  qa.get().inventory.glock.weaponRank=4;qa.get().inventory.glock.ammo=24;
+  assert.equal(bench.price,250,'With every rank earned, the bench restocks for 250');
   const at=()=>{qa.setPlayer(front.x,front.z);frames(1);};
   const glock=()=>qa.get().inventory.glock;
 
@@ -46,10 +49,10 @@ export function verifyPistolBench(qa,frames,elements){
   qa.interact();
   assert.equal(qa.get().points,750,'Restocking the pistol costs 250 essence');
   assert.equal(glock().ammo,5,'Restocking leaves the current magazine unchanged');
-  assert.equal(glock().reserve,78+8,'Reserve is full plus the rounds missing from the magazine');
+  assert.equal(glock().reserve,78+19,'Reserve is full plus the rounds missing from the (24-round, all ranks) magazine');
   assert.equal(qa.get().weapon,'glock','Buying from the bench equips the pistol');
   assert.equal(elements.get('toast').textContent,'GLOCK 21 AMMUNITION RESTOCKED');
-  qa.reload();frames(200);assert.equal(glock().ammo,13);assert.equal(glock().reserve,78,'One reload leaves magazine and reserve full');
+  qa.reload();frames(200);assert.equal(glock().ammo,24);assert.equal(glock().reserve,78,'One reload leaves magazine and reserve full');
   qa.interact();assert.equal(qa.get().points,750,'Topped-up pistol is not charged again');
 
   // A reload in progress is preserved.

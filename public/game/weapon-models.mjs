@@ -7,6 +7,8 @@ import {weaponSurfaces,weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=153'
 // The profiles are visual game assets, with forward along negative Z.
 const references={glock:'Glock 21 .45 pistol',rifle:'M4 carbine',shotgun:'Magazine-fed combat shotgun',smg:'MP5-style submachine gun',lmg:'M249-style squad automatic weapon',bushmaster:'AR-15 .450 Bushmaster precision rifle'};
 let assets;
+// Pistol red dot (v159): the window centre that the aimed eye lines up with.
+export const PISTOL_DOT_HEIGHT=.105;
 // Guns aimed with their own iron sights instead of a mounted optic (the shotgun since v153).
 const IRON_SIGHTS=new Set(['glock','shotgun']);
 // Rail top .026 (v155, chunkier receiver) plus the .036 flip-up sight height.
@@ -27,6 +29,11 @@ function getAssets(){
   m.hkSteel=mat(0x2a3135,.6,.46);m.hkPolymer=mat(0x22282b,.04,.78);m.markRed=mat(0xb1281e,0,.6);m.markWhite=mat(0xd8d4c8,0,.7);
   // Combat shotgun finishes (v153): black anodised aluminium and matte stock polymer.
   m.anodized=mat(0x23282b,.35,.56);m.stockPolymer=mat(0x202528,.03,.84);
+  // Pistol red dot (v159): a warm-coated window, a glowing red aiming dot and a
+  // dark solar cell on the housing.
+  m.dotGlass=new T.MeshBasicMaterial({color:0xff8c5a,transparent:true,opacity:.03,depthWrite:false});
+  m.dotMark=new T.MeshBasicMaterial({color:0xff2d1e,toneMapped:false,depthWrite:false});
+  m.solarCell=mat(0x1b2a33,.6,.18);
   const surface=weaponSurfaces();
   for(const material of [m.metal,m.edge,m.pistolSlide,m.brass,m.copper,m.hkSteel,m.anodized]){material.map=surface.metal;material.roughnessMap=surface.metalFinish;}
   assets={m,box:new T.BoxGeometry(1,1,1),sphere:new T.SphereGeometry(1,14,10),circle:new T.CircleGeometry(1,16),cylinder:new T.CylinderGeometry(1,1,1,20),cone:new T.ConeGeometry(1,1,12),profiles:new Map(),contours:new Map(),rings:new Map(),tubes:new Map(),openMaterials:new Map()};
@@ -156,6 +163,27 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
     box(.0405,.0455,.119,.004,.010,.027,m.pistolSlide,'Extractor claw');
     cylinder(.0428,.044,.133,.003,.0015,m.black,'Extractor pivot','x');
     for(const part of parts.slice(slideStart))slide.add(part);
+    // Pistol Rank 1 (v159): an enclosed red dot on the MOS cut, after the
+    // reference photo: a square-shouldered hood round a large window, a low
+    // rear body with a solar cell and the side "R" button, and a red dot. It
+    // rides with the slide and replaces the cover plate while fitted. The
+    // factory irons stay and co-witness in the bottom of the window.
+    const cover=new T.Group(),dot=new T.Group();cover.name='MOS cover plate set';dot.name='Pistol red dot sight';dot.visible=false;slide.add(cover,dot);
+    for(const part of slide.children.filter(o=>/^(Recessed MOS cover plate|MOS cover screw|MOS screw drive slot)$/.test(o.name)))cover.add(part);
+    const D=PISTOL_DOT_HEIGHT,dotStart=parts.length;
+    const rrect=(w,h,r,P)=>{const s=new P(),x=w/2,y=h/2;s.moveTo(-x+r,-y);s.lineTo(x-r,-y);s.quadraticCurveTo(x,-y,x,-y+r);s.lineTo(x,y-r);s.quadraticCurveTo(x,y,x-r,y);s.lineTo(-x+r,y);s.quadraticCurveTo(-x,y,-x,y-r);s.lineTo(-x,-y+r);s.quadraticCurveTo(-x,-y,-x+r,-y);return s;};
+    const plate=(key,make)=>{let geo=a.profiles.get(key);if(!geo){geo=make();a.profiles.set(key,geo);}return geo;};
+    const hood=plate('pistol-dot-hood',()=>{const s=rrect(.044,.040,.007,T.Shape);s.holes.push(rrect(.032,.026,.004,T.Path));const g=new T.ExtrudeGeometry(s,{depth:.030,bevelEnabled:true,bevelThickness:.0012,bevelSize:.0012,bevelSegments:1,curveSegments:6});g.translate(0,0,-.015);return g;});
+    add(hood,m.black,0,D,.133,null,'Red dot hood');
+    box(0,D+.0207,.133,.030,.0018,.020,m.black,'Red dot hood top ridge');
+    add(plate('pistol-dot-glass',()=>new T.ShapeGeometry(rrect(.032,.026,.004,T.Shape),6)),m.dotGlass,0,D,.130,null,'Red dot window');
+    const mark=add(plate('pistol-dot-mark',()=>new T.CircleGeometry(.0009,16)),m.dotMark,0,D,.136,null,'Red dot reticle');mark.userData.reticle=true;mark.castShadow=mark.receiveShadow=false;
+    box(0,.0825,.153,.040,.009,.074,m.black,'Red dot base');
+    profile('Red dot rear body',[[.147,.078],[.147,.0955],[.168,.0955],[.186,.0925],[.190,.0895],[.190,.078]],.040,m.black,.002);
+    box(0,.0962,.158,.028,.0012,.018,m.solarCell,'Red dot solar cell');
+    for(const side of [-1,1])cylinder(side*.0205,.0865,.177,.0045,.003,m.edge,'Red dot side button','x');
+    for(const side of [-1,1])box(side*.0225,.0915,.125,.0012,.012,.008,m.edge,'Red dot hood side flat');
+    for(const part of parts.slice(dotStart))dot.add(part);
 
     profile('Moulded Glock polymer frame',[[-.050,.004],[-.050,-.032],[-.022,-.049],[.042,-.059],[.106,-.039],[.190,-.036],[.242,-.053],[.256,-.020],[.233,.007],[-.048,.007]],.081,m.pistolFrame,.003);
     const grip=contour('Glock double-stack grip',GLOCK_GRIP,m.pistolFrame);grip.rotation.x=Math.PI/2;
@@ -541,7 +569,7 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
   // Keep reticle marks at their usual on-screen size inside the larger sight.
   if(k!==1&&sight)for(const mark of sight.marks)mark.scale.multiplyScalar(1/k);
   const sightHeight=(type==='glock'?.100:type==='shotgun'?SHOTGUN_SIGHT_HEIGHT:sight?.height??0)*k;
-  g.userData={weaponType:type,reference:references[type],body,parts,optic:sight,sightHeight,muzzle:muzzlePoint.clone().multiplyScalar(k),forehand:forehand*k,scale:k,slide,slideTime:0};
+  g.userData={weaponType:type,reference:references[type],body,parts,optic:sight,sightHeight,pistolDot:slide?{group:slide.getObjectByName('Pistol red dot sight'),cover:slide.getObjectByName('MOS cover plate set'),height:PISTOL_DOT_HEIGHT*k}:null,muzzle:muzzlePoint.clone().multiplyScalar(k),forehand:forehand*k,scale:k,slide,slideTime:0};
   return g;
 }
 
@@ -549,4 +577,11 @@ export function updatePistolSlide(model,dt,ammo){
   const state=model.userData;if(!state.slide)return;
   state.slideTime=Math.max(0,state.slideTime-dt);
   state.slide.position.z=ammo===0?.026:.026*Math.sin(Math.PI*state.slideTime/.12);
+}
+
+// Fit or remove the pistol's red dot (v159, pistol Rank 1). The cover plate
+// sits in the MOS cut whenever the optic is off.
+export function setPistolDot(model,fitted){
+  const dot=model.userData.pistolDot;if(!dot)return;
+  dot.group.visible=!!fitted;dot.cover.visible=!fitted;
 }
