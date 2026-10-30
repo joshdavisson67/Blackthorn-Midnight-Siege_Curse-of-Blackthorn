@@ -27,6 +27,21 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Raven SMG upgrade ranks (version 161)
+
+Once you own the Raven SMG, either SMG rack (ground floor or upstairs) sells its four ranks, in order, for the run:
+
+| Rank | Name | Upgrade | Cost |
+|---|---|---|---|
+| I | **Quickened Talons** | 30% faster reload | 2,000 |
+| II | **Unkindness** | 70-round magazine | 4,000 |
+| III | **Black Flock** | 100-round magazine | 8,000 |
+| IV | **Twin Ravens** (capstone) | An MP5 in each hand | 16,000 |
+
+- **Twin Ravens:** both MP5s have no optics and fire alternately at twice the rate. Each gun holds its own upgraded magazine (100 + 100), and one reload refills both from the shared reserve. Aiming tightens the spread and keeps the crosshair up instead of raising sights.
+- **Reserve:** it grows with the magazine ranks (240 → 420 → 600, six magazines). The twin guns add no reserve. Magazine ranks and the twin guns arrive loaded.
+- **Other details:** each rank has a flavour line in the rack prompt, the HUD names the rank, and once every rank is earned the rack simply hands you the SMG. A new run starts over.
+
 ## Pistol reserve grows with its magazine (version 160)
 
 - **Reserve ammo scales with the magazine ranks.** The Glock always carries six full magazines in reserve: 78 rounds at 13, **108** with Long Vigil's 18, and **144** with Grave Hunger's 24. The Soul Forge's +25% applies on top (a forged Grave Hunger holds 30 + 180).
