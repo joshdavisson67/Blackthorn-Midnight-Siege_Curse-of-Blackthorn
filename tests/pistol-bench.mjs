@@ -30,7 +30,7 @@ export function verifyPistolBench(qa,frames,elements){
   let gun=false;visual.group.traverse(o=>{if(o.userData.weaponType==='glock')gun=true;});assert(gun,'Pistol bench displays the Glock model');
 
   // v159: the bench sells the four pistol ranks first; restocking follows.
-  qa.get().inventory.glock.weaponRank=4;qa.get().inventory.glock.ammo=24;
+  qa.get().inventory.glock.weaponRank=4;qa.get().inventory.glock.ammo=24;qa.get().inventory.glock.reserve=144;
   assert.equal(bench.price,250,'With every rank earned, the bench restocks for 250');
   const at=()=>{qa.setPlayer(front.x,front.z);frames(1);};
   const glock=()=>qa.get().inventory.glock;
@@ -49,10 +49,10 @@ export function verifyPistolBench(qa,frames,elements){
   qa.interact();
   assert.equal(qa.get().points,750,'Restocking the pistol costs 250 essence');
   assert.equal(glock().ammo,5,'Restocking leaves the current magazine unchanged');
-  assert.equal(glock().reserve,78+19,'Reserve is full plus the rounds missing from the (24-round, all ranks) magazine');
+  assert.equal(glock().reserve,144+19,'Reserve (six 24-round magazines with all ranks) is full plus the rounds missing from the magazine');
   assert.equal(qa.get().weapon,'glock','Buying from the bench equips the pistol');
   assert.equal(elements.get('toast').textContent,'GLOCK 21 AMMUNITION RESTOCKED');
-  qa.reload();frames(200);assert.equal(glock().ammo,24);assert.equal(glock().reserve,78,'One reload leaves magazine and reserve full');
+  qa.reload();frames(200);assert.equal(glock().ammo,24);assert.equal(glock().reserve,144,'One reload leaves magazine and reserve full');
   qa.interact();assert.equal(qa.get().points,750,'Topped-up pistol is not charged again');
 
   // A reload in progress is preserved.

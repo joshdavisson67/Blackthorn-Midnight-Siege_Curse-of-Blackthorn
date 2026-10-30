@@ -18,6 +18,9 @@ export function nextRank(type,rank=0){return rankLadder(type)[rank]||null;}
 function earned(type,rank){return rankLadder(type).slice(0,Math.max(0,rank));}
 // Base magazine before the Soul Forge's capacity bonus is applied.
 export function rankMagazine(type,rank,base){let mag=base;for(const r of earned(type,rank))if(r.mag)mag=r.mag;return mag;}
+// v160: the reserve grows with the magazine, so it always holds the same number
+// of full magazines (the Glock keeps six: 78 / 108 / 144).
+export function rankReserve(type,rank,baseMag,baseReserve){return Math.round(baseReserve*rankMagazine(type,rank,baseMag)/baseMag);}
 // Damage multiplier on top of every other bonus, including the Soul Forge.
 export function rankDamage(type,rank){let k=1;for(const r of earned(type,rank))if(r.damage)k*=r.damage;return k;}
 // Fire-rate multiplier: the time between shots is divided by it.

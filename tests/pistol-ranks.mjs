@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as T from '../public/game/three.module.js';
-import {WEAPON_RANKS,rankMagazine,rankDamage,rankFireRate} from '../public/game/weapon-ranks.mjs';
+import {WEAPON_RANKS,rankMagazine,rankReserve,rankDamage,rankFireRate} from '../public/game/weapon-ranks.mjs';
 import {PISTOL_DOT_HEIGHT} from '../public/game/weapon-models.mjs';
 
 // v159: the Glock's four upgrade ranks, bought in order at the pistol bench.
@@ -8,6 +8,8 @@ export function verifyPistolRanks(qa,frames,listeners,elements,gameCanvas){
   const ladder=WEAPON_RANKS.glock;
   assert.deepEqual(ladder.map(r=>[r.name,r.price]),[['Bloodsight',2000],['Long Vigil',4000],['Grave Hunger',8000],['Last Rites',16000]]);
   assert.deepEqual([0,1,2,3,4].map(r=>rankMagazine('glock',r,13)),[13,13,18,24,24]);
+  // v160: the reserve keeps six full magazines at every size.
+  assert.deepEqual([0,1,2,3,4].map(r=>rankReserve('glock',r,13,78)),[78,78,108,144,144]);
   assert.deepEqual([0,3,4].map(r=>[rankDamage('glock',r),rankFireRate('glock',r)]),[[1,1],[1,1],[2,1.5]]);
 
   qa.start();qa.holdSpawns();
@@ -42,11 +44,15 @@ export function verifyPistolRanks(qa,frames,listeners,elements,gameCanvas){
   listeners.mouseup({button:2});frames(30);
 
   // Ranks II and III: bigger magazines that arrive loaded and reload to size.
-  qa.setPoints(4000);at();assert(elements.get('interaction').innerHTML.includes('4,000 ESSENCE'));qa.interact();
+  qa.setPoints(4000);at();assert(elements.get('interaction').innerHTML.includes('4,000 ESSENCE'));const r1=glock().reserve;qa.interact();
   assert.equal(glock().weaponRank,2);assert.equal(glock().ammo,18,'Long Vigil arrives with a full 18-round magazine');
-  qa.setPoints(8000);qa.interact();assert.equal(glock().weaponRank,3);assert.equal(glock().ammo,24,'Grave Hunger arrives with a full 24-round magazine');
+  assert.equal(glock().reserve,r1+30,'Long Vigil adds the 30 reserve rounds its bigger magazine needs (78 -> 108)');
+  const r2=glock().reserve;qa.setPoints(8000);qa.interact();assert.equal(glock().weaponRank,3);assert.equal(glock().ammo,24,'Grave Hunger arrives with a full 24-round magazine');
+  assert.equal(glock().reserve,r2+36,'Grave Hunger adds 36 more reserve rounds (108 -> 144)');
   glock().ammo=0;glock().reserve=200;qa.reload();frames(200);assert.equal(glock().ammo,24,'Reloads fill the 24-round magazine');
   glock().forgeRank=1;glock().ammo=0;qa.reload();frames(200);assert.equal(glock().ammo,30,'The Soul Forge capacity bonus applies on top (24 x 1.25)');
+  {const crate=st().interactables.find(s=>s.type==='ammo'&&s.name==='AMMUNITION');qa.setPlayer(crate.x,crate.z+1.6);frames(1);qa.setPoints(1000);glock().ammo=30;glock().reserve=0;qa.interact();
+   assert.equal(glock().reserve,180,'Ammo crates restock the ranked, forged reserve (144 x 1.25)');}
   glock().forgeRank=0;
 
   // Capstone: twice the damage per shot and 50% faster fire.

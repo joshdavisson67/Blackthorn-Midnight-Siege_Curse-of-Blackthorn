@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=157';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=159';
-import {createChangelog} from './changelog.mjs?v=159';
+import {createLeaderboard} from './leaderboard.mjs?v=160';
+import {createChangelog} from './changelog.mjs?v=160';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -27,7 +27,7 @@ import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 import {createStationBuilder} from './station-models.mjs?v=159';
 import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=159';
-import {nextRank,rankInfo,rankMagazine,rankDamage,rankFireRate,rankHasDot} from './weapon-ranks.mjs?v=159';
+import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot} from './weapon-ranks.mjs?v=160';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
 import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=159';
@@ -331,8 +331,9 @@ function notify(s,duration=2.6){$('toast').textContent=s;toastTime=duration;}
 function announce(title,sub=''){ $('banner').innerHTML=title+(sub?`<small>${sub}</small>`:'');bannerTime=3.2;}
 function addPoints(n){const earned=curseReward(n,curse.rank);points+=earned;totalScore+=earned;return earned;}
 function updateForgeStations(){for(const s of forgeStations)if(s.forgeRank!==inventory[weapon].forgeRank)s.setForgeRank(inventory[weapon].forgeRank);}
-// Weapon ranks (v159) set the base magazine; the Soul Forge scales it on top.
-function ammoCapacity(k=weapon){const inv=inventory[k],multiplier=forgeBonuses(inv.forgeRank).ammoMultiplier;return {mag:Math.ceil(rankMagazine(k,inv.weaponRank,weapons[k].mag)*multiplier),reserve:Math.ceil(weapons[k].reserve*multiplier)};}
+// Weapon ranks set the base magazine (v159) and a reserve that grows with it
+// (v160); the Soul Forge scales both on top.
+function ammoCapacity(k=weapon){const inv=inventory[k],w=weapons[k],multiplier=forgeBonuses(inv.forgeRank).ammoMultiplier;return {mag:Math.ceil(rankMagazine(k,inv.weaponRank,w.mag)*multiplier),reserve:Math.ceil(rankReserve(k,inv.weaponRank,w.mag,w.reserve)*multiplier)};}
 function freshInventory(){return Object.fromEntries(Object.entries(weapons).map(([k,v])=>[k,{ammo:v.mag,reserve:v.reserve,owned:k==='glock',forgeRank:0,weaponRank:0}]));}
 inventory=freshInventory();let doubleTime=0,grenadeTime=0,grenadeCooldown=0;
 function selectWeapon(k){if(!inventory[k].owned||reloadLeft>0)return;if(weapon!==k){weaponRecoil.reset();camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();}weapon=k;reticleHud.select(k);recoil=.06;flash.position.copy(gunGroups[k].userData.muzzle);flash.scale.setScalar(k==='glock'?.58:k==='smg'?.32:1);flash.position.z-=.11*flash.scale.x;for(const t in gunGroups)gunGroups[t].visible=t===k;updateHud();}
@@ -420,11 +421,11 @@ function applyWeaponRanks(){setPistolDot(gunGroups.glock,rankHasDot('glock',inve
 // The bench's price always reflects the next rank (or the 250 restock once all are earned).
 Object.defineProperty(pistolBench,'price',{get(){const next=nextRank('glock',inventory.glock.weaponRank);return next?next.price:250;}});
 function buyPistolRank(){
-  const inv=inventory.glock,next=nextRank('glock',inv.weaponRank);if(!next)return false;
+  const inv=inventory.glock,next=nextRank('glock',inv.weaponRank),before=ammoCapacity('glock');if(!next)return false;
   if(points<next.price){notify(`NEED ${next.price-points} MORE ESSENCE`);tone(110,.2,.03,'square');return false;}
   points-=next.price;inv.weaponRank=next.rank;applyWeaponRanks();
-  // A bigger magazine arrives loaded.
-  if(next.mag)inv.ammo=ammoCapacity('glock').mag;
+  // A bigger magazine arrives loaded, along with the extra reserve rounds it needs.
+  if(next.mag){const after=ammoCapacity('glock');inv.ammo=after.mag;inv.reserve+=Math.max(0,after.reserve-before.reserve);}
   reloadLeft=0;selectWeapon('glock');
   notify(`PISTOL RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect.toUpperCase()}`,4);
   tone(520,.18,.08,'triangle',1040);tone(780,.3,.05,'triangle',1560);

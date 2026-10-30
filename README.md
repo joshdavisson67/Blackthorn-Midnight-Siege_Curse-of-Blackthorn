@@ -27,6 +27,11 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Pistol reserve grows with its magazine (version 160)
+
+- **Reserve ammo scales with the magazine ranks.** The Glock always carries six full magazines in reserve: 78 rounds at 13, **108** with Long Vigil's 18, and **144** with Grave Hunger's 24. The Soul Forge's +25% applies on top (a forged Grave Hunger holds 30 + 180).
+- **The extra rounds come with the upgrade.** Long Vigil adds 30 reserve rounds and Grave Hunger 36 more, on top of the full new magazine. Ammo crates, Max Ammo and the pistol bench restock to the larger reserve.
+
 ## Pistol upgrade ranks (version 159)
 
 The first weapon upgrade ladder. The courtyard pistol bench sells the Glock's four ranks in order, and they last for the run:
