@@ -286,3 +286,6 @@ verifyBellaUpgrades(qa,frames,elements);
 
 const {verifyPistolRanks}=await import('./pistol-ranks.mjs');
 verifyPistolRanks(qa,frames,listeners,elements,gameCanvas);
+
+const {verifySmgRanks}=await import('./smg-ranks.mjs');
+verifySmgRanks(qa,frames,listeners,elements,gameCanvas);
