@@ -1,6 +1,7 @@
 import * as T from './three.module.js';
 import {createWeaponModel} from './weapon-models.mjs?v=159';
 import {configureArmorStation} from './armor.mjs?v=94';
+import {mapColor} from './minimap.mjs?v=162';
 import {configureForgeStation} from './soul-forge.mjs?v=118';
 
 // Shared low-poly exhibit parts: built once, then statically batched with the
@@ -169,5 +170,6 @@ export function createStationBuilder({world,colliders,solidMeshes,interactables,
 }
 export function drawStationMarker(c,s,x,z){
   const symbol=s.type==='bell'?'BL':s.type==='kennel'?'B':s.type==='mausoleumDoor'?'T':s.type==='nuke'?'NU':s.type==='lmg'?'LM':s.type==='armor'?(s.armorTier>0?'N'+Math.min(s.armorTier,3):'AR'):s.type==='cellarDoor'?'↓':s.type==='perk'?s.icon:s.type==='shotgun'?'SG':s.type==='smg'?'SM':s.type==='bushmaster'?'BM':s.type==='glock'?'GL':s.type==='ammo'?'A':s.type==='upgrade'?'F':s.power==='double'?'×2':'∞';
-  c.fillStyle='#09151e';c.fillRect(x-8,z-7,16,14);c.strokeStyle=s.hex||'#d4b77a';c.lineWidth=1;c.strokeRect(x-8,z-7,16,14);c.fillStyle=s.hex||'#d4b77a';c.font='bold 9px Arial';c.textAlign='center';c.fillText(symbol,x,z+3);
+  // The estate map uses the same non-red station palette as the minimap (v162).
+  const color=mapColor(s);c.fillStyle='#09151e';c.fillRect(x-8,z-7,16,14);c.strokeStyle=color;c.lineWidth=1;c.strokeRect(x-8,z-7,16,14);c.fillStyle=color;c.font='bold 9px Arial';c.textAlign='center';c.fillText(symbol,x,z+3);
 }

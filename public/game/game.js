@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=157';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=161';
-import {createChangelog} from './changelog.mjs?v=161';
+import {createLeaderboard} from './leaderboard.mjs?v=162';
+import {createChangelog} from './changelog.mjs?v=162';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -14,7 +14,7 @@ import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnM
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
 import {buildGraveyard} from './graveyard.mjs?v=154';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
-import {buildCellar,drawCellarMap} from './cellar.mjs?v=159';
+import {buildCellar,drawCellarMap} from './cellar.mjs?v=162';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
 import {buildShed} from './shed.mjs?v=159';
 import * as T from './three.module.js';
@@ -25,21 +25,22 @@ import {suppressedShot} from './gun-audio.mjs?v=150';
 import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
-import {createStationBuilder} from './station-models.mjs?v=159';
+import {createStationBuilder} from './station-models.mjs?v=162';
 import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=159';
+import {drawMinimap} from './minimap.mjs?v=162';
 import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual} from './weapon-ranks.mjs?v=161';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=159';
+import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=162';
 import {createEnemyAssets} from './enemy-assets.mjs?v=157';
-import {createCombatLights} from './combat-lights.mjs?v=159';
+import {createCombatLights} from './combat-lights.mjs?v=162';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=157';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=154';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=154';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=159';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=162';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=158';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=140';
 import {addEstateDetail} from './estate-detail.mjs?v=154';
@@ -51,7 +52,7 @@ import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses,configureForgeStation} from './soul-forge.mjs?v=118';
 import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=153';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=159';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=162';
 import {buildRotundaBell} from './rotunda-bell.mjs?v=130';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=154';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=135';
@@ -1231,7 +1232,8 @@ const effectNext=new T.Vector3();
 function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+.12;if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;}e.mesh.rotation.x+=step*4;}if(e.type==='blast'){e.mesh.scale.setScalar(1+(1-e.life/e.max)*12);e.mesh.material.opacity=e.life/e.max*.75;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else world.remove(e.mesh);if(e.type==='blast')e.mesh.material.dispose();effects.splice(i,1);}}}
 function grantPowerup(type){if(type==='ammo'){refillAmmo();notify('MAX AMMO · RESERVES RESTOCKED');}else if(type==='double'){doubleTime=POWERUPS.double.duration;notify('×2 · DOUBLE DAMAGE FOR 20s');}else if(type==='grenades'){grenadeTime=POWERUPS.grenades.duration;notify('INFINITE GRENADES · 12s · PRESS G');}}
 function updatePickups(dt){for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;if(p.mesh.userData.model)p.mesh.userData.model.rotation.y+=dt*.65;p.mesh.position.y=(p.y||0)+.8+Math.sin(elapsed*2+p.phase)*.15;if(p.eventPool)p.mesh.rotation.y+=dt*1.4;if(mode==='playing'&&p.life>0&&Math.abs((p.y||0)-player.y)<1.2&&Math.hypot(p.mesh.position.x-player.x,p.mesh.position.z-player.z)<1.2){if(p.type==='essence'){const reward=addPoints(p.value);notify(`GRAVE ESSENCE +${reward}`);}else if(p.type==='bone')collectBoneChip();else grantPowerup(p.type);tone(660,.4,.1,'triangle',1200);p.life=0;}if(p.life<=0){if(p.eventPool)eventVisuals.release(p);else world.remove(p.mesh);pickups.splice(i,1);}}}
-const radar=$('radar'),rx=radar.getContext('2d');function drawRadar(){rx.clearRect(0,0,radar.width,radar.height);rx.save();rx.scale(radar.width/150,radar.height/150);rx.save();rx.translate(75,75);rx.strokeStyle='#a8b49c35';rx.lineWidth=1;rx.beginPath();rx.arc(0,0,47,0,Math.PI*2);rx.stroke();rx.rotate(-lookYaw);const sc=3;rx.strokeStyle='#a1ada354';for(const c of colliders){if(c.disabled)continue;if(player.y+.06>=(c.maxY??3.8)||player.y+1.8<=(c.minY??0))continue;if(c.w<1&&c.d<1)continue;const x=(c.x-player.x)*sc,z=(c.z-player.z)*sc;if(Math.hypot(x,z)<95)rx.strokeRect(x-c.w*sc/2,z-c.d*sc/2,c.w*sc,c.d*sc);}for(const e of zombies){if(e.dead||Math.abs(e.floorY-player.y)>1.8)continue;const x=(e.group.position.x-player.x)*sc,z=(e.group.position.z-player.z)*sc;if(Math.hypot(x,z)<68){rx.fillStyle=e.enraged?'#ff3925':e.feral?'#b6ff4e':e.rareDog?'#82edf3':e.dog?'#bd9ddc':e.brute?'#e4a85b':'#ca6b52';rx.beginPath();rx.arc(x,z,e.brute?3:2,0,7);rx.fill();}}for(const s of interactables){if(s.used||s.locked||s.secret)continue;if(Math.abs((s.y||0)-player.y)>1.8)continue;const x=(s.x-player.x)*sc,z=(s.z-player.z)*sc;if(Math.hypot(x,z)<68){rx.fillStyle=s.hex||'#baaa76';rx.fillRect(x-2,z-2,4,4);}}if(bella.unlocked&&Math.abs(bella.pos.y-player.y)<1.8){const x=(bella.pos.x-player.x)*sc,z=(bella.pos.z-player.z)*sc;if(Math.hypot(x,z)<68){rx.fillStyle='#9af0d6';rx.beginPath();rx.arc(x,z,3,0,7);rx.fill();rx.font='bold 8px Arial';rx.fillText('B',x+4,z+3);}}rx.restore();rx.fillStyle='#d8d9bf';rx.beginPath();rx.moveTo(75,69);rx.lineTo(71,80);rx.lineTo(79,80);rx.closePath();rx.fill();rx.fillStyle='#8b9f95';rx.font='8px Arial';rx.fillText('N',72,13);rx.restore();}
+const radar=$('radar'),rx=radar.getContext('2d');// v162: north-up minimap; see minimap.mjs.
+function drawRadar(){return drawMinimap(rx,{width:radar.width,height:radar.height,player,yaw:lookYaw,colliders,zombies,stations:interactables,bella});}
 let hudTick=0,frameCount=0,fpsTime=0,footstepTime=0;
 function tick(now){requestAnimationFrame(tick);gamepad.poll(Math.min(Math.max(0,(now-lastTime)/1000),.05),{enabled:padPlay(),playing:mode==='playing'&&$('guide').classList.contains('hidden'),layer:padLayer(),sensitivity:Number($('sensitivity').value),aiming:aiming&&!grenadeThrow.active,zoom:weapons[weapon].zoom||1,onTarget:mode==='playing'&&padOnTarget()});updateControllerStatus();document.body.classList.toggle('pad-playing',padPlay()&&mode==='playing');if(mode==='playing'&&!directControls()&&!hasMouseLock())pauseGame();touchControls?.setActive(mode==='playing'&&$('guide').classList.contains('hidden'));const frameSeconds=Math.max(0,(now-lastTime)/1000),dt=Math.min(frameSeconds,.05);lastTime=now;elapsed+=dt;fpsTime+=frameSeconds;frameCount++;if(mode==='playing'&&!document.hidden){const before=renderScale.scale;renderScale.sample(frameSeconds);if(renderScale.scale!==before)resize();}else renderScale.interrupt();if(fpsTime>1){$('fps').textContent=`${Math.round(frameCount/fpsTime)} FPS · ${$('quality').value.toUpperCase()}${renderScale.scale<1?` · ${Math.round(renderScale.scale*100)}% RES`:''}`;fpsTime=0;frameCount=0;}
 if(mode==='curse')runTime+=dt;
