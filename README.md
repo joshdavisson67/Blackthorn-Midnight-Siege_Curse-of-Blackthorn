@@ -27,6 +27,13 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Minimap overhaul (version 162)
+
+- **North stays up.** The map no longer spins. Your marker is an arrow at the centre that turns with your view, over a soft, fading view cone. N, E, S and W sit on the rim.
+- **Red means zombies.** Every zombie is a red dot: brutes are larger, dogs smaller, and enraged undead get an extra ring. Stations never use red on the map: Ironheart turns soft pink, and the pistol bench turns gold like the other weapon racks. The estate map (M) uses the same palette.
+- **Zombies across the whole map.** They show anywhere in the circle, which now covers about 28 m around you. Zombies on another floor appear as hollow red rings, and zombies beyond the edge show as red pips on the rim pointing toward them.
+- Walls on your floor are drawn as soft filled outlines, clipped to the circle.
+
 ## Raven SMG upgrade ranks (version 161)
 
 Once you own the Raven SMG, either SMG rack (ground floor or upstairs) sells its four ranks, in order, for the run:
