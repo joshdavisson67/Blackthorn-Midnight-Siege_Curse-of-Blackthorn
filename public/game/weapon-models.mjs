@@ -5,7 +5,7 @@ import {weaponSurfaces,weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=153'
 
 // One set of meshes/materials supplies both the first-person guns and exhibits.
 // The profiles are visual game assets, with forward along negative Z.
-const references={glock:'Glock 21 .45 pistol',rifle:'M4 carbine',shotgun:'Magazine-fed combat shotgun',smg:'MP5-style submachine gun',lmg:'M249-style squad automatic weapon',bushmaster:'AR-15 .450 Bushmaster precision rifle'};
+const references={glock:'Glock 21 .45 pistol',rifle:'M4 carbine',shotgun:'Magazine-fed combat shotgun',smg:'MP5-style submachine gun',lmg:'M249-style squad automatic weapon',bushmaster:'Ruger AR-556 .450 Bushmaster rifle'};
 let assets;
 // Pistol red dot (v159): the window centre that the aimed eye lines up with.
 export const PISTOL_DOT_HEIGHT=.105;
@@ -40,8 +40,8 @@ function getAssets(){
   return assets;
 }
 
-// dotSight (v165, Bushmaster Rank I): the 10x scope gives way to the M4's
-// red-dot tube on its riser.
+// dotSight (v165, Bushmaster Rank I): the 10x scope gives way to the Raven's
+// holographic red-dot sight on a low riser (v166; v165 used the M4's tube).
 export function createWeaponModel(type,{hands=false,optic=true,dotSight=false}={}){
   if(!references[type])throw new Error('Unknown weapon model: '+type);
   const a=getAssets(),{m}=a,g=new T.Group(),body=new T.Group(),parts=[];
@@ -216,8 +216,78 @@ export function createWeaponModel(type,{hands=false,optic=true,dotSight=false}={
     cylinder(0,.035,-.041,.010,.002,m.black,'Recessed .45 bore');
     cylinder(0,.015,-.051,.0038,.002,m.black,'Recoil spring recess');
     muzzlePoint=new T.Vector3(0,.035,-.060);forehand=.045;
-  }else if(type==='rifle'||type==='bushmaster'){
-    const heavy=type==='bushmaster',furniture=heavy?m.olive:m.polymer;
+  }else if(type==='bushmaster'){
+    // Ruger AR-556 in .450 Bushmaster (v166), after the reference photos: an
+    // all-black flat-top with a long free-float M-LOK handguard and a
+    // full-length top rail, an angled handguard nose, a heavy barrel with a
+    // radial-port brake, a short straight .450 magazine, a compact pistol
+    // grip and a slim Magpul-style stock with an angled sling slot.
+    const A=m.anodized,P=m.stockPolymer;
+    const front=-.735,rear=-.222,mid=(front+rear)/2,len=rear-front,HW=.047; // handguard
+    // Receivers.
+    profile('Ruger .450 upper receiver',[[-.235,-.030],[-.235,.059],[.112,.059],[.138,.034],[.138,-.026]],.092,A,.004);
+    // The lower wraps the magazine well, then steps up over an open trigger
+    // guard to the grip and tapers into the buffer tube.
+    profile('Ruger .450 lower receiver',[[-.232,-.026],[.120,-.026],[.130,-.040],[.112,-.058],[.040,-.058],[-.062,-.058],[-.080,-.074],[-.090,-.104],[-.216,-.104],[-.232,-.082]],.086,A,.004);
+    box(0,-.098,-.152,.092,.014,.100,A,'Flared magazine well');
+    ring(-.0445,-.072,-.150,.012,.002,m.black,'Engraved Ruger crest').rotation.y=Math.PI/2;
+    rail(-.050,.362,.077,.052);
+    box(0,.066,.130,.070,.012,.022,m.black,'Charging handle');box(-.030,.066,.142,.016,.012,.012,m.black,'Charging handle latch');
+    ejection(-.034,.094,.020,.0465);
+    box(.050,.020,.040,.018,.036,.030,A,'Brass deflector');cylinder(.047,.010,.090,.013,.030,A,'Forward assist','x');
+    box(.0465,-.040,-.035,.001,.016,.040,m.black,'Engraved .450 BUSHMASTER marking');
+    for(const side of [-1,1])box(side*.047,-.027,-.050,.002,.003,.27,m.black,'Upper and lower receiver seam');
+    profile('Compact polymer pistol grip',[[.030,-.054],[.098,-.054],[.160,-.196],[.126,-.212],[.056,-.172],[.040,-.090]],.058,P,.006);
+    for(let i=0;i<4;i++)box(0,-.100-i*.026,.070+i*.017,.060,.012,.022,m.rubber,'Grip stippling panel');
+    trigger(.012);pins([-.18,.07],-.035,.045);
+    box(-.045,-.014,.055,.005,.027,.011,m.black,'Selector lever').rotation.x=.3;
+    box(-.046,-.005,-.065,.007,.029,.026,m.edge,'Bolt catch paddle');
+    box(.045,-.051,-.108,.007,.020,.034,m.black,'Magazine release fence');box(.049,-.051,-.106,.004,.011,.020,m.edge,'Magazine release button');
+    // Short, straight .450 Bushmaster magazine with ribbed sides.
+    profile('Short .450 Bushmaster magazine',[[-.206,-.092],[-.100,-.092],[-.103,-.222],[-.210,-.222]],.066,m.black,.004);
+    for(const side of [-1,1])for(let i=0;i<3;i++)box(side*.0335,-.160,-.125-i*.030,.003,.106,.009,A,'Magazine side rib');
+    box(0,-.226,-.155,.074,.014,.116,A,'Magazine floorplate');
+    // Buffer tube and a slim, angled Magpul-style stock.
+    ring(0,.008,.142,.024,.004,A,'Castle nut');cylinder(0,.008,.225,.022,.17,A,'Buffer tube');
+    cylinder(0,.010,.300,.029,.17,P,'Stock body over the buffer tube');
+    profile('Slim adjustable stock',[[.205,.030],[.388,.030],[.392,-.165],[.372,-.176],[.300,-.098],[.236,-.040],[.208,-.012]],.064,P,.005,[[[.322,-.072],[.338,-.074],[.364,-.142],[.350,-.146]]]);
+    box(0,-.068,.394,.070,.208,.018,m.rubber,'Rubber buttpad');for(let i=0;i<7;i++)box(0,-.160+i*.028,.404,.062,.005,.003,m.black,'Buttpad groove');
+    box(0,-.040,.250,.020,.016,.060,m.black,'Stock adjustment lever');
+    for(const side of [-1,1]){ring(side*.0325,-.040,.284,.009,.002,m.black,'Stock QD sling socket').rotation.y=Math.PI/2;box(side*.0325,.000,.330,.002,.012,.070,m.black,'Moulded stock lever channel');}
+    // Long free-float M-LOK handguard: slotted sides, chamfered top and bottom
+    // edges, an angled nose (the top reaches further than the bottom), and the
+    // top rail running on from the receiver.
+    rail(mid,len,.077,.052);box(0,.055,mid,.058,.006,len,A,'Handguard top plate');
+    box(0,-.047,mid+.014,.058,.006,len-.028,A,'Handguard bottom plate');
+    for(let i=0;i<8;i++)box(0,-.0505,front+.06+i*(len-.10)/7,.020,.002,.030,m.black,'Bottom M-LOK slot');
+    const slots=[],windows=[];
+    for(let i=0;i<10;i++){const z=front+.040+i*(len-.08)/10;slots.push([[z,-.021],[z+.030,-.021],[z+.030,-.010],[z,-.010]]);}
+    for(let i=0;i<8;i++){
+      const z=front+.045+i*(len-.10)/8;
+      if(i>=2&&i<=6)windows.push([[z,.006],[z+.040,.006],[z+.032,.026],[z-.008,.026]]);
+      else slots.push([[z,.010],[z+.026,.010],[z+.026,.020],[z,.020]]);
+    }
+    for(const side of [-1,1]){
+      const panel=profile('M-LOK handguard side panel',[[front,.036],[rear,.036],[rear,-.030],[front+.028,-.030]],.006,A,.0008,[...slots,...windows]);panel.position.x=side*HW;
+      const top=box(side*.0375,.046,mid,.0276,.006,len,A,'Handguard upper chamfer');top.rotation.z=-side*.81;
+      const low=box(side*.0375,-.039,mid+.014,.0262,.006,len-.028,A,'Handguard lower chamfer');low.rotation.z=side*.84;
+      box(side*(HW+.0035),.024,rear-.075,.001,.008,.055,m.black,'Engraved RUGER mark');
+      for(const z of [rear-.018,rear-.040])screw(side*(HW+.003),-.018,z,'Handguard clamp screw');
+      sling(side*(HW+.006),-.040,rear-.030,'Handguard QD sling socket',true);
+    }
+    // Barrel: visible through the slots, then exposed ahead of the nose.
+    cylinder(0,0,mid,.017,len,m.metal,'Heavy .450 barrel inside the handguard');
+    cylinder(0,.004,front+.090,.024,.040,m.black,'Low-profile gas block');cylinder(0,.036,mid+.050,.005,len-.160,m.edge,'Gas tube');
+    cylinder(0,0,front-.050,.019,.100,m.metal,'Heavy .450 barrel');
+    // Radial-port muzzle brake.
+    const brakeZ=front-.140;cylinder(0,0,brakeZ,.025,.085,A,'Radial-port muzzle brake');
+    ring(0,0,brakeZ+.0425,.022,.003,A,'Brake shoulder');ring(0,0,brakeZ-.0425,.022,.004,m.edge,'Brake crown');cylinder(0,0,brakeZ-.0435,.012,.002,m.black,'Brake bore');
+    for(let row=0;row<3;row++)for(const deg of [-90,-45,0,45,90]){
+      const a=deg*Math.PI/180+(row%2?.22:0),z=brakeZ+.026-row*.026,port=cylinder(-Math.sin(a)*.0235,Math.cos(a)*.0235,z,.0055,.006,m.black,'Brake port','y');port.rotation.z=a;
+    }
+    muzzlePoint=new T.Vector3(0,0,brakeZ-.048);forehand=-.45;
+  }else if(type==='rifle'){
+    const furniture=m.polymer;
     profile('Forged M4 upper receiver',[[-.235,-.033],[-.22,.059],[.115,.059],[.14,.027],[.14,-.029]],.118,m.metal,.004);
     profile('M4 lower and magazine well',[[-.23,-.028],[-.07,-.028],[-.055,-.054],[.13,-.054],[.125,-.07],[.045,-.07],[.018,-.112],[-.155,-.112],[-.16,-.088],[-.235,-.076]],.095,m.metal);
     grip(.062);trigger(.012);pins([-.18,.07],-.035);
@@ -233,11 +303,11 @@ export function createWeaponModel(type,{hands=false,optic=true,dotSight=false}={
     cylinder(.069,.018,.085,.015,.034,m.edge,'Forward assist','x');
     box(0,.067,.122,.12,.012,.017,m.black,'Charging handle');
     rail(-.057,.35,.077);
-    const guardZ=heavy?-.402:-.378,guardLength=heavy?.30:.25,start=guardZ-guardLength/2,end=guardZ+guardLength/2;
+    const guardZ=-.378,guardLength=.25,start=guardZ-guardLength/2,end=guardZ+guardLength/2;
     cylinder(0,0,guardZ,.015,guardLength+.04,m.metal,'Barrel visible through handguard');
     box(0,.051,guardZ,.103,.011,guardLength,m.black,'Handguard upper spine');
     box(0,-.051,guardZ,.103,.010,guardLength,m.black,'Handguard lower spine');
-    rail(guardZ,heavy?.30:.255,.077,.063);
+    rail(guardZ,.255,.077,.063);
     for(const side of [-1,1]){
       const slots=[];
       for(const yy of [-.034,.034])for(let i=0;i<6;i++){
@@ -250,29 +320,17 @@ export function createWeaponModel(type,{hands=false,optic=true,dotSight=false}={
       screw(side*.058,.005,end-.014,'Handguard retaining screw');
     }
     for(const z of [start+.004,end-.004])ring(0,0,z,.050,.005,m.black,'Open handguard end collar');
-    cylinder(0,0,heavy?-.63:-.574,heavy?.021:.015,heavy?.23:.175,m.metal,heavy?'Heavy .450 barrel':'Stepped carbine barrel');cylinder(0,0,heavy?-.551:-.503,.025,.034,m.black,'Barrel collar');
-    if(!heavy){
-      profile('Front sight tower',[[-.56,.013],[-.548,.14],[-.532,.148],[-.513,.013]],.017,m.metal,.002,[[[-.544,.042],[-.522,.042],[-.535,.114]]]);
-      box(0,.143,-.539,.008,.014,.008,m.black,'Front sight post');
-      cylinder(0,.043,-.397,.005,.27,m.edge,'Gas return tube');
-      for(const side of [-1,1])box(side*.013,.141,-.539,.006,.023,.013,m.metal,'Front sight protective ear');
-    }else{
-      cylinder(0,.018,-.553,.025,.035,m.black,'Low-profile gas block');
-      cylinder(0,.039,-.394,.005,.30,m.edge,'Precision gas return tube');
-    }
-    muzzlePoint=muzzle(heavy?-.80:-.70,heavy?.029:.022);forehand=heavy?-.42:-.39;
-    if(heavy){
-      profile('Straight 15-round .450 magazine',[[-.20,-.08],[-.094,-.08],[-.098,-.30],[-.21,-.30],[-.207,-.18]],.073,m.olive,.004);
-      for(const side of [-1,1])for(let i=0;i<3;i++)box(side*.038,-.203,-.123-i*.027,.003,.158,.008,m.black,'Straight magazine channel');
-      box(0,-.303,-.154,.081,.021,.124,m.black,'Heavy magazine floorplate');
-      cylinder(.062,-.036,.058,.012,.007,m.brass,'Semi-auto selector marking','x');
-    }else{
+    cylinder(0,0,-.574,.015,.175,m.metal,'Stepped carbine barrel');cylinder(0,0,-.503,.025,.034,m.black,'Barrel collar');
+    profile('Front sight tower',[[-.56,.013],[-.548,.14],[-.532,.148],[-.513,.013]],.017,m.metal,.002,[[[-.544,.042],[-.522,.042],[-.535,.114]]]);
+    box(0,.143,-.539,.008,.014,.008,m.black,'Front sight post');
+    cylinder(0,.043,-.397,.005,.27,m.edge,'Gas return tube');
+    for(const side of [-1,1])box(side*.013,.141,-.539,.006,.023,.013,m.metal,'Front sight protective ear');
+    muzzlePoint=muzzle(-.70,.022);forehand=-.39;
     profile('Curved STANAG magazine',[[-.195,-.08],[-.096,-.08],[-.106,-.18],[-.147,-.30],[-.182,-.341],[-.277,-.307],[-.222,-.183]],.069,m.edge,.004);
     for(const side of [-1,1])for(let i=0;i<3;i++){
       const line=box(side*.036,-.223,-.158-i*.023,.003,.166,.004,m.metal,'Magazine pressed channel');line.rotation.x=-.27;
     }
     box(0,-.326,-.225,.076,.017,.10,m.black,'Magazine floorplate').rotation.x=-.32;
-    }
     box(-.051,-.014,.055,.005,.027,.011,m.black,'Selector lever').rotation.x=.3;
     box(-.053,-.005,-.065,.007,.029,.026,m.edge,'Bolt catch paddle');
     box(-.053,-.031,-.059,.007,.009,.036,m.black,'Bolt catch linkage');
@@ -550,7 +608,7 @@ export function createWeaponModel(type,{hands=false,optic=true,dotSight=false}={
       profile('LMG scope mount',[[-.192,.112],[-.192,.163],[-.158,.167],[-.080,.171],[-.041,.171],[-.041,.112]],.077,m.black,.001);
       for(const side of [-1,1])for(const z of [-.170,-.065])screw(side*.041,.145,z,'LMG quick-detach clamp');
     }else{
-      const [bottom,top]=({rifle:[.078,.130],smg:[.079,.094]})[dotted?'rifle':type];
+      const [bottom,top]=({rifle:[.078,.130],smg:[.079,.094]})[dotted?'smg':type];
       box(0,(bottom+top)/2,-.07,.068,top-bottom,.098,m.black,'Optic riser');
       for(const side of [-1,1])for(const z of [-.101,-.04])screw(side*.037,(bottom+top)/2,z,'Optic clamp bolt');
     }
@@ -567,7 +625,7 @@ export function createWeaponModel(type,{hands=false,optic=true,dotSight=false}={
     const arm=cylinder(-.12,-.223,forehand+.042,.043,.237,m.glove,'Support forearm','y');arm.rotation.z=-.55;
     for(const x of [-.035,-.012,.011])ell(x,-.133,forehand,.009,.008,.036,m.black,'Glove reinforcement');
   }
-  const sight=optic&&!IRON_SIGHTS.has(type)?makeOptic(g,dotted?'rifle':type,m.metal):null;
+  const sight=optic&&!IRON_SIGHTS.has(type)?makeOptic(g,dotted?'smg':type,m.metal):null;
   if(dotted)sight.group.name='Bushmaster red-dot sight';
   const k=WEAPON_SCALE[type]??1;g.scale.setScalar(k);
   // Keep reticle marks at their usual on-screen size inside the larger sight.

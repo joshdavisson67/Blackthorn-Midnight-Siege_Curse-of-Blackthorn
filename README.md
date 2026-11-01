@@ -27,6 +27,16 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Ruger-style Bushmaster model (version 166)
+
+The .450 Bushmaster is rebuilt after the Ruger AR-556 in .450 Bushmaster. It is now all black, with no olive furniture:
+
+- **Receivers:** a flat-top upper with the rail running on into the handguard, brass deflector, forward assist and charging handle. The lower wraps a flared magazine well and steps up over an open trigger guard.
+- **Handguard:** a long free-float M-LOK handguard with chamfered edges and an angled nose (the top reaches further forward than the bottom). Each side has a row of M-LOK slots, with a row of angled lightening windows above it. It also carries a QD socket and clamp screws.
+- **Barrel and muzzle:** a heavy barrel shows through the slots and past the nose, ending in a radial-port muzzle brake.
+- **Furniture:** a short, straight, ribbed .450 magazine, a compact stippled grip, and a slim adjustable stock with an angled sling slot over the buffer tube.
+- **Sights:** the 10× scope sits on the rail as before. **Blood Moon (Rank I)** now fits the Raven's holographic sight on a low riser instead of the M4's red-dot tube.
+
 ## .450 Bushmaster upgrade ranks (version 165)
 
 The Bushmaster's base magazine is now 8 rounds, with 48 in reserve (six magazines). Once you own it, its east-study rack sells four ranks in order. They last for the run.
