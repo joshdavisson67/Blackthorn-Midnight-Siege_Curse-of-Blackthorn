@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {createOpticReticle} from './reticles.mjs?v=116';
+import {createOpticReticle} from './reticles.mjs?v=167';
 import {weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=153';
 export const VISUAL_BRIGHTNESS=1.15;
 export function stabilizeTexture(t){t.minFilter=T.LinearMipmapLinearFilter;t.magFilter=T.LinearFilter;t.generateMipmaps=true;t.anisotropy=16;return t;}
@@ -97,7 +97,10 @@ function opticMaterials(metal){
   const scopeGlass=glass.clone();scopeGlass.opacity=.018;
   const fiber=housing.clone();fiber.color.setHex(0xa54233);fiber.metalness=.12;fiber.roughness=.7;
   const warning=rubber.clone();warning.color.setHex(0xd7b223);warning.roughness=.6;
-  const result={housing,rubber,glass,scopeGlass,fiber,warning};opticFinishes.set(metal,result);return result;
+  // v167 LPVO: hard-anodised matte black and white engraved index marks.
+  const matte=housing.clone();matte.color.setHex(0x15191b);matte.roughness=.66;matte.metalness=.3;
+  const marking=rubber.clone();marking.color.setHex(0xd9ddd8);marking.roughness=.5;
+  const result={housing,rubber,glass,scopeGlass,fiber,warning,matte,marking};opticFinishes.set(metal,result);return result;
 }
 function opticWindow(w,h,r,Path=T.Shape){
   const p=new Path(),x=-w/2,y=-h/2;
@@ -119,19 +122,52 @@ export function makeOptic(parent,type,metal){
     const mesh=add(opticGeometry('cylinder',()=>new T.CylinderGeometry(1,1,1,20)),mat,x,y,z,name,housing,[r,length,r]);
     if(axis==='z')mesh.rotation.x=Math.PI/2;if(axis==='x')mesh.rotation.z=Math.PI/2;return mesh;
   }
-  function rim(z,r,t,name){return add(opticGeometry(`rim:${r}:${t}`,()=>new T.TorusGeometry(r,t,8,40)),m.housing,0,0,z,name);}
-  function tube(back,front,length,z,name){const mesh=add(opticGeometry(`tube:${back}:${front}:${length}`,()=>new T.CylinderGeometry(back,front,length,40,1,true)),m.housing,0,0,z,name);mesh.rotation.x=Math.PI/2;return mesh;}
+  function rim(z,r,t,name,mat=m.housing){return add(opticGeometry(`rim:${r}:${t}`,()=>new T.TorusGeometry(r,t,8,40)),mat,0,0,z,name);}
+  function tube(back,front,length,z,name,mat=m.housing){const mesh=add(opticGeometry(`tube:${back}:${front}:${length}`,()=>new T.CylinderGeometry(back,front,length,40,1,true)),mat,0,0,z,name);mesh.rotation.x=Math.PI/2;return mesh;}
   if(type==='bushmaster'){
+    // 1-10x low-power variable optic (v167), after the Sig Tango-MSR reference:
+    // a 34 mm matte tube, a flared eyepiece with a knurled power ring and
+    // throw lever, a centre saddle with a knurled elevation turret, a large
+    // slotted side dial and a windage cap, a modest objective bell, and
+    // flip-up lens caps. It still magnifies 10x in game.
     optic.name='10x precision scope';optic.position.set(0,.214,-.07);
-    tube(.066,.045,.10,.04,'Ribbed scope eyepiece');tube(.045,.045,.19,-.105,'Long scope tube');tube(.045,.078,.10,-.25,'Flared objective bell');
-    for(const [z,r] of [[.09,.066],[.065,.060],[.042,.053],[-.055,.045],[-.155,.045],[-.302,.078]])rim(z,r,.004,'Scope rim');
-    for(let i=0;i<16;i++){
-      const angle=i*Math.PI/8,knurl=box(Math.sin(angle)*.062,Math.cos(angle)*.062,.070,.005,.006,.028,m.rubber,'Eyepiece grip flute');knurl.rotation.z=-angle;
+    const M=m.matte,T_=.036;
+    // Eyepiece: lens rim, housing, power ring with grip flutes and throw lever.
+    const lens=.036;rim(.090,lens+.004,.004,'Scope rim',M);
+    tube(.046,.046,.054,.081,'Eyepiece housing',M);rim(.108,.046,.0035,'Eyepiece rubber edge',m.rubber);
+    const ring=add(opticGeometry('lpvo-power-ring',()=>new T.CylinderGeometry(.050,.050,.032,32,1,true)),M,0,0,.044,'Magnification power ring');ring.rotation.x=Math.PI/2;
+    for(const z of [.029,.059])rim(z,.050,.0025,'Power ring edge',M);
+    for(let i=0;i<18;i++){
+      const angle=i*Math.PI/9;if(angle>2.4&&angle<3.9)continue;
+      const flute=box(Math.sin(angle)*.051,Math.cos(angle)*.051,.044,.006,.004,.026,m.rubber,'Power ring grip flute');flute.rotation.z=-angle;
     }
-    for(const z of [-.05,-.043,-.036])rim(z,.045,.0015,'Magnification collar groove');
-    cylinder(0,.058,-.11,.024,.028,m.housing,'Elevation turret');cylinder(0,.074,-.11,.025,.006,m.rubber,'Elevation turret cap');
-    cylinder(.058,0,-.11,.024,.028,m.housing,'Windage turret','x');cylinder(.074,0,-.11,.025,.006,m.rubber,'Windage turret cap','x');
-    const glass=add(opticGeometry('scope-glass',()=>new T.CircleGeometry(.062,48)),m.scopeGlass,0,0,.088,'clear-10x-scope-glass',optic);
+    cylinder(.058,.010,.050,.0045,.020,M,'Power throw lever','x');cylinder(.069,.010,.050,.008,.010,m.rubber,'Throw lever knob','x');
+    for(let i=0;i<5;i++)box(-.024+i*.009,.047,.066,.0014,.0006,.007-(i%2)*.003,m.marking,'Magnification index mark');
+    tube(.046,T_,.050,.003,'Eyepiece taper',M);
+    // Main tube and turret saddle.
+    tube(T_,T_,.090,-.055,'34mm main tube rear',M);tube(T_,T_,.090,-.190,'34mm main tube front',M);
+    tube(.041,.041,.060,-.122,'Turret saddle',M);for(const z of [-.152,-.092])rim(z,.040,.003,'Saddle shoulder',M);
+    box(0,.044,-.122,.034,.008,.050,M,'Turret saddle top');
+    cylinder(0,.052,-.122,.019,.020,M,'Elevation turret base');cylinder(0,.068,-.122,.024,.014,M,'Elevation turret cap');
+    for(let i=0;i<12;i++){const a=i*Math.PI/6;box(Math.sin(a)*.0245,.068,-.122+Math.cos(a)*.0245,.006,.012,.003,m.rubber,'Elevation knurl').rotation.y=a;}
+    cylinder(0,.0755,-.122,.016,.002,m.rubber,'Elevation cap face');
+    cylinder(-.050,0,-.122,.027,.014,M,'Slotted side dial','x');box(-.0575,0,-.122,.002,.030,.004,m.rubber,'Side dial slot');
+    for(let i=0;i<10;i++){const a=i*Math.PI/5;box(-.050,Math.sin(a)*.027,-.122+Math.cos(a)*.027,.012,.005,.004,m.rubber,'Side dial knurl').rotation.x=a;}
+    cylinder(.047,0,-.122,.017,.012,M,'Windage cap','x');cylinder(.054,0,-.122,.014,.003,m.rubber,'Windage cap face','x');
+    // Objective bell, rim and front lens.
+    tube(T_,.042,.040,-.255,'Objective taper',M);tube(.042,.042,.040,-.295,'Objective bell',M);
+    rim(-.275,.042,.0025,'Objective collar',M);rim(-.315,.042,.0035,'Objective rim',M);
+    add(opticGeometry('lpvo-objective-glass',()=>new T.CircleGeometry(.038,40)),m.scopeGlass,0,0,-.308,'Objective lens');
+    box(-.0425,.006,-.215,.0008,.0015,.070,m.marking,'Engraved index line');
+    // Flip-up lens caps, open and folded back over the bells.
+    for(const [z,dir,name] of [[.108,1,'Rear'],[-.315,-1,'Front']]){
+      tube(.049,.049,.014,z-dir*.004,`${name} flip cap collar`,m.rubber);
+      // Hinged at the top of the bell; the open lid lies back, tipped up ~16 degrees.
+      box(0,.053,z,.020,.010,.014,m.rubber,`${name} flip cap hinge`);
+      const tilt=.28,r=.044,lid=cylinder(0,.054+r*Math.sin(tilt),z+dir*r*Math.cos(tilt),r,.006,m.rubber,`${name} flip cap lid`);lid.rotation.x=-dir*tilt;
+      box(0,.054+2*r*Math.sin(tilt)+.004,z+dir*(2*r*Math.cos(tilt)-.004),.016,.010,.008,m.rubber,`${name} flip cap tab`).rotation.x=-dir*tilt;
+    }
+    const glass=add(opticGeometry('scope-glass',()=>new T.CircleGeometry(lens,48)),m.scopeGlass,0,0,.090,'clear-10x-scope-glass',optic);
     const reticle=createOpticReticle(type,.093);optic.add(...reticle.marks);
     return {group:optic,housing,glass,...reticle,height:.214,magnification:10};
   }
