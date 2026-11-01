@@ -27,6 +27,15 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Expiring drops flicker, and grave essence pays 100 (version 169)
+
+- **Expiry warning.** Drops that expire fade out and back in over their last five seconds: power-ups (20 s), grave essence crystals (30 s) and Bella's bone chips.
+  - There are four slow fades, one every 0.75 s, then eight quick ones, one every 0.25 s, in the final two seconds.
+  - Each fading drop gets its own see-through copy of its finish, so other drops of the same kind stay solid.
+  - The shared finish is restored when it is collected, when it expires, or on a new run.
+  - The see-through variants are compiled during loading, so the first fade doesn't stutter.
+- **Grave essence.** Grave Awakening crystals now pay a 100-essence baseline (was 25), multiplied by your curse.
+
 ## Minimap stays readable while scoped (version 168)
 
 When a scope's black surround fills the screen (the Bushmaster's 10× or the LMG's 3×), the minimap switches to a lit style:

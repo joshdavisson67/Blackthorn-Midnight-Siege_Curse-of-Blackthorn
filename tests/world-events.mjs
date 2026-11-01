@@ -115,7 +115,7 @@ export function verifyWorldEvents(qa,frames,listeners,elements){
   for(const e of born){const score=qa.get().totalScore;quiet(()=>qa.damageEnemy(e,100000));assert.equal(qa.get().totalScore-score,70,'Risen dead killed inside the 30s window still earn the event bonus');const count=qa.get().pickups.length;qa.damageEnemy(e,100000);assert.equal(qa.get().pickups.length,count,'A repeated death cannot drop essence twice');}
   assert.equal(qa.get().pickups.filter(p=>p.type==='essence').length,6);frames(1);assert(qa.get().waveDelay>0,'The wave clears after the final grave zombie is killed');assert.equal(awakening.phase,'idle');
   const bonusBefore=qa.get().totalScore;for(const p of [...qa.get().pickups]){qa.setPlayer(p.mesh.position.x,p.mesh.position.z);frames(1);}
-  assert.equal(qa.get().totalScore-bonusBefore,150);assert.equal(qa.get().pickups.length,0);assert(qa.get().eventVisuals.coins.every(p=>!p.mesh.visible));assert.deepEqual(lightIds(),lights);
+  assert.equal(qa.get().totalScore-bonusBefore,600,'Six grave essence crystals pay 100 each (v169)');assert.equal(qa.get().pickups.length,0);assert(qa.get().eventVisuals.coins.every(p=>!p.mesh.visible));assert.deepEqual(lightIds(),lights);
   const visuals=qa.get().eventVisuals;
   for(let i=0;i<30;i++)visuals.dropEssence(30+i,25,0,qa.get().pickups);
   assert.equal(qa.get().pickups.length,EVENT_VISUAL_BUDGET.essence);assert.equal(new Set(qa.get().pickups).size,EVENT_VISUAL_BUDGET.essence);
