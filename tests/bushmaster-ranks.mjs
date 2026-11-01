@@ -3,6 +3,7 @@ import * as T from '../public/game/three.module.js';
 import {WEAPON_RANKS,rankMagazine,rankReserve,rankFireRate,rankDamage,rankRecoil,rankHasDot} from '../public/game/weapon-ranks.mjs';
 import {weapons,weaponAimFov} from '../public/game/core.mjs';
 import {COMBAT} from '../public/game/combat-feedback.mjs';
+import {createWeaponModel} from '../public/game/weapon-models.mjs';
 
 // v165: the .450 Bushmaster's ranks, sold at its east-study rack once it is owned.
 export function verifyBushmasterRanks(qa,frames,listeners,elements,gameCanvas){
@@ -21,7 +22,7 @@ export function verifyBushmasterRanks(qa,frames,listeners,elements,gameCanvas){
   const scoped=st().gunGroups.bushmaster,dotSight=st().gunRoot.getObjectByName('Bushmaster red-dot sight');assert(dotSight,'A red-dot Bushmaster view model is prepared at load');
   let dotted=dotSight;while(dotted.parent!==st().gunRoot)dotted=dotted.parent;
   // v166: the Ruger AR-556-style model, and the Raven's holographic sight for Blood Moon.
-  const names=g=>{const n=new Set();g.traverse(o=>n.add(o.name));return n;},rifle=names(scoped),dotNames=names(dotted);
+  const names=g=>{const n=new Set();g.traverse(o=>n.add(o.name));return n;},rifle=names(createWeaponModel('bushmaster')),dotNames=names(createWeaponModel('bushmaster',{dotSight:true}));
   for(const part of ['M-LOK handguard side panel','Handguard upper chamfer','Radial-port muzzle brake','Brake port','Short .450 Bushmaster magazine','Slim adjustable stock','Compact polymer pistol grip','10x precision scope'])assert(rifle.has(part),`The Bushmaster has its ${part}`);
   assert(dotNames.has('Holographic sight body')&&dotNames.has('Reflex sight hood')&&!dotNames.has('Red-dot sight tube')&&!dotNames.has('10x precision scope'),'Blood Moon fits the Raven holographic sight, not the M4 tube');
   assert(!dotNames.has('Precision scope mount'),'No scope rings remain on the red-dot rifle');
