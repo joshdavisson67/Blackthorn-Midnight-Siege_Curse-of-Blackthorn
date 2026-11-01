@@ -27,6 +27,15 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Minimap stays readable while scoped (version 168)
+
+When a scope's black surround fills the screen (the Bushmaster's 10× or the LMG's 3×), the minimap switches to a lit style:
+- a pale rim with a soft glow
+- a lighter disc
+- brighter walls
+
+Before this, the dark disc and faint rim disappeared against the black and only a few dots showed. Zombies stay red, stations keep their colours, and the map returns to its normal style when you stop aiming.
+
 ## Bushmaster 1-10x LPVO and BDC10 reticle (version 167)
 
 The Bushmaster's base scope is rebuilt after the Sig Tango-MSR 1-10x28 LPVO, and still magnifies 10× in game.

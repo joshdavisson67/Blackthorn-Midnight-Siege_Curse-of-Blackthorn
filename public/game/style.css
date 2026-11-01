@@ -76,6 +76,8 @@
 .hudNavigation{position:absolute;top:var(--hud-top-inset);right:38px;display:flex;flex-direction:column;align-items:flex-end;gap:var(--hud-stack-gap)}
 .hudNavigation .score{width:150px}
 #radar{position:static;width:var(--hud-map-size);height:var(--hud-map-size);border-width:1px;flex:none}
+/* v168: lit edge and glow so the map reads against a scope's black surround. */
+#radar.scoped{border-color:#e6dfc0b0;box-shadow:0 0 0 1px #00000080,0 0 14px 2px #d8d2b04d;background:#16262f}
 #location{top:38px;left:50%;right:auto;transform:translateX(-50%);max-width:calc(100% - 640px);font-size:9px;letter-spacing:2px;text-align:center;line-height:1.5}
 #bottomHud{bottom:64px;gap:14px}
 .hudVitals,.hudEquipment{display:flex;flex-direction:column;gap:var(--hud-stack-gap);align-items:flex-start}

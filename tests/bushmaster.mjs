@@ -43,7 +43,7 @@ export function verifyBushmaster(qa,frames,listeners,canvas,elements){
   const magnification=Math.tan(75*Math.PI/360)/Math.tan(scoped.camera.fov*Math.PI/360);
   assert(Math.abs(magnification-10)<1e-5,'World projection provides actual 10× magnification');
   assert(Math.abs(scoped.viewCamera.fov-16)<1e-5,'Scope housing uses its own projection without magnifying the gun tenfold');
-  const optic=scoped.gunGroups.bushmaster.userData.optic;assert(optic.mask.visible);assert(!scoped.gunGroups.bushmaster.userData.body.visible&&!optic.housing.visible,'Fully scoped, only the lens window shows: the rifle and scope body are hidden');
+  const optic=scoped.gunGroups.bushmaster.userData.optic;assert(optic.mask.visible);assert(!scoped.gunGroups.bushmaster.userData.body.visible&&!optic.housing.visible,'Fully scoped, only the lens window shows: the rifle and scope body are hidden');assert(elements.get('radar').classList.contains('scoped'),'The minimap switches to its lit scoped style');
   const center=optic.dot.getWorldPosition(new T.Vector3()).project(scoped.viewCamera);assert(Math.hypot(center.x,center.y)<.004,'Scope reticle aligns with the actual center shot');
   for(const x of [-.014,0,.014])for(const y of [-.014,0,.014]){
     const target=optic.group.localToWorld(new T.Vector3(x,y,.054)),direction=target.sub(scoped.viewCamera.position).normalize();
@@ -53,7 +53,7 @@ export function verifyBushmaster(qa,frames,listeners,canvas,elements){
   qa.setAim(0,0);listeners.mousemove({movementX:100,movementY:0});const scopedYaw=Math.abs(qa.get().lookYaw);
   listeners.mouseup({button:2});qa.setAim(0,0);listeners.mousemove({movementX:100,movementY:0});const hipYaw=Math.abs(qa.get().lookYaw);
   assert(hipYaw>0);assert(Math.abs(scopedYaw/hipYaw-.062)<1e-8,'10× aim reduces mouse motion proportionally');
-  frames(140);assert(Math.abs(qa.get().camera.fov-75)<1e-5);assert(!optic.mask.visible,'Releasing aim removes the scope mask');assert(qa.get().gunGroups.bushmaster.userData.body.visible&&optic.housing.visible,'Releasing aim brings the rifle back');
+  frames(140);assert(Math.abs(qa.get().camera.fov-75)<1e-5);assert(!optic.mask.visible,'Releasing aim removes the scope mask');assert(qa.get().gunGroups.bushmaster.userData.body.visible&&optic.housing.visible,'Releasing aim brings the rifle back');assert(!elements.get('radar').classList.contains('scoped'),'Releasing aim restores the normal minimap');
 
   function bulletDamage(type){
     qa.start();qa.startWave();qa.holdSpawns();qa.get().inventory[type].owned=true;qa.selectWeapon(type);qa.setPlayer(0,20);qa.setAim(0,-.15);frames(1);
