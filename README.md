@@ -27,6 +27,21 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## .450 Bushmaster upgrade ranks (version 165)
+
+The Bushmaster's base magazine is now 8 rounds, with 48 in reserve (six magazines). Once you own it, its east-study rack sells four ranks in order. They last for the run.
+
+| Rank | Name | Price | Effect | Flavor |
+|---|---|---|---|---|
+| I | Blood Moon | 2,000 | Red dot replaces the 10× scope · 50% faster fire | *The moon turns red, and so does everything beneath it.* |
+| II | Bone Orchard | 4,000 | 16-round magazine (reserve 96) | *Sixteen rounds to plant a bone orchard.* |
+| III | Ossuary | 8,000 | 24-round magazine (reserve 144) | *Twenty-four rounds. The ossuary is never full.* |
+| IV | Executioner’s Calm | 16,000 | Almost no recoil (5% kick) · 2× damage | *The hand is still. The verdict is final.* |
+
+- **Blood Moon** swaps the view model for the same rifle with the M4's red-dot tube on a riser. Aiming becomes a 1× sight picture (48° view) with no scope mask, and the dot sits on the line of fire. Shots cycle every 0.167 s instead of 0.25 s.
+- **Stacking.** Magazine ranks take the Soul Forge's +25% capacity (24 becomes 30 at Forge rank 1) and arrive loaded, with their reserve. The capstone's 2× damage multiplies with Forge damage.
+- **Racks.** If you can't afford the next rank, any rank rack (Raven, M12, Bushmaster) still hands you the weapon and tells you how much more essence you need.
+
 ## M12 shotgun upgrade ranks (version 164)
 
 Once you own the M12, any of its three racks (dining room, upstairs, north wing) sells its ranks in order. They last for the run.

@@ -40,7 +40,9 @@ function getAssets(){
   return assets;
 }
 
-export function createWeaponModel(type,{hands=false,optic=true}={}){
+// dotSight (v165, Bushmaster Rank I): the 10x scope gives way to the M4's
+// red-dot tube on its riser.
+export function createWeaponModel(type,{hands=false,optic=true,dotSight=false}={}){
   if(!references[type])throw new Error('Unknown weapon model: '+type);
   const a=getAssets(),{m}=a,g=new T.Group(),body=new T.Group(),parts=[];
   g.name=references[type];body.name='Weapon body';g.add(body);
@@ -537,8 +539,9 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
   }
 
   // An opaque mount never crosses the existing open reticle sightline.
+  const dotted=type==='bushmaster'&&dotSight;
   if(optic&&!IRON_SIGHTS.has(type)){
-    if(type==='bushmaster'){
+    if(type==='bushmaster'&&!dotted){
       for(const z of [-.125,-.015]){
         box(0,.125,z,.072,.098,.029,m.black,'Precision scope mount');ring(0,.214,z,.048,.005,m.metal,'Scope mounting ring');
         for(const side of [-1,1])screw(side*.041,.133,z,'Scope clamp bolt');
@@ -547,7 +550,7 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
       profile('LMG scope mount',[[-.192,.112],[-.192,.163],[-.158,.167],[-.080,.171],[-.041,.171],[-.041,.112]],.077,m.black,.001);
       for(const side of [-1,1])for(const z of [-.170,-.065])screw(side*.041,.145,z,'LMG quick-detach clamp');
     }else{
-      const [bottom,top]=({rifle:[.078,.130],smg:[.079,.094]})[type];
+      const [bottom,top]=({rifle:[.078,.130],smg:[.079,.094]})[dotted?'rifle':type];
       box(0,(bottom+top)/2,-.07,.068,top-bottom,.098,m.black,'Optic riser');
       for(const side of [-1,1])for(const z of [-.101,-.04])screw(side*.037,(bottom+top)/2,z,'Optic clamp bolt');
     }
@@ -564,7 +567,8 @@ export function createWeaponModel(type,{hands=false,optic=true}={}){
     const arm=cylinder(-.12,-.223,forehand+.042,.043,.237,m.glove,'Support forearm','y');arm.rotation.z=-.55;
     for(const x of [-.035,-.012,.011])ell(x,-.133,forehand,.009,.008,.036,m.black,'Glove reinforcement');
   }
-  const sight=optic&&!IRON_SIGHTS.has(type)?makeOptic(g,type,m.metal):null;
+  const sight=optic&&!IRON_SIGHTS.has(type)?makeOptic(g,dotted?'rifle':type,m.metal):null;
+  if(dotted)sight.group.name='Bushmaster red-dot sight';
   const k=WEAPON_SCALE[type]??1;g.scale.setScalar(k);
   // Keep reticle marks at their usual on-screen size inside the larger sight.
   if(k!==1&&sight)for(const mark of sight.marks)mark.scale.multiplyScalar(1/k);

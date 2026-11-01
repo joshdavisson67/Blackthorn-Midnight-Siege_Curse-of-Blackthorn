@@ -293,5 +293,8 @@ verifySmgRanks(qa,frames,listeners,elements,gameCanvas);
 const {verifyShotgunRanks}=await import('./shotgun-ranks.mjs');
 verifyShotgunRanks(qa,frames,listeners,elements,gameCanvas);
 
+const {verifyBushmasterRanks}=await import('./bushmaster-ranks.mjs');
+verifyBushmasterRanks(qa,frames,listeners,elements,gameCanvas);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
