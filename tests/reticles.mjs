@@ -21,7 +21,8 @@ export function verifyReticles(qa,frames,listeners,elements,canvas){
     const sight=qa.get().gunGroups[type].userData.optic;
     if(type==='glock'||type==='shotgun'){assert(!sight,type==='glock'?'Keep the Glock factory iron sights':'The shotgun aims with flip-up iron sights instead of a red dot (v153)');}
     else{
-      assert.equal(sight.name,p.name);assert.equal(sight.marks.length,2,'Each optic uses just two small meshes');
+      assert.equal(sight.name,p.name);assert.equal(sight.marks.length,p.optic?3:2,'Each optic uses just two small meshes (the 10x BDC10 adds its red horseshoe)');
+      if(p.optic){assert.equal(sight.outline.material.color.getHex(),0x0b0d0d,'The BDC10 posts and drop tree are etched black');assert(sight.marks[2].material.color.r>.9&&sight.marks[2].material.color.g<.3,'Its horseshoe glows red');}
       const repeat=createOpticReticle(type,sight.dot.position.z),again=createOpticReticle(type,sight.dot.position.z);assert.equal(again.dot.geometry,repeat.dot.geometry);assert.equal(again.outline.geometry,repeat.outline.geometry,'Optic marks reuse cached geometry');
       assert.deepEqual(sight.dot.geometry.attributes.position.array,repeat.dot.geometry.attributes.position.array);assert.deepEqual(sight.outline.geometry.attributes.position.array,repeat.outline.geometry.attributes.position.array,'Held sights use the same cached pattern as the model factory');
       signatures.add(JSON.stringify([...sight.outline.geometry.attributes.position.array]));

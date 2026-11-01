@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {makeOptic} from './graphics.mjs?v=153';
+import {makeOptic} from './graphics.mjs?v=167';
 import {GLOCK_GRIP,glockSlideGeometry,glockStippleGeometry,glockGripPoint,glockRearPlateGeometry} from './glock-model-parts.mjs?v=117';
 import {weaponSurfaces,weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=153';
 
@@ -600,9 +600,17 @@ export function createWeaponModel(type,{hands=false,optic=true,dotSight=false}={
   const dotted=type==='bushmaster'&&dotSight;
   if(optic&&!IRON_SIGHTS.has(type)){
     if(type==='bushmaster'&&!dotted){
-      for(const z of [-.125,-.015]){
-        box(0,.125,z,.072,.098,.029,m.black,'Precision scope mount');ring(0,.214,z,.048,.005,m.metal,'Scope mounting ring');
-        for(const side of [-1,1])screw(side*.041,.133,z,'Scope clamp bolt');
+      // One-piece cantilever mount (v167): a rail clamp with two cross-bolt
+      // nuts, a slotted arm, and two ring towers either side of the saddle.
+      const A=m.anodized;
+      box(0,.094,-.090,.058,.022,.150,A,'Cantilever rail clamp');
+      for(const z of [-.135,-.045]){cylinder(.034,.090,z,.009,.010,m.black,'Cross-bolt nut','x');box(.0395,.090,z,.001,.010,.002,m.edge,'Cross-bolt slot');}
+      profile('Cantilever mount arm',[[-.300,.118],[-.020,.118],[-.020,.104],[-.300,.112]],.040,A,.002,[[[-.270,.111],[-.180,.111],[-.180,.115],[-.270,.115]]]);
+      for(const z of [-.125,-.265]){
+        box(0,.150,z,.046,.070,.024,A,'Precision scope mount');
+        for(const side of [-1,1])box(side*.0235,.150,z,.002,.030,.008,m.black,'Ring tower lightening slot');
+        ring(0,.214,z,.041,.006,A,'Scope mounting ring');
+        for(const side of [-1,1])screw(side*.044,.236,z,'Ring cap screw');
       }
     }else if(type==='lmg'){
       profile('LMG scope mount',[[-.192,.112],[-.192,.163],[-.158,.167],[-.080,.171],[-.041,.171],[-.041,.112]],.077,m.black,.001);

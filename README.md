@@ -27,6 +27,25 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Bushmaster 1-10x LPVO and BDC10 reticle (version 167)
+
+The Bushmaster's base scope is rebuilt after the Sig Tango-MSR 1-10x28 LPVO, and still magnifies 10× in game.
+
+- **Scope body:**
+  - A matte 34 mm tube and a flared eyepiece with a knurled power ring, throw lever and white index marks.
+  - A centre saddle with a knurled elevation turret, a large slotted side dial and a windage cap.
+  - A modest objective bell with an engraved index line.
+  - Flip-up caps hinged on both bells, lying open.
+- **Mount:** a one-piece cantilever mount, with a rail clamp and two cross-bolt nuts, a slotted arm, and ring towers either side of the saddle.
+- **BDC10 reticle**, after the reference:
+  - Heavy tapered black posts from the left, right and bottom edges.
+  - Three small pointers either side of centre.
+  - A red illuminated horseshoe around the aiming dot.
+  - A bullet-drop tree of hash lines with fanning windage dots.
+
+  The hip-fire HUD keeps the precision crosshair.
+- **Scoped view:** once fully scoped in, the black mask covers everything but the lens, so the rifle and scope body are hidden. The view through the lens stays a clean circle, without the tube interior or the mount showing.
+
 ## Ruger-style Bushmaster model (version 166)
 
 The .450 Bushmaster is rebuilt after the Ruger AR-556 in .450 Bushmaster. It is now all black, with no olive furniture:
