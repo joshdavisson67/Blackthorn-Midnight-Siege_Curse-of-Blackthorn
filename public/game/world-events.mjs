@@ -3,7 +3,7 @@ export const EVENT_RULES=Object.freeze({firstWave:3,chance:.40,warning:3,graveWa
 export const WORLD_EVENTS=Object.freeze({
   shroud:{name:'THE SHROUD',duration:30,color:'#a7d9db',warning:'An eerie call carries across the cemetery…',description:'Dense fog conceals the distant dead outdoors. Every kill earns 20% more essence.',effect:'OUTDOOR VISIBILITY REDUCED · +20% KILL ESSENCE'},
   surge:{name:'THE SURGE',duration:30,color:'#cfadff',warning:'A supernatural pulse is gathering…',description:'Standard zombies hasten. Every kill earns 20% more essence.',effect:'+20% WALKER SPEED · +20% KILL ESSENCE'},
-  awakening:{name:'GRAVE AWAKENING',duration:30,color:'#b5ecae',warning:'Three marked graves glow and tremble in the cemetery.',description:'Six dead rise from the cemetery. Every kill earns 20% more essence for 30 seconds. Collect their bonus essence.',effect:'CEMETERY REINFORCEMENTS · +20% KILL ESSENCE · GOLD ESSENCE DROPS'},
+  awakening:{name:'GRAVE AWAKENING',duration:30,color:'#b5ecae',warning:'Three marked graves glow and tremble in the cemetery.',description:'Six dead rise from the cemetery. Every kill earns 20% more essence for 30 seconds. Collect their bonus essence.',effect:'CEMETERY REINFORCEMENTS · +20% KILL ESSENCE · HEADSTONE ESSENCE DROPS'},
   blackout:{name:'BLACKOUT',duration:30,color:'#e0c27a',warning:'The lamps gutter and hiss…',description:'Every light in the estate dies. Only your flashlight cuts the dark. Every kill earns 20% more essence.',effect:'ALL LIGHTS OUT · FLASHLIGHT ONLY · +20% KILL ESSENCE'},
 });
 const ids=Object.keys(WORLD_EVENTS);
