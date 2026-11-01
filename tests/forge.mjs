@@ -42,7 +42,7 @@ export function verifySoulForge(qa,frames,listeners,elements){
     glock:[[17,98],[21,122],[26,153]],
     rifle:[[38,225],[47,282],[59,352]],shotgun:[[10,70],[13,88],[16,110]],
     smg:[[50,300],[63,375],[79,469]],lmg:[[125,625],[157,782],[196,977]],
-    bushmaster:[[19,113],[24,141],[30,176]]
+    bushmaster:[[10,60],[13,75],[16,94]]
   },prices=[5000,10000,15000],signCache=qa.get().signage.materials.size;
   for(const v of forges)for(const material of v.station.forgeMaterials)assert(qa.get().renderer.initializedTextures.has(material.map),'Rank finishes upload while the loading screen is active');
   function prepare(type,forgeY=0,quick=false){

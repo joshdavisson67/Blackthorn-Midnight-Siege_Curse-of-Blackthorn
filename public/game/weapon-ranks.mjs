@@ -1,7 +1,8 @@
 // Weapon upgrade ranks (v159). Each weapon climbs its own ladder, bought in
 // order; ranks last for the run. The Glock's ladder is sold at the courtyard
 // pistol bench; the Raven SMG's (v161) at either SMG rack once it is owned;
-// the M12 shotgun's (v164) at any of its three racks once it is owned.
+// the M12 shotgun's (v164) at any of its three racks once it is owned; the
+// .450 Bushmaster's (v165) at its east-study rack once it is owned.
 export const WEAPON_RANKS=Object.freeze({
   glock:Object.freeze([
     Object.freeze({rank:1,numeral:'I',name:'Bloodsight',price:2000,effect:'Slide-mounted red dot',flavor:'A crimson eye that never blinks.',dot:true}),
@@ -26,6 +27,15 @@ export const WEAPON_RANKS=Object.freeze({
     Object.freeze({rank:2,numeral:'II',name:'Coffin Nails',price:4000,effect:'16-round magazine',flavor:'Sixteen nails. Sixteen coffins.',mag:16}),
     Object.freeze({rank:3,numeral:'III',name:'Charnel Feast',price:8000,effect:'24-round magazine',flavor:'Twenty-four shells, and the charnel house still hungers.',mag:24}),
     Object.freeze({rank:4,numeral:'IV',name:'Requiem Storm',price:16000,effect:'Full-auto · 2× fire rate',flavor:'Hold the trigger. Let the requiem play.',capstone:true,auto:true,rate:2})
+  ]),
+  // v165: the .450 Bushmaster's ladder, sold at its east-study rack once it
+  // is owned. Rank I trades the 10x scope for a red dot and a faster trigger;
+  // the capstone all but removes recoil and doubles damage.
+  bushmaster:Object.freeze([
+    Object.freeze({rank:1,numeral:'I',name:'Blood Moon',price:2000,effect:'Red dot replaces the 10× scope · 50% faster fire',flavor:'The moon turns red, and so does everything beneath it.',dot:true,rate:1.5}),
+    Object.freeze({rank:2,numeral:'II',name:'Bone Orchard',price:4000,effect:'16-round magazine',flavor:'Sixteen rounds to plant a bone orchard.',mag:16}),
+    Object.freeze({rank:3,numeral:'III',name:'Ossuary',price:8000,effect:'24-round magazine',flavor:'Twenty-four rounds. The ossuary is never full.',mag:24}),
+    Object.freeze({rank:4,numeral:'IV',name:'Executioner’s Calm',price:16000,effect:'Almost no recoil · 2× damage',flavor:'The hand is still. The verdict is final.',capstone:true,recoil:.05,damage:2})
   ])
 });
 
@@ -51,3 +61,5 @@ export function rankReloadTime(type,rank){let k=1;for(const r of earned(type,ran
 export function rankDual(type,rank){return earned(type,rank).some(r=>r.dual);}
 // Full-auto capstone (v164): a semi-auto weapon fires while the trigger is held.
 export function rankAuto(type,rank){return earned(type,rank).some(r=>r.auto);}
+// Recoil multiplier (v165, Bushmaster capstone: .05, effectively none).
+export function rankRecoil(type,rank){let k=1;for(const r of earned(type,rank))if(r.recoil!==undefined)k*=r.recoil;return k;}

@@ -1,7 +1,7 @@
 import * as T from './three.module.js';
-import {drawStationMarker} from './station-models.mjs?v=162';
-import {UPPER_Y as Y,UPPER_HEIGHT,UPPER_CEILING,UPPER_TILES,UPPER_ROOMS,STAIR,EXTERIOR_STAIRS,OLIVIA_ATTIC} from './vertical.mjs?v=164';
-import {prepareUpperShell,UPPER_SLAB_THICKNESS,UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=164';
+import {drawStationMarker} from './station-models.mjs?v=165';
+import {UPPER_Y as Y,UPPER_HEIGHT,UPPER_CEILING,UPPER_TILES,UPPER_ROOMS,STAIR,EXTERIOR_STAIRS,OLIVIA_ATTIC} from './vertical.mjs?v=165';
+import {prepareUpperShell,UPPER_SLAB_THICKNESS,UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {buildExteriorStairs} from './exterior-stairs.mjs?v=109';
 export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,colliders,solidMeshes,interactables,station,furnishings,rugs}){
   const shellReport=prepareUpperShell(world,colliders,solidMeshes);

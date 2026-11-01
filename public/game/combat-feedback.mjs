@@ -21,12 +21,13 @@ const STAGGER={
 export function createWeaponRecoil(){
   const state={pitch:0,yaw:0,back:0,lift:0,recovery:15,sequence:0};
   return Object.assign(state,{
-    fire(weapon,ads=false){
-      const p=COMBAT[weapon],scale=ads?p.ads:1;
+    // amount scales the whole kick (v165: the Bushmaster capstone fires at .05).
+    fire(weapon,ads=false,amount=1){
+      const p=COMBAT[weapon],scale=(ads?p.ads:1)*amount;
       state.recovery=p.recovery;
       state.pitch=clamp(state.pitch+p.kick*scale,0,.14);
       state.yaw=clamp(state.yaw+p.yaw*SWAY[state.sequence++%SWAY.length]*scale,-.035,.035);
-      state.back=clamp(state.back+p.back,0,.13);state.lift=clamp(state.lift+p.lift,0,.32);
+      state.back=clamp(state.back+p.back*amount,0,.13);state.lift=clamp(state.lift+p.lift*amount,0,.32);
     },
     update(dt){
       const decay=Math.exp(-dt*state.recovery);

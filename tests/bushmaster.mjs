@@ -5,7 +5,7 @@ import {UPPER_Y} from '../public/game/vertical.mjs';
 
 export function verifyBushmaster(qa,frames,listeners,canvas,elements){
   const w=weapons.bushmaster;
-  assert.equal(w.mag,15);assert.equal(w.damage,weapons.rifle.damage*2);assert.equal(w.zoom,10);
+  assert.equal(w.mag,8,'v165: the base Bushmaster magazine holds 8');assert.equal(w.reserve,48,'Six magazines in reserve');assert.equal(w.damage,weapons.rifle.damage*2);assert.equal(w.zoom,10);
   const rack=qa.get().interactables.find(s=>s.type==='bushmaster');
   assert(rack&&rack.y===UPPER_Y,'Bushmaster is available upstairs');assert.equal(rack.price,2500);
   const front={x:rack.x+Math.sin(rack.rotation||0)*1.6,z:rack.z+Math.cos(rack.rotation||0)*1.6};
@@ -14,7 +14,7 @@ export function verifyBushmaster(qa,frames,listeners,canvas,elements){
   qa.setPlayer(front.x,front.z,UPPER_Y);qa.setPoints(rack.price-1);qa.interact();
   assert(!qa.get().inventory.bushmaster.owned);assert.equal(qa.get().points,rack.price-1);
   qa.setPoints(rack.price);qa.interact();assert.equal(qa.get().points,0);assert.equal(qa.get().weapon,'bushmaster');
-  const inv=qa.get().inventory.bushmaster;assert.deepEqual([inv.ammo,inv.reserve],[15,90]);
+  const inv=qa.get().inventory.bushmaster;assert.deepEqual([inv.ammo,inv.reserve],[8,48]);
   qa.selectWeapon('glock');qa.interact();assert.equal(qa.get().weapon,'bushmaster');assert.equal(qa.get().points,0,'An owned rifle can be equipped at its rack without charging again');
   qa.selectWeapon('glock');listeners.keydown({code:'Digit5',repeat:false});assert.equal(qa.get().weapon,'bushmaster');
   frames(2);assert(elements.get('weaponName').textContent.includes('.450 BUSHMASTER'));
@@ -22,22 +22,22 @@ export function verifyBushmaster(qa,frames,listeners,canvas,elements){
   for(const step of [1000/30,1000/60,1000/144]){
     qa.start();qa.startWave();qa.holdSpawns();qa.get().inventory.bushmaster.owned=true;qa.selectWeapon('bushmaster');
     const held=qa.get().inventory.bushmaster;
-    canvas.events.mousedown({button:0});assert.equal(held.ammo,14);
-    frames(Math.ceil(1500/step),step);assert.equal(held.ammo,14,'Holding fire produces exactly one shot at every frame rate');
-    canvas.events.mousedown({button:0});assert.equal(held.ammo,14,'A repeated down event cannot bypass the trigger release');
-    listeners.mouseup({button:0});canvas.events.mousedown({button:0});assert.equal(held.ammo,13);
-    listeners.mouseup({button:0});frames(1,step);canvas.events.mousedown({button:0});assert.equal(held.ammo,13,'Rapid clicking respects the firing recovery time');
-    frames(Math.ceil(500/step),step);assert.equal(held.ammo,13,'A click during recovery is not queued into automatic fire');
-    listeners.mouseup({button:0});canvas.events.mousedown({button:0});assert.equal(held.ammo,12);listeners.mouseup({button:0});
+    canvas.events.mousedown({button:0});assert.equal(held.ammo,7);
+    frames(Math.ceil(1500/step),step);assert.equal(held.ammo,7,'Holding fire produces exactly one shot at every frame rate');
+    canvas.events.mousedown({button:0});assert.equal(held.ammo,7,'A repeated down event cannot bypass the trigger release');
+    listeners.mouseup({button:0});canvas.events.mousedown({button:0});assert.equal(held.ammo,6);
+    listeners.mouseup({button:0});frames(1,step);canvas.events.mousedown({button:0});assert.equal(held.ammo,6,'Rapid clicking respects the firing recovery time');
+    frames(Math.ceil(500/step),step);assert.equal(held.ammo,6,'A click during recovery is not queued into automatic fire');
+    listeners.mouseup({button:0});canvas.events.mousedown({button:0});assert.equal(held.ammo,5);listeners.mouseup({button:0});
   }
   qa.start();qa.startWave();qa.holdSpawns();qa.get().inventory.rifle.owned=true;qa.selectWeapon('rifle');canvas.events.mousedown({button:0});frames(60);assert(qa.get().inventory.rifle.ammo<25,'The M4 retains automatic fire');listeners.mouseup({button:0});
 
   qa.get().inventory.bushmaster.owned=true;qa.selectWeapon('bushmaster');qa.setPlayer(0,20);qa.setAim(0,0);
   frames(20);
-  const reloadInv=qa.get().inventory.bushmaster;reloadInv.ammo=0;reloadInv.reserve=30;
+  const reloadInv=qa.get().inventory.bushmaster;reloadInv.ammo=0;reloadInv.reserve=16;
   canvas.events.mousedown({button:0});assert(qa.get().reloadLeft>0);frames(210);
-  assert.deepEqual([reloadInv.ammo,reloadInv.reserve],[15,15],'Empty-trigger reload transfers 15 rounds and does not fire again while held');
-  listeners.mouseup({button:0});canvas.events.mousedown({button:0});assert.equal(reloadInv.ammo,14);listeners.mouseup({button:0});
+  assert.deepEqual([reloadInv.ammo,reloadInv.reserve],[8,8],'Empty-trigger reload transfers 8 rounds and does not fire again while held');
+  listeners.mouseup({button:0});canvas.events.mousedown({button:0});assert.equal(reloadInv.ammo,7);listeners.mouseup({button:0});
 
   canvas.events.mousedown({button:2});frames(140);const scoped=qa.get();
   const magnification=Math.tan(75*Math.PI/360)/Math.tan(scoped.camera.fov*Math.PI/360);
@@ -61,5 +61,5 @@ export function verifyBushmaster(qa,frames,listeners,canvas,elements){
   }
   assert.equal(bulletDamage('bushmaster'),bulletDamage('rifle')*2,'Real Bushmaster bullets deal twice M4 damage');
   qa.start();assert(!qa.get().inventory.bushmaster.owned,'A new run resets weapon ownership');assert.equal(qa.get().camera.fov,75,'A new run resets scope zoom');
-  console.log('PASS: upstairs .450 Bushmaster purchase, 15-round reload, key 5, real 2× M4 damage, one shot per click at 30/60/144 FPS, preserved M4 auto fire, true 10× zoom, clear reticle and proportional mouse aim.');
+  console.log('PASS: upstairs .450 Bushmaster purchase, 8-round reload, key 5, real 2× M4 damage, one shot per click at 30/60/144 FPS, preserved M4 auto fire, true 10× zoom, clear reticle and proportional mouse aim.');
 }
