@@ -119,10 +119,10 @@ export function verifyWorldEvents(qa,frames,listeners,elements){
   const visuals=qa.get().eventVisuals;
   for(let i=0;i<30;i++)visuals.dropEssence(30+i,25,0,qa.get().pickups);
   assert.equal(qa.get().pickups.length,EVENT_VISUAL_BUDGET.essence);assert.equal(new Set(qa.get().pickups).size,EVENT_VISUAL_BUDGET.essence);
-  assert.equal(visuals.geometries.length,3);visuals.root.traverse(o=>{if(o.isMesh){assert(!o.castShadow);assert(!o.material.map);assert(o.matrixAutoUpdate,'Reusable event meshes stay unfrozen');}});
+  assert.equal(visuals.geometries.length,6,'Markers plus the headstone, its plinth and its cross (v170)');for(const c of visuals.coins){const names=[];c.mesh.traverse(o=>names.push(o.name));assert(names.includes('Headstone plinth')&&names.filter(n=>n==='Gold grave cross').length===4,'Each grave essence drop is a headstone with a gold cross on both faces');}visuals.root.traverse(o=>{if(o.isMesh){assert(!o.castShadow);assert(!o.material.map);assert(o.matrixAutoUpdate,'Reusable event meshes stay unfrozen');}});
   qa.start();assert.equal(qa.get().pickups.length,0);assert.equal(qa.get().worldEvents.phase,'idle');assert.equal(qa.get().worldEvents.lastEventWave,-2);assert(visuals.coins.every(p=>!p.mesh.visible));
   const canceled=ready('awakening');canceled.update(7);qa.setHealth(1);qa.hurtPlayer(100);assert.equal(qa.get().mode,'dead');assert.equal(canceled.pendingSpawns,0);assert.equal(canceled.phase,'idle');frames(60);assert(!qa.get().zombies.some(e=>e.graveBorn));
   assert(elements.get('guideSurvival').textContent.includes('40%'));assert(elements.get('guideSurvival').textContent.includes('From wave 3'));assert(elements.get('guideSurvival').textContent.includes('All four events last 30 seconds'));assert(elements.get('guideSurvival').textContent.includes('Blackout · 30 seconds'));assert(elements.get('guideSurvival').textContent.includes('Grave Awakening'));
   qa.setEventRandom(()=>1);qa.start();
-  console.log('PASS: warned grave emergence, safe cemetery routes, 32-enemy cap, queued pause, six single-use gold drops / 150 collected bonus, bounded reuse, no new lights/textures/shadows, and death/restart cleanup.');
+  console.log('PASS: warned grave emergence, safe cemetery routes, 32-enemy cap, queued pause, six single-use headstone drops / 600 collected bonus, bounded reuse, no new lights/textures/shadows, and death/restart cleanup.');
 }
