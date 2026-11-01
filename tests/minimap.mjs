@@ -31,6 +31,11 @@ export function verifyMinimap(qa,frames){
   assert.equal(a.out.pips,1,'A zombie off the map edge gets a rim pip');
   const zombieFills=a.log.filter(e=>e.op==='fill'&&e.style===MINIMAP.zombie);assert(zombieFills.length>=3,'Zombies are red');
   assert(a.log.some(e=>e.op==='stroke'&&e.style===MINIMAP.zombie),'Zombies on another floor are hollow red rings');
+  // v168: a lit, higher-contrast style for a scope's black surround.
+  const lit=recorder();drawMinimap(lit.c,{width:330,height:330,player,yaw:0,colliders:[wall],zombies:[near],stations:[],scoped:true});
+  const discOf=l=>l.find(e=>e.op==='fill').style,lum=hex=>{const n=parseInt(hex.slice(1,7),16);return (n>>16&255)+(n>>8&255)+(n&255);};
+  assert(lum(discOf(lit.log))>lum(discOf(a.log))*1.8,'Scoped, the map disc is lighter than the black surround');
+  assert(lit.log.some(e=>e.op==='fill'&&e.style===MINIMAP.zombie),'Zombies stay red when scoped');
   const reach=MINIMAP.radius/MINIMAP.scale;assert(reach>25,`The minimap covers about ${reach.toFixed(0)} m around you`);
   // Stations are never red, here or in the real estate.
   const stationFills=a.log.filter(e=>e.op==='fillRect'&&e.w<6);

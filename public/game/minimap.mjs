@@ -2,7 +2,9 @@
 // view cone. Red is reserved for zombies: every station uses a non-red map
 // colour. Zombies show across the whole minimap, on other floors as hollow
 // rings, and beyond its edge as red pips on the rim pointing at them.
-export const MINIMAP=Object.freeze({size:150,radius:72,scale:2.6,rimPip:66,cone:{radius:44,halfAngle:.55},zombie:'#ff3b30',zombieRage:'#ff8a7a'});
+export const MINIMAP=Object.freeze({size:150,radius:72,scale:2.6,rimPip:66,cone:{radius:44,halfAngle:.55},zombie:'#ff3b30',zombieRage:'#ff8a7a',
+  // v168: palettes for the open world and for a scope's black surround.
+  palette:Object.freeze({normal:Object.freeze({disc:'#07111a',wallFill:'#93a19326',wallLine:'#b7c3ab70',rim:'#a8b49c66',rimWidth:1.2}),scoped:Object.freeze({disc:'#16262f',wallFill:'#b9c7b744',wallLine:'#dce6d3a8',rim:'#e6dfc0d0',rimWidth:2.2})})});
 
 const hexHue=hex=>{
   const n=parseInt(String(hex).replace('#','').slice(0,6),16);if(!Number.isFinite(n))return null;
@@ -22,14 +24,14 @@ export function mapColor(s){
   return SAFE[s.type]??(s.shedWeapon?SAFE.shotgun:'#e8dcc0');
 }
 
-export function drawMinimap(c,{width,height,player,yaw,colliders=[],zombies=[],stations=[],bella=null}){
-  const M=MINIMAP,sc=M.scale,R=M.radius,toMap=(x,z)=>[(x-player.x)*sc,(z-player.z)*sc];
+export function drawMinimap(c,{width,height,player,yaw,colliders=[],zombies=[],stations=[],bella=null,scoped=false}){
+  const M=MINIMAP,P=scoped?M.palette.scoped:M.palette.normal,sc=M.scale,R=M.radius,toMap=(x,z)=>[(x-player.x)*sc,(z-player.z)*sc];
   c.clearRect(0,0,width,height);c.save();c.scale(width/M.size,height/M.size);c.translate(M.size/2,M.size/2);
   // Disc, rim and compass ticks.
-  c.fillStyle='#07111a';c.beginPath();c.arc(0,0,R+2,0,Math.PI*2);c.fill();
+  c.fillStyle=P.disc;c.beginPath();c.arc(0,0,R+2,0,Math.PI*2);c.fill();
   c.save();c.beginPath();c.arc(0,0,R,0,Math.PI*2);c.clip();
   // Walls and furniture on your floor, as soft filled outlines (north-up).
-  c.fillStyle='#93a19326';c.strokeStyle='#b7c3ab70';c.lineWidth=.8;
+  c.fillStyle=P.wallFill;c.strokeStyle=P.wallLine;c.lineWidth=.8;
   const reach=R/sc+4;
   for(const w of colliders){
     if(w.disabled||(w.w<.6&&w.d<.6))continue;
@@ -65,7 +67,7 @@ export function drawMinimap(c,{width,height,player,yaw,colliders=[],zombies=[],s
     }
   }
   c.restore();
-  c.strokeStyle='#a8b49c66';c.lineWidth=1.2;c.beginPath();c.arc(0,0,R,0,Math.PI*2);c.stroke();
+  c.strokeStyle=P.rim;c.lineWidth=P.rimWidth;c.beginPath();c.arc(0,0,R,0,Math.PI*2);c.stroke();
   c.fillStyle='#c9d1bd';c.font='bold 8px Arial';c.textAlign='center';c.textBaseline='middle';c.fillText('N',0,-R+6);
   c.fillStyle='#8b9f95';c.font='6px Arial';c.fillText('E',R-5,0);c.fillText('S',0,R-5);c.fillText('W',-R+5,0);
   c.restore();

@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=167';
-import {createChangelog} from './changelog.mjs?v=167';
+import {createLeaderboard} from './leaderboard.mjs?v=168';
+import {createChangelog} from './changelog.mjs?v=168';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=165';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -14,7 +14,7 @@ import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnM
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
 import {buildGraveyard} from './graveyard.mjs?v=165';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
-import {buildCellar,drawCellarMap} from './cellar.mjs?v=167';
+import {buildCellar,drawCellarMap} from './cellar.mjs?v=168';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
 import {buildShed} from './shed.mjs?v=167';
 import * as T from './three.module.js';
@@ -25,22 +25,22 @@ import {suppressedShot} from './gun-audio.mjs?v=150';
 import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
-import {createStationBuilder} from './station-models.mjs?v=167';
+import {createStationBuilder} from './station-models.mjs?v=168';
 import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=167';
-import {drawMinimap} from './minimap.mjs?v=162';
+import {drawMinimap} from './minimap.mjs?v=168';
 import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual,rankAuto,rankRecoil} from './weapon-ranks.mjs?v=165';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=167';
+import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=168';
 import {createEnemyAssets} from './enemy-assets.mjs?v=157';
-import {createCombatLights} from './combat-lights.mjs?v=167';
+import {createCombatLights} from './combat-lights.mjs?v=168';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=157';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=165';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=167';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=168';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=165';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=140';
 import {addEstateDetail} from './estate-detail.mjs?v=165';
@@ -52,7 +52,7 @@ import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses,configureForgeStation} from './soul-forge.mjs?v=118';
 import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=167';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=167';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=168';
 import {buildRotundaBell} from './rotunda-bell.mjs?v=130';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=135';
@@ -1252,7 +1252,8 @@ const radar=$('radar'),rx=radar.getContext('2d');// v162: north-up minimap; see 
 // v163: the canvas backing store follows the map's on-screen size (it grows
 // with the screen on PC), so the bigger map stays sharp.
 function fitRadar(){const s=Math.round(Math.min(560,Math.max(120,radar.clientWidth*Math.min(devicePixelRatio||1,3))));if(radar.clientWidth&&radar.width!==s){radar.width=radar.height=s;}}
-function drawRadar(){fitRadar();return drawMinimap(rx,{width:radar.width,height:radar.height,player,yaw:lookYaw,colliders,zombies,stations:interactables,bella});}
+let radarScoped=false;
+function drawRadar(){fitRadar();return drawMinimap(rx,{width:radar.width,height:radar.height,player,yaw:lookYaw,colliders,zombies,stations:interactables,bella,scoped:radarScoped});}
 let hudTick=0,frameCount=0,fpsTime=0,footstepTime=0;
 function tick(now){requestAnimationFrame(tick);gamepad.poll(Math.min(Math.max(0,(now-lastTime)/1000),.05),{enabled:padPlay(),playing:mode==='playing'&&$('guide').classList.contains('hidden'),layer:padLayer(),sensitivity:Number($('sensitivity').value),aiming:aiming&&!grenadeThrow.active,zoom:(zoomOf(weapon)||1),onTarget:mode==='playing'&&padOnTarget()});updateControllerStatus();document.body.classList.toggle('pad-playing',padPlay()&&mode==='playing');if(mode==='playing'&&!directControls()&&!hasMouseLock())pauseGame();touchControls?.setActive(mode==='playing'&&$('guide').classList.contains('hidden'));const frameSeconds=Math.max(0,(now-lastTime)/1000),dt=Math.min(frameSeconds,.05);lastTime=now;elapsed+=dt;fpsTime+=frameSeconds;frameCount++;if(mode==='playing'&&!document.hidden){const before=renderScale.scale;renderScale.sample(frameSeconds);if(renderScale.scale!==before)resize();}else renderScale.interrupt();if(fpsTime>1){$('fps').textContent=`${Math.round(frameCount/fpsTime)} FPS · ${$('quality').value.toUpperCase()}${renderScale.scale<1?` · ${Math.round(renderScale.scale*100)}% RES`:''}`;fpsTime=0;frameCount=0;}
 if(mode==='curse')runTime+=dt;
@@ -1269,7 +1270,10 @@ updatePistolSlide(gunGroups.glock,dt,inventory.glock.ammo);
 const dual=dualOn(),ads=aiming&&!grenadeThrow.active&&reloadLeft===0&&!dual?1:0;gunRoot.position.y+=reloadDrop;gunRoot.position.x=T.MathUtils.lerp(gunRoot.position.x,ads||dual?0:.28,dt*14);if(dual)for(const d of dualGuns){d.kick=Math.max(0,d.kick-dt*14);d.g.position.z=d.kick*.045;d.g.rotation.x=d.kick*.06;}gunRoot.position.y=T.MathUtils.lerp(gunRoot.position.y,(ads?-aimHeight(weapon):-.26)-grenadeThrow.lower*.43,dt*14);gunRoot.position.z=T.MathUtils.lerp(gunRoot.position.z,(ads?(ADS_DEPTH[weapon]??-.34):-.48)+weaponRecoil.back*(ads?.6:1),dt*14)+recoil*dt*4;gunRoot.rotation.set((ads?0:weaponRecoil.lift+recoil*1.2)+grenadeThrow.lower*.25,0,zoomOf(weapon)&&ads?0:Math.sin(walkPhase*.5)*(moving?(ads?.001:.012):.001));{const pose=reloadPose(reloadLeft>0&&reloadDuration>0?1-reloadLeft/reloadDuration:0);reloadDrop=pose.drop;gunRoot.position.y-=pose.drop;gunRoot.rotation.z+=pose.roll;gunRoot.rotation.x+=pose.pitch;}if(sprint&&moving)gunRoot.rotation.z=-.25;for(const {type,sight} of scopedGuns){sight.mask.visible=weapon===type&&ads>0&&weaponViewFov<(sight.viewFov??16)+1;
 // v167: once the mask covers the screen, only the lens window shows, so the
 // rifle and scope body are hidden; the tube interior and mounts can't intrude.
-gunGroups[type].userData.body.visible=sight.housing.visible=!sight.mask.visible;}setOpacity('crosshair',ads?0:1);
+gunGroups[type].userData.body.visible=sight.housing.visible=!sight.mask.visible;}
+// v168: the black scope surround swallows the dark minimap disc, so the map
+// switches to a lit, higher-contrast style while a scope is up.
+{const scoped=scopedGuns.some(({sight})=>sight.mask.visible);if(scoped!==radarScoped){radarScoped=scoped;radar.classList.toggle('scoped',scoped);drawRadar();}}setOpacity('crosshair',ads?0:1);
 hudTick-=dt;if(hudTick<=0){updateHud();drawRadar();hudTick=.1;}}
 else if(mode==='menu'){camera.position.set(11.8,2.1,24);camera.lookAt(-1,3.3,0);camera.position.x+=Math.sin(elapsed*.12)*.3;gunRoot.visible=false;rain.visible=true;}
 updateReloadHud();combatHud.update(dt,player,lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(dualOn()?dualMuzzle:viewGun(weapon).userData.muzzle);muzzleLight.intensity=flashTime>0?(weapon==='smg'?5:15):0;hitTime=Math.max(0,hitTime-dt);setOpacity('hit',hitTime>0?1:0);damageFlash=Math.max(0,damageFlash-dt*.8);setOpacity('damage',Math.max(damageFlash,mode==='playing'&&health<30?.16:0));nukeFlashTime=Math.max(0,nukeFlashTime-dt*1.5);setOpacity('nukeFlash',nukeFlashTime);toastTime=Math.max(0,toastTime-dt);setOpacity('toast',toastTime>0?1:0);bannerTime=Math.max(0,bannerTime-dt);setOpacity('banner',bannerTime>0?1:0);
