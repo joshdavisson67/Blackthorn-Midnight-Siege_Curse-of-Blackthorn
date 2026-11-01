@@ -1,4 +1,4 @@
-import {enemyKind} from './core.mjs?v=154';
+import {enemyKind} from './core.mjs?v=164';
 export const FERAL=Object.freeze({unlockWave:7,chance:1/8,speedMultiplier:1.75,damageMultiplier:2});
 export function chooseEnemyKind(wave,slot,roll=Math.random()){
   const kind=enemyKind(wave,slot);

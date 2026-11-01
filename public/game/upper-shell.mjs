@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {UPPER_Y} from './vertical.mjs?v=154';
+import {UPPER_Y} from './vertical.mjs?v=164';
 
 export const UPPER_SLAB_THICKNESS=.24;
 export const UPPER_SLAB_BOTTOM=UPPER_Y-UPPER_SLAB_THICKNESS;
