@@ -63,8 +63,11 @@
 }
 
 /* Gameplay widgets at half their previous size, anchored to the viewport. */
-#hud{font-size:16px;--hud-top-inset:30px;--hud-map-size:165px;--hud-stack-gap:12px}
-.topHud{top:var(--hud-top-inset);left:38px;right:226px}
+/* v163: the minimap grows with the screen on PC: about 25% larger on a
+   1080p monitor (~210px), up to 260px on 1440p and above, never below the
+   old 165px. The touch layout below keeps its compact 92px map. */
+#hud{font-size:16px;--hud-top-inset:30px;--hud-map-size:clamp(165px,calc(14vh + 75px),260px);--hud-stack-gap:12px}
+.topHud{top:var(--hud-top-inset);left:38px;right:calc(var(--hud-map-size) + 61px)}
 .round small,.score small{font-size:9px;letter-spacing:3px}
 .round b{font-size:55px}
 .round span{font-size:9px;letter-spacing:2px;margin-top:7px}
@@ -124,7 +127,7 @@
   .vitals{width:180px}
   .healthTrack{width:140px}
   .powerupBadge{min-width:165px;padding:8px 9px}
-  .topHud{left:20px;right:190px}
+  .topHud{left:20px;right:calc(var(--hud-map-size) + 25px)}
   .round{max-width:200px}
   .hudNavigation{right:20px}
 

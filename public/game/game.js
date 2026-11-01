@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=157';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=162';
-import {createChangelog} from './changelog.mjs?v=162';
+import {createLeaderboard} from './leaderboard.mjs?v=163';
+import {createChangelog} from './changelog.mjs?v=163';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=84';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -1233,7 +1233,10 @@ function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[
 function grantPowerup(type){if(type==='ammo'){refillAmmo();notify('MAX AMMO · RESERVES RESTOCKED');}else if(type==='double'){doubleTime=POWERUPS.double.duration;notify('×2 · DOUBLE DAMAGE FOR 20s');}else if(type==='grenades'){grenadeTime=POWERUPS.grenades.duration;notify('INFINITE GRENADES · 12s · PRESS G');}}
 function updatePickups(dt){for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;if(p.mesh.userData.model)p.mesh.userData.model.rotation.y+=dt*.65;p.mesh.position.y=(p.y||0)+.8+Math.sin(elapsed*2+p.phase)*.15;if(p.eventPool)p.mesh.rotation.y+=dt*1.4;if(mode==='playing'&&p.life>0&&Math.abs((p.y||0)-player.y)<1.2&&Math.hypot(p.mesh.position.x-player.x,p.mesh.position.z-player.z)<1.2){if(p.type==='essence'){const reward=addPoints(p.value);notify(`GRAVE ESSENCE +${reward}`);}else if(p.type==='bone')collectBoneChip();else grantPowerup(p.type);tone(660,.4,.1,'triangle',1200);p.life=0;}if(p.life<=0){if(p.eventPool)eventVisuals.release(p);else world.remove(p.mesh);pickups.splice(i,1);}}}
 const radar=$('radar'),rx=radar.getContext('2d');// v162: north-up minimap; see minimap.mjs.
-function drawRadar(){return drawMinimap(rx,{width:radar.width,height:radar.height,player,yaw:lookYaw,colliders,zombies,stations:interactables,bella});}
+// v163: the canvas backing store follows the map's on-screen size (it grows
+// with the screen on PC), so the bigger map stays sharp.
+function fitRadar(){const s=Math.round(Math.min(560,Math.max(120,radar.clientWidth*Math.min(devicePixelRatio||1,3))));if(radar.clientWidth&&radar.width!==s){radar.width=radar.height=s;}}
+function drawRadar(){fitRadar();return drawMinimap(rx,{width:radar.width,height:radar.height,player,yaw:lookYaw,colliders,zombies,stations:interactables,bella});}
 let hudTick=0,frameCount=0,fpsTime=0,footstepTime=0;
 function tick(now){requestAnimationFrame(tick);gamepad.poll(Math.min(Math.max(0,(now-lastTime)/1000),.05),{enabled:padPlay(),playing:mode==='playing'&&$('guide').classList.contains('hidden'),layer:padLayer(),sensitivity:Number($('sensitivity').value),aiming:aiming&&!grenadeThrow.active,zoom:weapons[weapon].zoom||1,onTarget:mode==='playing'&&padOnTarget()});updateControllerStatus();document.body.classList.toggle('pad-playing',padPlay()&&mode==='playing');if(mode==='playing'&&!directControls()&&!hasMouseLock())pauseGame();touchControls?.setActive(mode==='playing'&&$('guide').classList.contains('hidden'));const frameSeconds=Math.max(0,(now-lastTime)/1000),dt=Math.min(frameSeconds,.05);lastTime=now;elapsed+=dt;fpsTime+=frameSeconds;frameCount++;if(mode==='playing'&&!document.hidden){const before=renderScale.scale;renderScale.sample(frameSeconds);if(renderScale.scale!==before)resize();}else renderScale.interrupt();if(fpsTime>1){$('fps').textContent=`${Math.round(frameCount/fpsTime)} FPS · ${$('quality').value.toUpperCase()}${renderScale.scale<1?` · ${Math.round(renderScale.scale*100)}% RES`:''}`;fpsTime=0;frameCount=0;}
 if(mode==='curse')runTime+=dt;

@@ -27,6 +27,15 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Minimap scales with the screen (version 163)
+
+- **On PC, the minimap scales with the window height.** It is about 25% larger on a 1080p monitor (about 210px, up from 165px) and caps at 260px on 1440p and larger screens. It never drops below the old 165px.
+- **Phones and the touch layout keep the compact 92px map.**
+- **The canvas resolution follows the map's on-screen size,** so the larger map stays sharp.
+- **The HUD around it adjusts in both positions.**
+  - Top right: the essence readout stays under the map, and the wave column leaves room for it.
+  - Bottom left: the map stays above health and armor, matching their width.
+
 ## Minimap overhaul (version 162)
 
 - **North stays up.** The map no longer spins. Your marker is an arrow at the centre that turns with your view, over a soft, fading view cone. N, E, S and W sit on the rim.

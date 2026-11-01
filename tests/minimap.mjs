@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {drawMinimap,mapColor,isReddish,MINIMAP} from '../public/game/minimap.mjs';
 
 // A 2D context that records what is drawn and under which rotation.
@@ -40,5 +41,13 @@ export function verifyMinimap(qa,frames){
   for(const s of all)assert(!isReddish(mapColor(s)),`${s.name||s.type} is not red on the map (${mapColor(s)})`);
   // The live HUD map draws without errors while playing.
   frames(12);
-  console.log(`PASS: north-up minimap with only the player marker turning (view cone), red zombies across the full ${reach.toFixed(0)} m view plus rim pips beyond it and hollow rings on other floors, and no red station among ${all.length} on the minimap or estate map.`);
+  // v163: on PC the map grows with the screen; the touch layout keeps 92px.
+  const css=readFileSync(new URL('../public/game/style.css',import.meta.url),'utf8');
+  const size=css.match(/#hud\{[^}]*--hud-map-size:clamp\((\d+)px,calc\((\d+)vh \+ (\d+)px\),(\d+)px\)/);assert(size,'The PC minimap size scales with the screen');
+  const [lo,vh,add,hi]=size.slice(1).map(Number),mapAt=h=>Math.min(hi,Math.max(lo,vh*h/100+add));
+  assert(Math.abs(mapAt(969)/165-1.25)<.04,`About 25% larger on a 1080p monitor (${mapAt(969).toFixed(0)}px)`);
+  assert.equal(mapAt(1329),260,'Up to 260px on 1440p');assert.equal(mapAt(600),165,'Never smaller than before');
+  assert(css.includes('body.touch-playing #hud{--hud-map-size:92px'),'Phones keep the compact map');
+  assert(css.includes('.topHud{top:var(--hud-top-inset);left:38px;right:calc(var(--hud-map-size) + 61px)}')&&css.includes('.topHud{left:20px;right:calc(var(--hud-map-size) + 25px)}'),'The wave column makes room for the bigger map');
+  console.log(`PASS: north-up minimap with only the player marker turning (view cone), red zombies across the full ${reach.toFixed(0)} m view plus rim pips beyond it and hollow rings on other floors, and no red station among ${all.length} on the minimap or estate map; the PC map scales to ${mapAt(969).toFixed(0)}px at 1080p and ${hi}px at 1440p while phones keep 92px.`);
 }
