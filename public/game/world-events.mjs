@@ -1,5 +1,5 @@
 // Wave events use game time, never wall-clock timers or permanent enemy stats.
-export const EVENT_RULES=Object.freeze({firstWave:3,chance:.40,warning:3,graveWarning:4,graves:3,reinforcements:6,graveBonus:25,spawnInterval:.8,aliveLimit:32});
+export const EVENT_RULES=Object.freeze({firstWave:3,chance:.40,warning:3,graveWarning:4,graves:3,reinforcements:6,graveBonus:100,spawnInterval:.8,aliveLimit:32});
 export const WORLD_EVENTS=Object.freeze({
   shroud:{name:'THE SHROUD',duration:30,color:'#a7d9db',warning:'An eerie call carries across the cemetery…',description:'Dense fog conceals the distant dead outdoors. Every kill earns 20% more essence.',effect:'OUTDOOR VISIBILITY REDUCED · +20% KILL ESSENCE'},
   surge:{name:'THE SURGE',duration:30,color:'#cfadff',warning:'A supernatural pulse is gathering…',description:'Standard zombies hasten. Every kill earns 20% more essence.',effect:'+20% WALKER SPEED · +20% KILL ESSENCE'},
