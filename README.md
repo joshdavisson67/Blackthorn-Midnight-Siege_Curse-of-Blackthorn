@@ -27,6 +27,23 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## M12 shotgun upgrade ranks (version 164)
+
+Once you own the M12, any of its three racks (dining room, upstairs, north wing) sells its ranks in order. They last for the run.
+
+| Rank | Name | Price | Effect | Flavor |
+|---|---|---|---|---|
+| I | Gravedigger’s Haste | 2,000 | 30% faster reload | *Shells in before the soil settles.* |
+| II | Coffin Nails | 4,000 | 16-round magazine (reserve 112) | *Sixteen nails. Sixteen coffins.* |
+| III | Charnel Feast | 8,000 | 24-round magazine (reserve 168) | *Twenty-four shells, and the charnel house still hungers.* |
+| IV | Requiem Storm | 16,000 | Full-auto at 2× fire rate | *Hold the trigger. Let the requiem play.* |
+
+- **Semi-auto until the capstone.** The M12 now fires one shell per trigger pull, like the Glock: holding the trigger doesn't refire, and pulls during the 0.63 s cycle are ignored. Requiem Storm lets you hold the trigger, at about 0.31 s between shells.
+- **Everything stacks.**
+  - Magazine ranks take the Soul Forge's +25% capacity per rank (24 shells become 30 at Forge rank 1). Each comes loaded, with a reserve that grows to keep seven full magazines.
+  - Reload ranks multiply with the Forge's 25% faster reloads and with Quickhands.
+  - Forge damage applies to every shell.
+
 ## Minimap scales with the screen (version 163)
 
 - **On PC, the minimap scales with the window height.** It is about 25% larger on a 1080p monitor (about 210px, up from 165px) and caps at 260px on 1440p and larger screens. It never drops below the old 165px.

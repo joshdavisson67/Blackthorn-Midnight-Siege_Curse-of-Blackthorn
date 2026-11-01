@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
-import {isBlocked} from './core.mjs?v=154';
-import {UPPER_Y,moveActor,updateActorHeight,supportBelow,stairHeight} from './vertical.mjs?v=154';
+import {isBlocked} from './core.mjs?v=164';
+import {UPPER_Y,moveActor,updateActorHeight,supportBelow,stairHeight} from './vertical.mjs?v=164';
 import {cellarStairHeight} from './cellar-layout.mjs?v=28';
 
 // v158: a 15-yard guard radius (was 12) and 25% more bite reach (was .95).

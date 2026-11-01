@@ -1,6 +1,7 @@
 // Weapon upgrade ranks (v159). Each weapon climbs its own ladder, bought in
 // order; ranks last for the run. The Glock's ladder is sold at the courtyard
-// pistol bench; the Raven SMG's (v161) at either SMG rack once it is owned.
+// pistol bench; the Raven SMG's (v161) at either SMG rack once it is owned;
+// the M12 shotgun's (v164) at any of its three racks once it is owned.
 export const WEAPON_RANKS=Object.freeze({
   glock:Object.freeze([
     Object.freeze({rank:1,numeral:'I',name:'Bloodsight',price:2000,effect:'Slide-mounted red dot',flavor:'A crimson eye that never blinks.',dot:true}),
@@ -16,6 +17,15 @@ export const WEAPON_RANKS=Object.freeze({
     Object.freeze({rank:2,numeral:'II',name:'Unkindness',price:4000,effect:'70-round magazine',flavor:'A flock of seventy, and none of them kind.',mag:70}),
     Object.freeze({rank:3,numeral:'III',name:'Black Flock',price:8000,effect:'100-round magazine',flavor:'A hundred wings to blot out the moon.',mag:100}),
     Object.freeze({rank:4,numeral:'IV',name:'Twin Ravens',price:16000,effect:'Dual-wield SMGs · 2× fire rate · two magazines',flavor:'Huginn and Muninn ride again, and both are armed.',capstone:true,dual:true,rate:2})
+  ]),
+  // v164: the M12's ladder, sold at any shotgun rack once it is owned. The M12
+  // is semi-auto until the capstone, which turns it into a full-auto
+  // drum-fed storm firing twice as fast.
+  shotgun:Object.freeze([
+    Object.freeze({rank:1,numeral:'I',name:'Gravedigger’s Haste',price:2000,effect:'30% faster reload',flavor:'Shells in before the soil settles.',reload:.7}),
+    Object.freeze({rank:2,numeral:'II',name:'Coffin Nails',price:4000,effect:'16-round magazine',flavor:'Sixteen nails. Sixteen coffins.',mag:16}),
+    Object.freeze({rank:3,numeral:'III',name:'Charnel Feast',price:8000,effect:'24-round magazine',flavor:'Twenty-four shells, and the charnel house still hungers.',mag:24}),
+    Object.freeze({rank:4,numeral:'IV',name:'Requiem Storm',price:16000,effect:'Full-auto · 2× fire rate',flavor:'Hold the trigger. Let the requiem play.',capstone:true,auto:true,rate:2})
   ])
 });
 
@@ -39,3 +49,5 @@ export function rankHasDot(type,rank){return earned(type,rank).some(r=>r.dot);}
 export function rankReloadTime(type,rank){let k=1;for(const r of earned(type,rank))if(r.reload)k*=r.reload;return k;}
 // Dual-wield capstone: two guns, two magazines; the reserve does not grow.
 export function rankDual(type,rank){return earned(type,rank).some(r=>r.dual);}
+// Full-auto capstone (v164): a semi-auto weapon fires while the trigger is held.
+export function rankAuto(type,rank){return earned(type,rank).some(r=>r.auto);}
