@@ -27,6 +27,10 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Full-screen tip while loading (version 171)
+
+The first loading screen now shows **TIP: PRESS F11 TO ENTER FULL SCREEN MODE** a short gap below "PREPARING THE ESTATE", with F11 drawn as a key. Touch devices, which have no F11 key, don't show it.
+
 ## Grave essence is a little headstone (version 170)
 
 Grave Awakening's bonus essence drop is now a small headstone instead of a gold crystal. It's a pale, softly glowing round-topped slab on a dark plinth, with a bright gold cross on both faces. It bobs and turns like before, flickers out over its last five seconds, keeps its glow through a blackout, and pays the same 100-essence baseline.
