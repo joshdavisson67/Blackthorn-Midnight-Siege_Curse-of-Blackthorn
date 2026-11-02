@@ -299,5 +299,8 @@ verifyBushmasterRanks(qa,frames,listeners,elements,gameCanvas);
 const {verifyDropFade}=await import('./drop-fade.mjs');
 verifyDropFade(qa,frames);
 
+const {verifyFullscreenTip}=await import('./fullscreen-tip.mjs');
+verifyFullscreenTip(elements);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
