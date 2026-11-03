@@ -27,6 +27,24 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Every zombie its own build (version 177)
+
+Each walker is now posed its own way on the same four bodies. Every difference is a small per-zombie offset on joints the animator already drives, so no models, geometry or textures were added.
+
+- **Posture:**
+  - Some walkers have a collapsed shoulder, sagging up to 5 cm on either side.
+  - The spine can bend to one side and twist.
+  - The pelvis can tilt.
+  - The head can jut, turn or tilt.
+- **Stance:**
+  - Some walkers stand crouched, with bent knees and lower hips. Others stand ramrod upright.
+  - Stance width varies, and each foot turns out by its own amount.
+  - Planted feet still meet the floor.
+- **Arms:** each arm has its own hang (forward or back), splay from the body, elbow bend, forearm twist and wrist droop, on top of the existing arm carriages. Many walkers hold their two arms differently.
+- **Speed:** walkers' base speeds now stay within 7% of each other, down from the old ±15% spread. The average is unchanged, and the v175 rhythm still makes each one surge and drag.
+- **Brutes** get a stiffer, straighter build. Dogs and elite bosses keep their own poses.
+- **Seeded:** builds come from each zombie's own seed, so they are reproducible and no other random draws in the run change.
+
 ## Damage-driven limp (version 176)
 
 Leg shots used to show only a brief flinch until enough damage dropped a walker to a crawl. Now each leg remembers the hits it took.

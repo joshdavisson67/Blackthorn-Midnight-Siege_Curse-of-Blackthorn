@@ -81,6 +81,7 @@ export function rollGait(rng=Math.random,{feral=false,brute=false}={}){
     loose:.75+rng()*.5
   };
 }
+const NO_BUILD=Object.freeze({dropSide:0,shoulderDrop:0,spineBend:0,spineTwist:0,pelvisTilt:0,headJut:0,headTurn:0,headTilt:0,kneeBend:0,stanceWidth:0,toeOut:[0,0],arms:[{swingFwd:0,splay:0,elbow:0,twist:0,wrist:0},{swingFwd:0,splay:0,elbow:0,twist:0,wrist:0}]});
 const DEFAULT_GAIT=Object.freeze({dragLeg:0,sway:1,hunch:0,arms:'clutch',reachArm:0,armLag:0,hipLag:0,bob:1,scuff:0,attack:'grabber',elbow:[.15,.15],elbowSwing:1,loose:1});
 // Arm carriage: base pitch, swing, forearm bend.
 // Arm carriage: base pitch, swing, forearm bend. 'dead' is a broken arm that
@@ -634,18 +635,18 @@ const reach=(th,k)=>THIGH*Math.cos(th)+SHIN*Math.cos(th+k);
 // and ankle blend between those poses, so nothing snaps at lift-off or
 // touch-down. `support` is a weight that rises and falls smoothly through the
 // stance and is zero in the air.
-function stancePose(t,span,drag,bob){
-  const k=(.09*Math.sin(Math.PI*Math.min(1,t*2.2))*bob+.04)*(1-.4*drag),hip=solveHip(-span/2+span*t,k),lift=smooth01((t-.72)/.28);
+function stancePose(t,span,drag,bob,bend=0){
+  const k=(.09*Math.sin(Math.PI*Math.min(1,t*2.2))*bob+.04)*(1-.4*drag)+bend,hip=solveHip(-span/2+span*t,k),lift=smooth01((t-.72)/.28);
   return {hip,knee:k+lift*.25,foot:-(hip+k)+lift*.32,height:reach(hip,k)};
 }
-function legPose(u,stance,span,knee,drag,scuff,bob,pitch=0){
+function legPose(u,stance,span,knee,drag,scuff,bob,pitch=0,bend=0){
   if(u<stance){
-    const t=u/stance,s=stancePose(t,span,drag,bob);
+    const t=u/stance,s=stancePose(t,span,drag,bob,bend);
     // Angles are solved against the vertical; the pitched pelvis is removed.
     return {hip:s.hip-pitch,knee:s.knee,foot:s.foot,height:s.height,support:Math.pow(Math.sin(Math.PI*t),.6),planted:true};
   }
-  const s=(u-stance)/(1-stance),A=stancePose(1,span,drag,bob),B=stancePose(0,span,drag,bob);
-  const ratio=(1-stance)/stance,mA=(A.hip-stancePose(.97,span,drag,bob).hip)/.03*ratio,mB=(stancePose(.03,span,drag,bob).hip-B.hip)/.03*ratio;
+  const s=(u-stance)/(1-stance),A=stancePose(1,span,drag,bob,bend),B=stancePose(0,span,drag,bob,bend);
+  const ratio=(1-stance)/stance,mA=(A.hip-stancePose(.97,span,drag,bob,bend).hip)/.03*ratio,mB=(stancePose(.03,span,drag,bob,bend).hip-B.hip)/.03*ratio;
   const s2=s*s,s3=s2*s,hip=(2*s3-3*s2+1)*A.hip+(s3-2*s2+s)*mA+(-2*s3+3*s2)*B.hip+(s3-s2)*mB,e=smooth01(s),bump=Math.pow(Math.sin(Math.PI*s),2);
   const k=A.knee+(B.knee-A.knee)*e+knee*bump*(1-scuff*.6*drag);
   const foot=A.foot+(B.foot-A.foot)*e+(-.16+(scuff*.3+.16)*drag)*bump;
@@ -655,6 +656,8 @@ export function animateZombie(e,dt,distance,moved,look=null){
   // Pivoting on the spot shuffles the feet round instead of sliding.
   const pivot=moved>0?0:clamp((Math.abs(e.turnRate||0)-.6)/2,0,.5),moving=Math.max(pivot,clamp(moved/Math.max(dt*e.speed,.0001),0,1)),blend=1-Math.exp(-dt*12);
   e.motion=T.MathUtils.lerp(e.motion||0,moving,blend);e.phase+=moved*6.4/e.stride+pivot*dt*4;e.idle=(e.idle||0)+dt;
+  // v177: this zombie's own build (posture offsets); none for plain rigs.
+  const B=e.build||NO_BUILD;
   const p=e.phase,w=e.motion,run=clamp((e.speed-1.1)/1.8,0,1),g=e.gait||DEFAULT_GAIT,hip=p+g.hipLag,t=e.idle,slump=e.slump||0;
   // Ground covered while one foot is planted, in this rig's own units.
   const scale=e.group?.scale?.y||1,cycle=TAU*e.stride/6.4/scale,stretch=1+run*.25+(e.feral?.2:0);
@@ -673,7 +676,7 @@ export function animateZombie(e,dt,distance,moved,look=null){
     // Antalgic limp: a short stance on the dragged leg, a longer one on the good
     // leg, never both feet in the air (legs are half a cycle apart).
     const dragStance=Math.max(.5-LIMP.stanceFloor*e.limpDepth/LIMP.deepen,STANCE*(1-.75*limpAmount)),drag=dw[j],stance=STANCE+(STANCE-dragStance)*.6*(1-drag)+(dragStance-STANCE)*drag,u=(((p+j*Math.PI)/TAU)%1+1)%1;
-    const pose=legPose(u,stance,cycle*stance*w*stretch,.62+run*.25+(e.feral?.2:0),drag,g.scuff,g.bob,pelvisPitch);
+    const pose=legPose(u,stance,cycle*stance*w*stretch,.62+run*.25+(e.feral?.2:0),drag,g.scuff,g.bob,pelvisPitch,B.kneeBend);
     return {u,stance,drag,pose};
   });
   // Weight shifts smoothly between the legs: each planted leg's support rises
@@ -694,10 +697,10 @@ export function animateZombie(e,dt,distance,moved,look=null){
   e.root.position.set(balance*.024*vig*g.sway*w,.92-drop+.004*breathe*(1-w)-(e.legHit>0?.055:0)-st*.07,0);
   const pelvisYaw=springTo(e,'pelvisYaw',Math.sin(hip)*.065*vig*g.sway*w,dt,6,.75);
   springTo(e,'lurch',(drop*1.6+limp*.06)*w,dt,10,.5);
-  e.root.rotation.set(pelvisPitch+st*.12+lu*.08,pelvisYaw,springTo(e,'pelvisRoll',-balance*.045*vig*g.sway*w+dragSide*limp*.1*w-dragSide*sink*.42-turn*.025,dt,6,.8));
+  e.root.rotation.set(pelvisPitch+st*.12+lu*.08,pelvisYaw,springTo(e,'pelvisRoll',-balance*.045*vig*g.sway*w+dragSide*limp*.1*w-dragSide*sink*.42-turn*.025,dt,6,.8)+B.pelvisTilt);
   // Chest counter-twists against the pelvis; each heel strike nods it forward.
   const nod=springTo(e,'nod',(drop*2.2*g.bob+limp*.12)*w+sink*.3,dt,9,.45);
-  e.spine.rotation.set(.1+run*.07+(e.feral?.12:0)+g.hunch+slump+nod+.02*breathe*(1-w)*.6+st*.4+lu*.24+lp*.3,-pelvisYaw*1.15+Math.sin(hip)*.012*w,e.lean*.3+springTo(e,'spineTilt',balance*.04*vig*w+dragSide*sink*.5,dt,5,.8)+Math.sin(t*.37+e.lean*5)*.03*(1-w));
+  e.spine.rotation.set(.1+run*.07+(e.feral?.12:0)+g.hunch+slump+nod+.02*breathe*(1-w)*.6+st*.4+lu*.24+lp*.3,-pelvisYaw*1.15+Math.sin(hip)*.012*w+B.spineTwist,e.lean*.3+B.spineBend+(B.dropSide?1:-1)*B.shoulderDrop*1.4+springTo(e,'spineTilt',balance*.04*vig*w+dragSide*sink*.5,dt,5,.8)+Math.sin(t*.37+e.lean*5)*.03*(1-w));
   // Head: tracks the player with a lagging neck, lolls with the stride, twitches.
   let yawTo=0,pitchTo=0;
   if(look&&e.group){
@@ -712,9 +715,9 @@ export function animateZombie(e,dt,distance,moved,look=null){
     if(r<.45)kick(e,'headYaw',(chance(e)-.5)*8*tic);else if(r<.75)kick(e,'headRoll',(chance(e)-.5)*9*tic);else kick(e,'shrug'+(r<.88?0:1),-(2.5+chance(e)*3.5)*tic);}
   const headBase=(e.feral?-.24:-.07)-g.hunch*.7-slump*1.1;
   e.head.rotation.set(
-    springTo(e,'headPitch',headBase+pitchTo*.6-nod*.7+Math.sin(t*1.1)*.04-st*.45-lu*.3-lp*.25,dt,11,.55),
-    springTo(e,'headYaw',yawTo*.75+Math.sin(p*.5)*.045*vig*w,dt,6,.7),
-    springTo(e,'headRoll',e.lean+Math.sin(t*.8)*.035-balance*.075*vig*w-yawTo*.12,dt,5,.6));
+    springTo(e,'headPitch',headBase+pitchTo*.6-nod*.7+Math.sin(t*1.1)*.04-st*.45-lu*.3-lp*.25+B.headJut,dt,11,.55),
+    springTo(e,'headYaw',yawTo*.75+Math.sin(p*.5)*.045*vig*w+B.headTurn*(1-Math.abs(yawTo)),dt,6,.7),
+    springTo(e,'headRoll',e.lean+B.headTilt+Math.sin(t*.8)*.035-balance*.075*vig*w-yawTo*.12,dt,5,.6));
   e.jaw.rotation.x=(e.faceSnarl??.14)+Math.max(0,Math.sin(t*2.3+e.lean*7))*.05+Math.max(0,Math.sin(t*11.3))*.015;
   let contact=false;
   if(e.staggerLeft>0||e.crawlDrop>0)e.attackTime=-1;
@@ -729,29 +732,29 @@ export function animateZombie(e,dt,distance,moved,look=null){
   }
   for(let j=0;j<2;j++){
     const a=Math.sin(p+j*Math.PI-g.armLag),side=j?1:-1,leg=e.legs[j],arm=e.arms[j],{hip:lh,knee:lk,foot:lf}=legPoses[j].pose;
-    leg.pivot.rotation.set(lh,-pelvisYaw*.5,side*.025);leg.calf.rotation.x=lk;leg.foot.rotation.x=lf;
+    leg.pivot.rotation.set(lh,-pelvisYaw*.5+side*B.toeOut[j],side*(.025+B.stanceWidth));leg.calf.rotation.x=lk;leg.foot.rotation.x=lf;
     const pose=g.arms==='mixed'?(j===g.reachArm?'reach':'dangle'):g.arms==='broken'?(j===g.reachArm?'dead':'dangle'):g.arms,[base,swing,bend]=ARM_CARRIAGE[pose];
     // Arms hang from the shoulders and follow through: the forearm and hand
     // trail the upper arm, and dangling arms swing wider and heavier. A dead
     // arm flops on a slack spring; clawing arms grasp at the air in turn.
-    const dead=pose==='dead',claw=pose==='claw';
+    const dead=pose==='dead',claw=pose==='claw',BA=B.arms[j];
     const shrug=springTo(e,'shrug'+j,0,dt,9,.4),reachTremble=pose==='reach'?Math.sin(t*7.3+j*2)*.025+Math.sin(t*3.1+j)*.03:0;
     const clawing=claw?Math.sin(t*3.4+j*Math.PI)*.28+Math.sin(t*7.9+j)*.06:0;
-    const ax=springTo(e,'arm'+j,base-a*swing*w-run*.14+reachTremble+clawing+(pose==='dangle'?-.08*Math.sin(t*.9+j)*(1-w):0),dt,dead?4:pose==='dangle'?7.5:11,dead?.12:pose==='dangle'?.32:.55);
-    arm.pivot.rotation.set(ax,side*(pose==='reach'?.04:claw?-.12:.09)-pelvisYaw*(dead?1.2:.4),side*(dead?.04:.10+Math.sin(p*.5)*.035)+shrug*side*.25);
+    const ax=springTo(e,'arm'+j,base-a*swing*w-run*.14+reachTremble+clawing+(pose==='dangle'?-.08*Math.sin(t*.9+j)*(1-w):0)+BA.swingFwd,dt,dead?4:pose==='dangle'?7.5:11,dead?.12:pose==='dangle'?.32:.55);
+    arm.pivot.rotation.set(ax,side*(pose==='reach'?.04:claw?-.12:.09)-pelvisYaw*(dead?1.2:.4),side*(dead?.04:.10+Math.sin(p*.5)*.035)+side*BA.splay+shrug*side*.25);
     // v140: the elbow rests at this zombie's own bend, flexes as the arm swings
     // forward and opens as it swings back (a little behind the shoulder), and
     // the forearm and hand are sprung in world angle so they lag and overshoot.
     const [rest,flex,ef,ed]=ELBOW[e.feral?'feral':pose],flexDrive=.5+.5*Math.sin(p+j*Math.PI-g.armLag-.55);
     const grope=pose==='reach'?-.16*(.5+.5*Math.sin(t*1.6+j*2.1))-.05*Math.sin(t*4.3+j):0;
     const idle=-.1*(.5+.5*Math.sin(t*.55+j*2.4+e.lean*7))*(1-w);
-    const fxTarget=rest-(g.elbow?.[j]??.15)*(dead?.2:1)-flex*(g.elbowSwing??1)*w*flexDrive-run*.2+grope+idle+(claw?Math.sin(t*3.4+j*Math.PI+.8)*.3:0);
+    const fxTarget=rest-(g.elbow?.[j]??.15)*(dead?.2:1)-flex*(g.elbowSwing??1)*w*flexDrive-run*.2+grope+idle+(claw?Math.sin(t*3.4+j*Math.PI+.8)*.3:0)-BA.elbow;
     const loose=g.loose??1,fw=springTo(e,'foreW'+j,ax+fxTarget,dt,ef/loose,ed*(.8+.2*loose));
     const fx=softRange(fw-ax,-2.3,.04);
-    arm.forearm.rotation.set(fx,side*(dead?.06+Math.sin(t*1.3+j)*.25:.08+.16*Math.min(1.4,-fx)),side*(dead?-.12:.055));
+    arm.forearm.rotation.set(fx,side*(dead?.06+Math.sin(t*1.3+j)*.25:.08+.16*Math.min(1.4,-fx)+BA.twist),side*(dead?-.12:.055));
     const handTarget=(pose==='reach'?-.05:claw?-.55+Math.sin(t*6.8+j*2)*.35:dead?.25:-.17)-.12*(1-flexDrive)*w;
     const hw=springTo(e,'handW'+j,ax+fx+handTarget,dt,dead?8:15/loose,dead?.22:.45);
-    arm.hand.rotation.set(softRange(hw-ax-fx,-1.25,.7,.2),0,side*.13+Math.sin(t*1.7+j)*.05);
+    arm.hand.rotation.set(softRange(hw-ax-fx+BA.wrist,-1.25,.7,.2),0,side*.13+Math.sin(t*1.7+j)*.05);
     e.spine.rotation.z+=shrug*side*-.06+(dead?side*.05:0);
     // Stumbling arms fling out to catch the fall; lunging arms grab ahead.
     if(st||lu){arm.pivot.rotation.x-=st*(.75+.35*j)+lu*1.05;arm.pivot.rotation.z+=side*st*.4;arm.forearm.rotation.x=Math.min(.04,arm.forearm.rotation.x+lu*.35);}
