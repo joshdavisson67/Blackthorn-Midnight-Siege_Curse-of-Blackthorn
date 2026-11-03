@@ -94,7 +94,7 @@ export function verifyStairs(qa,frames,listeners,elements){
   }
   console.log(`PASS: matching 0.72m banister visuals/collision and ${partialJumps.length} partial/diagonal stairwell jumps land safely and retain escape routes at 30/60/144 FPS.`);
   const side=new T.Vector3(STAIR.x+1.7,0,-4.3);moveActor(side,-.8,0,s.colliders);assert(side.x>STAIR.x+1.0&&side.y===0,'A tall stair cannot be entered sideways by teleporting upward');
-  const underFlight=new T.Vector3(STAIR.x+1.7,0,-8.4);moveActor(underFlight,-1.5,0,s.colliders);assert(underFlight.x<STAIR.x+1.0&&underFlight.y===0,'The sloped banister preserves passage beneath the high end of the stairs');
+  const underFlight=new T.Vector3(STAIR.x+1.7,0,-8.4);moveActor(underFlight,-1.5,0,s.colliders);assert(underFlight.x>STAIR.x+STAIR.w/2&&underFlight.y===0,'v173: the space beneath the high end of the stairs is solid, so walkers stop at its panelling');
   const upper=s.interactables.find(st=>st.y===UPPER_Y),approach={x:upper.x+Math.sin(upper.rotation||0)*1.5,z:upper.z+Math.cos(upper.rotation||0)*1.5};qa.setPlayer(approach.x,approach.z,0);qa.setPoints(5000);qa.interact();assert.equal(qa.get().points,5000,'Cannot buy upstairs supplies through the floor');
   qa.setPlayer(approach.x,approach.z,UPPER_Y);qa.interact();assert.equal(qa.get().points,4650);qa.openMap();assert(!elements.get('estateMap').classList.contains('hidden'));qa.closeMap();
   console.log('PASS: collision layers, atrium rails, stair side-entry protection, upper ammunition and floor-aware map/purchases.');

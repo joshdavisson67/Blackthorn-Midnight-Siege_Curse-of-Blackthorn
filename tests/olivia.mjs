@@ -72,10 +72,11 @@ export function verifyOliviaEasterEgg(qa,frames,listeners,elements){
   // Walls stop the fire.
   const behind=qa.makeZombie(-26.5,-6,false,false,false,4.3);behind.speed=0;const hp=behind.hp;
   qa.bellaBreath(new T.Vector3(-29.6,4.75,-6),new T.Vector3(1,0,0),BELLA.fire.range,BELLA.fire.angle);assert.equal(behind.hp,hp,'Fire does not pass through walls');
-  const open=qa.makeZombie(-31,-6,false,false,false,4.3);open.speed=0;const ohp=open.hp;
-  qa.bellaBreath(new T.Vector3(-33,4.75,-6),new T.Vector3(1,0,0),BELLA.fire.range,BELLA.fire.angle);assert(Math.abs(ohp-open.hp-dps)<1e-6,`Each pulse burns for ${dps}`);
-  const aside=qa.makeZombie(-33,-3.5,false,false,false,4.3);aside.speed=0;const ahp=aside.hp;
-  qa.bellaBreath(new T.Vector3(-33,4.75,-6),new T.Vector3(1,0,0),BELLA.fire.range,BELLA.fire.angle);assert.equal(aside.hp,ahp,'Only the cone burns');
+  // v173: clear of the attic stairs, whose underside is now solid once they are down.
+  const open=qa.makeZombie(-31,-9,false,false,false,4.3);open.speed=0;const ohp=open.hp;
+  qa.bellaBreath(new T.Vector3(-33,4.75,-9),new T.Vector3(1,0,0),BELLA.fire.range,BELLA.fire.angle);assert(Math.abs(ohp-open.hp-dps)<1e-6,`Each pulse burns for ${dps}`);
+  const aside=qa.makeZombie(-34,-11,false,false,false,4.3);aside.speed=0;const ahp=aside.hp;
+  qa.bellaBreath(new T.Vector3(-33,4.75,-9),new T.Vector3(1,0,0),BELLA.fire.range,BELLA.fire.angle);assert.equal(aside.hp,ahp,'Only the cone burns');
   for(const e of [victim,behind,open,aside])qa.damageEnemy(e,1e9,false,{source:'Bella'});
   assert(!st().pickups.some(p=>p.type==='bone'),'A rat dragon’s kills no longer drop chips');
 

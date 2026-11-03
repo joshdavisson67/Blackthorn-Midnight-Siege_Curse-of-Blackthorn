@@ -91,6 +91,24 @@ export function buildOliviaAttic({world,M,box,colliders,solidMeshes,interactable
   for(const o of [hatch,stairs])o.traverse(n=>{n.userData.dynamic=true;});
   const smooth=v=>{v=Math.min(1,Math.max(0,v));return v*v*(3-2*v);};
   let progress=0;
+  // v173: supports under the unfolded flight, and stepped solid blocks below
+  // its treads, so nothing can walk under or get behind it. The blocks stand
+  // only on the upper floor (never the hall below) and switch on once the
+  // flight is fully down; each stops 0.5 m under the treads above it, leaving
+  // room for a crawler hauling itself up the steep flight.
+  const ramp=z=>S.baseY+rise*(S.bottomZ-z)/run,supports=new T.Group();supports.name='Attic stair supports';supports.visible=false;world.add(supports);
+  const postGeo=new T.BoxGeometry(.09,1,.09),postZ=[-4.9,-6.2,-7.35];
+  for(const side of [-1,1]){
+    const x=S.x+side*(S.w/2-.04);
+    for(const z of postZ){const h=ramp(z)-.08-S.baseY,p=new T.Mesh(postGeo,wood);p.scale.y=h;p.position.set(x,S.baseY+h/2,z);p.name='Attic stair support post';p.castShadow=p.receiveShadow=true;supports.add(p);}
+    for(const y of [.42,1.05]){const a=postZ[0],b=postZ.at(-1),r=new T.Mesh(new T.BoxGeometry(.05,.07,a-b+.09),wood);r.position.set(x,S.baseY+y,(a+b)/2);r.name='Attic stair support rail';r.castShadow=true;supports.add(r);}
+  }
+  supports.traverse(n=>{n.userData.dynamic=true;});
+  const underStair=[],slices=16;
+  for(let i=0;i<slices;i++){
+    const za=S.bottomZ-run*i/slices,zb=S.bottomZ-run*(i+1)/slices,top=ramp(za)-.5;if(top<S.baseY+.1)continue;
+    const c={x:S.x,z:(za+zb)/2,w:S.w+.1,d:za-zb,minY:S.baseY,maxY:top,disabled:true,attic:true,underStair:true};colliders.push(c);underStair.push(c);
+  }
   // 0 closed → 1 hatch open and every tread in place.
   function setProgress(p){
     progress=Math.min(1,Math.max(0,p));
@@ -99,6 +117,7 @@ export function buildOliviaAttic({world,M,box,colliders,solidMeshes,interactable
     handrail.scale.z=Math.max(.001,smooth((progress-.55)/.4));handrail.visible=progress>.55;
     const topPos=at(1);
     for(const [i,m] of treads.entries()){const k=smooth((progress-.3-(S.steps-1-i)*.03)/.25);m.visible=k>0;m.position.lerpVectors(topPos,m.userData.final,k);m.rotation.x=(1-k)*.6;}
+    supports.visible=progress>.6;for(const c of underStair)c.disabled=progress<1;
     hatch.updateMatrixWorld(true);stairs.updateMatrixWorld(true);
   }
   setProgress(0);
@@ -111,7 +130,7 @@ export function buildOliviaAttic({world,M,box,colliders,solidMeshes,interactable
   interactables.push(station);
   // Tag everything solid the attic added, so it can be told apart from the house.
   for(let i=firstCollider;i<colliders.length;i++)colliders[i].attic=true;
-  return {hatch,stairs,treads,station,olivia,tablet,setProgress,get progress(){return progress;},
+  return {hatch,stairs,treads,supports,underStair,station,olivia,tablet,setProgress,get progress(){return progress;},
     update(dt,{player,celebrate=false}={}){olivia.update(dt,player,celebrate);}};
 }
 

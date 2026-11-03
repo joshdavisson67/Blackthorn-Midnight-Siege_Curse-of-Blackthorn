@@ -305,5 +305,8 @@ verifyFullscreenTip(elements);
 const {verifyHidingSpots}=await import('./hiding-spots.mjs');
 verifyHidingSpots(qa);
 
+const {verifyStairUnderside}=await import('./stair-underside.mjs');
+verifyStairUnderside(qa,frames);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
