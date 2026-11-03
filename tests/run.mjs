@@ -308,5 +308,8 @@ verifyHidingSpots(qa);
 const {verifyStairUnderside}=await import('./stair-underside.mjs');
 verifyStairUnderside(qa,frames);
 
+const {verifyCampSpawns}=await import('./camp-spawns.mjs');
+verifyCampSpawns(qa,frames);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
