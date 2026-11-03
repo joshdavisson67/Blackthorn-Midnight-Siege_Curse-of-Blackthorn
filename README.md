@@ -27,6 +27,20 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Solid stairs (version 173)
+
+Zombies could wander under the main staircase and get stuck chasing a player on the landing.
+
+- **Main staircase:** the space beneath it is closed in from the hall wall to the right-hand banister.
+  - The hall side is wood-panelled, with battens and a base trim.
+  - A back wall runs up to the landing.
+  - A sloped collider follows the treads 0.25 m below their surface, so the floor underneath is solid while the flight still climbs normally from either end.
+- **Olivia's attic stairs:** once the flight unfolds, three pairs of support posts with cross rails stand under it.
+  - Stepped solid blocks fill the space under the treads, stopping 0.5 m below them so crawlers can still haul themselves up the steep flight.
+  - The blocks stand only on the upper floor, never the hall below, and switch off again when the stairs fold away on a new run.
+  - Anyone standing underneath when the flight lands is moved out to its side.
+- **Crawling zombies** (legs shot out) climb and descend both flights.
+
 ## Nowhere to hide (version 172)
 
 The whole estate was audited on a 0.2 m grid: ground floor, upper floor and cellar, with every gate open. Each spot the player can walk to was checked for a spot a zombie can stand in within its 1.6 m swing, with the clear upright line the game requires for a hit. Three player-only gaps were closed:

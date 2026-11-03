@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=172';
-import {createChangelog} from './changelog.mjs?v=172';
+import {createLeaderboard} from './leaderboard.mjs?v=173';
+import {createChangelog} from './changelog.mjs?v=173';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=165';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -40,8 +40,8 @@ import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=157';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
-import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=165';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=172';
+import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=173';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=173';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=165';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=140';
 import {addEstateDetail} from './estate-detail.mjs?v=165';
@@ -715,7 +715,7 @@ function openAttic(){
 }
 function updateAtticOpening(dt){
   atticState.time+=dt;attic.setProgress(atticState.time/EASTER_EGG.openTime);
-  if(atticState.time>=EASTER_EGG.openTime){atticState.opening=false;atticState.open=true;setAtticOpen(true);nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);tone(523,.2,.05,'triangle',784);updateHud();}
+  if(atticState.time>=EASTER_EGG.openTime){atticState.opening=false;atticState.open=true;setAtticOpen(true);clearAtticUnderside();nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);tone(523,.2,.05,'triangle',784);updateHud();}
 }
 function talkToOlivia(){
   if(bella.dragon){notify('OLIVIA: “BELLA LOOKS SO COOL!”',3);return false;}
@@ -724,6 +724,12 @@ function talkToOlivia(){
   boneChips-=EASTER_EGG.chips;bella.becomeDragon();oliviaCheer=2.5;
   announce('BELLA THE RAT DRAGON','OLIVIA GAVE HER WINGS, A DRAGON TAIL AND FIRE BREATH');
   tone(523,.25,.06,'triangle',659);tone(659,.3,.05,'triangle',784);tone(784,.5,.05,'triangle',1046);updateHud();return true;
+}
+// v173: once the flight is down its underside is solid. Anyone standing there
+// as it lands steps out to the nearer side of the stairs.
+function clearAtticUnderside(){
+  const S=OLIVIA_ATTIC.stair,out=(p,r)=>{if(Math.abs(p.y-UPPER_Y)>.5||p.z>S.bottomZ||p.z<S.topZ||Math.abs(p.x-S.x)>=S.w/2+.05+r)return;const side=p.x>=S.x?1:-1;p.x=S.x+side*(S.w/2+.05+r+.05);};
+  out(player,PLAYER_RADIUS);for(const e of zombies)if(!e.dead)out(e.walkPos,e.radius||.38);if(bella.unlocked)out(bella.pos,.3);
 }
 function playerInAttic(){return player.y>OLIVIA_ATTIC.y-.3&&inAttic(player.x,player.z);}
 // Steering for the narrow attic stairs, which the navigation grid does not

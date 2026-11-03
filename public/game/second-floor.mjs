@@ -38,6 +38,26 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
     colliders.push({x,z:midZ,w:.09,d:depth,minY:-.25,maxY:Y+RAIL_HEIGHT,railing:true,slope,baseY:Y/2,topY:Y/2+RAIL_HEIGHT});
   }
   for(const side of [-1,1]){const stringer=block(STAIR.x+side*(STAIR.w/2-.1),Y/2-.17,(STAIR.bottomZ+STAIR.topZ)/2,.16,.20,Math.hypot(Y,STAIR.bottomZ-STAIR.topZ),M.wood);stringer.rotation.x=Math.atan2(Y,STAIR.bottomZ-STAIR.topZ);solidMeshes.push(stringer);}
+  // v173: the space under the flight is closed in, from the hall wall to the
+  // right-hand banister, so nothing can wander underneath and get stuck. A
+  // sloped collider follows the treads 0.25 m below their surface, so the
+  // flight itself still climbs normally while the floor beneath is solid.
+  {
+    const x0=-5.41,x1=STAIR.x+STAIR.w/2+.02,cx=(x0+x1)/2,width=x1-x0,under=Y-UPPER_SLAB_THICKNESS;
+    const profile=new T.Shape();profile.moveTo(-STAIR.bottomZ+.38,0);profile.lineTo(-STAIR.topZ,0);profile.lineTo(-STAIR.topZ,under);profile.closePath();
+    const panelGeo=new T.ExtrudeGeometry(profile,{depth:.05,bevelEnabled:false});panelGeo.rotateY(Math.PI/2);
+    for(const x of [x1-.025,x0+.035]){const p=new T.Mesh(panelGeo,M.wood);p.position.set(x-.025,0,0);p.name='Under-stair panelling';p.castShadow=p.receiveShadow=true;group.add(p);solidMeshes.push(p);}
+    // Battens on the hall-facing side, each stopping under the stringer.
+    for(let i=1;i<=6;i++){const z=STAIR.bottomZ-(STAIR.bottomZ-STAIR.topZ)*i/7,h=Math.min(under,Y*(STAIR.bottomZ-z)/(STAIR.bottomZ-STAIR.topZ)-.12);block(x1+.015,h/2,z,.035,h,.07,M.wood);}
+    block(x1+.02,.09,(STAIR.bottomZ+STAIR.topZ)/2,.04,.18,STAIR.bottomZ-STAIR.topZ-.3,M.wood);
+    // The back face sits just inside the flight, so the wide hall doorway's
+    // approach under the landing stays clear; the sloped fill is what blocks.
+    block(cx,under/2,STAIR.topZ+.08,width,under,.1,M.wood);
+    // Its east edge stops 0.1 m inside the stringer (too narrow for anyone)
+    // to keep clear of that doorway's lane.
+    const depth=STAIR.bottomZ-STAIR.topZ,cx1=STAIR.x+STAIR.w/2-.1;
+    colliders.push({x:(x0+cx1)/2,z:(STAIR.bottomZ+STAIR.topZ)/2,w:cx1-x0,d:depth,slope:-Y/depth,topY:Y/2-.25,baseY:-20,underStair:true});
+  }
   // Keep the balcony guarded while letting the existing jump clear its top.
   function rail(x,z,w,d){
     block(x,Y+RAIL_HEIGHT-RAIL_BEAM/2,z,w,RAIL_BEAM,d,M.gold);
