@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=174';
-import {createChangelog} from './changelog.mjs?v=174';
+import {createLeaderboard} from './leaderboard.mjs?v=175';
+import {createChangelog} from './changelog.mjs?v=175';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=165';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -33,17 +33,17 @@ import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankH
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
 import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=168';
-import {createEnemyAssets} from './enemy-assets.mjs?v=157';
+import {createEnemyAssets} from './enemy-assets.mjs?v=175';
 import {createCombatLights} from './combat-lights.mjs?v=168';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
-import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=157';
+import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=175';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=173';
 import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=173';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=165';
-import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=140';
+import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=175';
 import {addEstateDetail} from './estate-detail.mjs?v=165';
 import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=167';
 import {createReticleHud} from './reticles.mjs?v=167';
@@ -59,6 +59,7 @@ import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=170';
 import {createBlackout} from './blackout.mjs?v=135';
 import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-spawns.mjs?v=174';
+import {createLife,updateLife,settleLife} from './zombie-life.mjs?v=175';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
 const reticleHud=createReticleHud($('crosshair'));
@@ -365,6 +366,8 @@ function makeZombie(x,z,brute=false,dog=false,rareDog=false,y=0,feral=false,asse
   e.routeSide=rng()<.5?-1:1;e.flank=rand(.25,1)*e.routeSide;e.stuck=0;e.waypoint=null;
   e.navigation={seed:Math.floor(rng()*2147483647),crowding:(x,z,y)=>crowd.density(x,z,y,e)};
   e.canOccupy=(x,z,y)=>crowd.canOccupy(x,z,y,e.radius,e.bodyHeight,e,e.walkPos);
+  // v175: a temperament of its own (lurch, surges, weave, stumbles, lunges).
+  if(!dog){e.life=createLife(e.navigation.seed,{feral,brute});e.vigor=e.life.vigor;}
   world.add(e.group);e.group.position.set(x,Math.abs(y)>.1?y-.02:enemyFloorHeight(x,z)-.02,z);tagZombie(e,e);zombies.push(e);return e;
 }
 const spawns=ESTATE_SPAWNS;let upperSpawnSlot=0;const campWatch=createCampWatch();
@@ -1233,13 +1236,16 @@ if(climbTo){tx=climbTo.x;tz=climbTo.z;}
 let dx=tx-p.x,dz=tz-p.z,len=Math.hypot(dx,dz),heading=Math.atan2(hunt.x-p.x,hunt.z-p.z);
 if(len>.1&&(dist>1.03||!sameFloor)&&!casting){
   dx/=len;dz/=len;crowd.steer(e,dx,dz,elapsed);dx=e.steerX;dz=e.steerZ;
+  // v175: each walker's own rhythm, surges, weave, stumbles and lunges.
+  const life=e.life&&!e.elite&&!e.crawling&&!casting?updateLife(e,dt,{dist,sameFloor,clear:e.clearPath,stairs:!!stairAt(p.x,p.z)||cellarStairHeight(p.x,p.z)!==null||!!climbTo,attackReady:e.attack<=.3&&e.attackTime<0,moved:e.lastMoved||0}):(settleLife(e,dt),null);
+  if(life?.weave){const c=Math.cos(life.weave),sn=Math.sin(life.weave),wx=dx*c+dz*sn,wz=dz*c-dx*sn;dx=wx;dz=wz;}
   // v139: ease the walking direction (~0.14s) so grid-cell routes curve
   // instead of zig-zagging the body from cell to cell. Sharp turns (over ~70°)
   // are taken at once so nobody grinds into a wall turning round.
   {const k=(e.walkDirX??dx)*dx+(e.walkDirZ??dz)*dz<.3?1:1-Math.exp(-dt*7);let sx=(e.walkDirX??dx)+(dx-(e.walkDirX??dx))*k,sz=(e.walkDirZ??dz)+(dz-(e.walkDirZ??dz))*k;const n=Math.hypot(sx,sz);if(n>.2){sx/=n;sz/=n;}else{sx=dx;sz=dz;}e.walkDirX=sx;e.walkDirZ=sz;dx=sx;dz=sz;}
-  const pace=(e.staggerLeft>0?0:1)*(e.crawling?(e.crawlDrop>0?0:CRAWL.speed):1)*(frenzyWave===wave&&wave?1.4:1)*(e.attackTime>=0?(e.dog?.65:.4):1)*(e.legHit>0?.55:1)*(e.warCry>0?BOSS.cry.speed:1),step=e.speed*worldEvents.speedMultiplier(e)*dt*pace;
+  const pace=(e.staggerLeft>0?0:1)*(e.crawling?(e.crawlDrop>0?0:CRAWL.speed):1)*(frenzyWave===wave&&wave?1.4:1)*(e.attackTime>=0?(e.dog?.65:.4):1)*(e.legHit>0?.55:1)*(e.warCry>0?BOSS.cry.speed:1)*(life?life.pace:1),step=e.speed*worldEvents.speedMultiplier(e)*dt*pace;
   moveWithCollision(p,dx*step,dz*step,e.radius,e);
-  const moved=Math.hypot(p.x-oldX,p.z-oldZ);
+  const moved=Math.hypot(p.x-oldX,p.z-oldZ);e.lastMoved=moved;
   e.stuck=moved<step*.15?e.stuck+dt:0;
   if(e.stuck>.35&&dist>1.8){
     // Slide around a neighbour when there is room; solid walls and bodies still
@@ -1252,7 +1258,7 @@ if(len>.1&&(dist>1.03||!sameFloor)&&!casting){
   // step, so crowd steering and wall slides do not swing the body side to side.
   {const k=1-Math.exp(-dt*2.4),vx=(p.x-oldX)/Math.max(dt,1e-4),vz=(p.z-oldZ)/Math.max(dt,1e-4);e.faceX=(e.faceX??vx)+(vx-(e.faceX??vx))*k;e.faceZ=(e.faceZ??vz)+(vz-(e.faceZ??vz))*k;
    if(Math.hypot(e.faceX,e.faceZ)>.25)heading=Math.atan2(e.faceX,e.faceZ);}
-}
+}else{settleLife(e,dt);e.lastMoved=0;}
 
 // Turn at a limited, eased rate (v136): bodies swing round with weight rather
 // than snapping to every steering wobble; the head leads, tracking the player.

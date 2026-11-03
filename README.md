@@ -27,6 +27,23 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Lively walkers (version 175)
+
+Walkers used to glide toward you at a steady speed. Each one now has a temperament that shapes how it moves across the floor, not just how its limbs swing.
+
+- **Four temperaments:**
+  - Shamblers rock and drift.
+  - Lurchers surge on every push-off and drag between steps.
+  - Stalkers move evenly, head down, and lunge.
+  - Staggerers weave and trip.
+  - Ferals stalk, and brutes plod heavily.
+- **Rhythm:** speed swells and sags with each step, with slower surges and lulls on top, and the chest pitches into each push.
+- **Weave:** on open floor they drift side to side. They straighten out within a few metres of you, and on every staircase.
+- **Stumbles:** now and then one trips. It pitches forward and throws its arms out, then catches itself and hurries to make up the time. They never trip on stairs or right next to you.
+- **Lunges:** from a few strides away, with a clear line to you, a walker may burst forward with its arms out. Each lunge has a cooldown.
+- **Body:** weight shift, hip roll and head loll are larger and scale with each zombie's vigor, so lively ones rock and heavy ones barely sway.
+- **Same speed:** average speed and arrival times are unchanged; only the shape of the movement is new. Dogs, crawlers and elite bosses keep their own movement.
+
 ## No safe corners (version 174)
 
 The storm cellar and Olivia's room were safe places to camp, because every zombie had to come in through one doorway or one flight of stairs.

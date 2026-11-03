@@ -35,7 +35,7 @@ export function verifyEnrage(qa,frames){
   console.log('PASS: real kills enrage all four types, preserve other materials, persist across time/waves, chain on death and clear with the run.');
 
   function travel(args,rage,frenzy){
-    qa.start();qa.startWave();qa.setPlayer(0,23);const e=qa.makeZombie(0,17,...args);e.speed=2;e.flank=0;
+    qa.start();qa.startWave();qa.setPlayer(0,23);const e=qa.makeZombie(0,17,...args);e.speed=2;e.flank=0;e.life=null;/* v175: exact multipliers, without the walker's own rhythm */
     if(rage)enrageNearby({dead:true,walkPos:e.walkPos},[e],()=>0,qa.get().enemyAssets.enrage);
     if(frenzy)qa.triggerFrenzy();frames(12);return e.walkPos.z-17;
   }

@@ -669,14 +669,16 @@ export function animateZombie(e,dt,distance,moved,look=null){
   const reachDown=total>2e-3?(supports[0]*legPoses[0].pose.height+supports[1]*legPoses[1].pose.height)/total:Math.max(legPoses[0].pose.height,legPoses[1].pose.height);
   const drop=springTo(e,'drop',LEG_LENGTH-reachDown,dt,18,.9),limp=(e.limp||0)*dragLoad;
   const breathe=Math.sin(t*1.35+e.lean*9);
-  // v139: gentler side-to-side rocking, eased through springs.
-  e.root.position.set(balance*.014*g.sway*w,.92-drop+.004*breathe*(1-w)-(e.legHit>0?.055:0),0);
-  const pelvisYaw=springTo(e,'pelvisYaw',Math.sin(hip)*.045*g.sway*w,dt,6,.75);
+  // v175: livelier weight shift, scaled by this zombie's vigor; stumbles,
+  // lunges and the lurch of each push-off come from its temperament.
+  const vig=e.vigor??1,st=e.stumbleW||0,lu=e.lungeW||0,lp=(e.lurchPulse||0)*w;
+  e.root.position.set(balance*.024*vig*g.sway*w,.92-drop+.004*breathe*(1-w)-(e.legHit>0?.055:0)-st*.07,0);
+  const pelvisYaw=springTo(e,'pelvisYaw',Math.sin(hip)*.065*vig*g.sway*w,dt,6,.75);
   springTo(e,'lurch',(drop*1.6+limp*.06)*w,dt,10,.5);
-  e.root.rotation.set(pelvisPitch,pelvisYaw,springTo(e,'pelvisRoll',-balance*.028*g.sway*w+sideOf(g.dragLeg)*limp*.1*w-turn*.025,dt,6,.8));
+  e.root.rotation.set(pelvisPitch+st*.12+lu*.08,pelvisYaw,springTo(e,'pelvisRoll',-balance*.045*vig*g.sway*w+sideOf(g.dragLeg)*limp*.1*w-turn*.025,dt,6,.8));
   // Chest counter-twists against the pelvis; each heel strike nods it forward.
   const nod=springTo(e,'nod',(drop*2.2*g.bob+limp*.12)*w,dt,9,.45);
-  e.spine.rotation.set(.1+run*.07+(e.feral?.12:0)+g.hunch+slump+nod+.02*breathe*(1-w)*.6,-pelvisYaw*1.15+Math.sin(hip)*.012*w,e.lean*.3+springTo(e,'spineTilt',balance*.024*w,dt,5,.8)+Math.sin(t*.37+e.lean*5)*.03*(1-w));
+  e.spine.rotation.set(.1+run*.07+(e.feral?.12:0)+g.hunch+slump+nod+.02*breathe*(1-w)*.6+st*.4+lu*.24+lp*.3,-pelvisYaw*1.15+Math.sin(hip)*.012*w,e.lean*.3+springTo(e,'spineTilt',balance*.04*vig*w,dt,5,.8)+Math.sin(t*.37+e.lean*5)*.03*(1-w));
   // Head: tracks the player with a lagging neck, lolls with the stride, twitches.
   let yawTo=0,pitchTo=0;
   if(look&&e.group){
@@ -691,9 +693,9 @@ export function animateZombie(e,dt,distance,moved,look=null){
     if(r<.45)kick(e,'headYaw',(chance(e)-.5)*8*tic);else if(r<.75)kick(e,'headRoll',(chance(e)-.5)*9*tic);else kick(e,'shrug'+(r<.88?0:1),-(2.5+chance(e)*3.5)*tic);}
   const headBase=(e.feral?-.24:-.07)-g.hunch*.7-slump*1.1;
   e.head.rotation.set(
-    springTo(e,'headPitch',headBase+pitchTo*.6-nod*.7+Math.sin(t*1.1)*.04,dt,11,.55),
-    springTo(e,'headYaw',yawTo*.75+Math.sin(p*.5)*.02*w,dt,6,.7),
-    springTo(e,'headRoll',e.lean+Math.sin(t*.8)*.035-balance*.02*w-yawTo*.12,dt,5,.6));
+    springTo(e,'headPitch',headBase+pitchTo*.6-nod*.7+Math.sin(t*1.1)*.04-st*.45-lu*.3-lp*.25,dt,11,.55),
+    springTo(e,'headYaw',yawTo*.75+Math.sin(p*.5)*.045*vig*w,dt,6,.7),
+    springTo(e,'headRoll',e.lean+Math.sin(t*.8)*.035-balance*.075*vig*w-yawTo*.12,dt,5,.6));
   e.jaw.rotation.x=(e.faceSnarl??.14)+Math.max(0,Math.sin(t*2.3+e.lean*7))*.05+Math.max(0,Math.sin(t*11.3))*.015;
   let contact=false;
   if(e.staggerLeft>0||e.crawlDrop>0)e.attackTime=-1;
@@ -732,6 +734,8 @@ export function animateZombie(e,dt,distance,moved,look=null){
     const hw=springTo(e,'handW'+j,ax+fx+handTarget,dt,dead?8:15/loose,dead?.22:.45);
     arm.hand.rotation.set(softRange(hw-ax-fx,-1.25,.7,.2),0,side*.13+Math.sin(t*1.7+j)*.05);
     e.spine.rotation.z+=shrug*side*-.06+(dead?side*.05:0);
+    // Stumbling arms fling out to catch the fall; lunging arms grab ahead.
+    if(st||lu){arm.pivot.rotation.x-=st*(.75+.35*j)+lu*1.05;arm.pivot.rotation.z+=side*st*.4;arm.forearm.rotation.x=Math.min(.04,arm.forearm.rotation.x+lu*.35);}
     const pose2=attack?.arms[j];
     if(pose2){const k=attack.weight;arm.pivot.rotation.x+=(pose2.px-arm.pivot.rotation.x)*k;arm.pivot.rotation.z+=(side*(.1+pose2.pz)-arm.pivot.rotation.z)*k;arm.forearm.rotation.x+=(pose2.fx-arm.forearm.rotation.x)*k;arm.hand.rotation.x+=(pose2.hx-.17-arm.hand.rotation.x)*k;}
   }
