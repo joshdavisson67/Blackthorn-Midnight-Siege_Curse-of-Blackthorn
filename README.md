@@ -27,6 +27,16 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Nowhere to hide (version 172)
+
+The whole estate was audited on a 0.2 m grid: ground floor, upper floor and cellar, with every gate open. Each spot the player can walk to was checked for a spot a zombie can stand in within its 1.6 m swing, with the clear upright line the game requires for a hit. Three player-only gaps were closed:
+
+- **West bedchamber:** the double bed stood 0.7 m off the back wall, leaving a pocket by its nightstand that zombies couldn't enter. The bed and nightstand are now flush against the wall and each other.
+- **Nursery:** the single bed and its sideboard get the same treatment.
+- **Soul Forge (ground floor):** it stood 0.78 m off the hall wall, wide enough to slip behind. It now sits against the wall, with its glow moved along with it.
+
+A re-audit finds no unhittable spot anywhere. A fast regression test guards these three places.
+
 ## Full-screen tip while loading (version 171)
 
 The first loading screen now shows **TIP: PRESS F11 TO ENTER FULL SCREEN MODE** a short gap below "PREPARING THE ESTATE", with F11 drawn as a key. Touch devices, which have no F11 key, don't show it.
