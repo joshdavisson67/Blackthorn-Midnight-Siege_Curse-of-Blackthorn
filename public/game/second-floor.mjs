@@ -156,11 +156,13 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
   const cabinet=(x,z,w=1.8,h=.98)=>furnishings.cabinet(x,z,{y:Y,w,h});
   function frame(x,z,title){block(x,Y+1.55,z,1.65,.85,.08,M.wood);const art=mesh(new T.PlaneGeometry(1.48,.69),label(title,'#c4b195',1024,{width:1.48,height:.69,kind:'memorial',maxLines:2}),[x,Y+1.55,z-.075],[1,1,1],group);art.rotation.y=Math.PI;}
   // Furnish each room for its purpose; leave halls and station approaches open.
-  bed(-36,-9.9);cabinet(-38.05,-10.45,.55,.68);cabinet(-24,-11.2,2.1);
+  // v172: beds and their nightstands sit flush against the back wall and each
+  // other, so there is no gap to hide in where the dead cannot reach.
+  bed(-36,-10.575);cabinet(-37.33,-11.43,.55,.68);cabinet(-24,-11.2,2.1);
   furnishings.cabinet(-15.1,-9.5,{y:Y,w:1.7,h:2.03,rotation:-Math.PI/2});
   table(-20.8,-9.8,1.5,.70);chair(-20.8,-8.75);
   cabinet(-32,10.9,2.0);furnishings.bust(-32,10.9,{y:Y+1.0,pedestal:false,collision:false,rotation:Math.PI});cabinet(-16,9.5,1.8);
-  table(20,-10.2,1.8,.82);chair(20,-9.10);cabinet(24,-11.2,2.2);bed(36,-10.0,'single');cabinet(37.35,-10.45,.55,.68);cabinet(31,-11.2,1.5,.72);
+  table(20,-10.2,1.8,.82);chair(20,-9.10);cabinet(24,-11.2,2.2);bed(36,-10.625,'single');cabinet(36.89,-11.43,.55,.68);cabinet(31,-11.2,1.5,.72);
   cabinet(32,10.9,1.8);furnishings.globe(32,10.9,{y:Y+1.0});cabinet(16,9.5,1.8);
   for(const x of [-32,-24,24,32])frame(x,11.70,x<0?'BLACKTHORN\nFAMILY':'ESTATE\nRELICS');
   for(const side of [-1,1]){

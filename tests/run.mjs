@@ -302,5 +302,8 @@ verifyDropFade(qa,frames);
 const {verifyFullscreenTip}=await import('./fullscreen-tip.mjs');
 verifyFullscreenTip(elements);
 
+const {verifyHidingSpots}=await import('./hiding-spots.mjs');
+verifyHidingSpots(qa);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
