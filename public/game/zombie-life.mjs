@@ -23,6 +23,9 @@ export const LIFE=Object.freeze({
   weaveFade:Object.freeze([2.5,5]),
 });
 
+// v176: a wounded leg trips more, can't lunge and can't weave as wide.
+export const HOBBLE=Object.freeze({trips:2,noLunge:.35,weaveDamp:.7});
+
 function seeded(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),between=(r,[a,b])=>a+(b-a)*r();
 
@@ -42,7 +45,8 @@ export function createLife(seed,{feral=false,brute=false}={}){
   };
 }
 
-// ctx: {dist, sameFloor, clear (straight walk to the player), stairs, attackReady, moved}
+// ctx: {dist, sameFloor, clear (straight walk to the player), stairs, attackReady, moved,
+//       hobble (0..1, v176: how badly its worse leg is wounded)}
 // Returns {pace (speed multiplier), weave (radians to turn the walking direction)}.
 export function updateLife(e,dt,ctx){
   const L=e.life;if(!L)return {pace:1,weave:0};
@@ -55,12 +59,12 @@ export function updateLife(e,dt,ctx){
   if(L.stumble>0){L.stumble=Math.max(0,L.stumble-dt);const k=1-L.stumble/S.time;pace*=S.low+(1-S.low)*k*k;if(L.stumble===0)L.recover=S.recover;}
   else{
     if(L.recover>0){L.recover=Math.max(0,L.recover-dt);pace*=S.boost;}
-    if(ctx.moved>0&&!ctx.stairs&&ctx.dist>S.clear&&L.lunge<=0){L.stumbleIn-=dt;if(L.stumbleIn<=0){L.stumble=S.time;L.recover=0;L.stumbleIn=between(L.rand,L.stumbleEvery);}}
+    if(ctx.moved>0&&!ctx.stairs&&ctx.dist>S.clear&&L.lunge<=0){L.stumbleIn-=dt*(1+HOBBLE.trips*(ctx.hobble||0));if(L.stumbleIn<=0){L.stumble=S.time;L.recover=0;L.stumbleIn=between(L.rand,L.stumbleEvery);}}
   }
   // Lunges: a short burst when the player is a few strides away, in the open.
   L.lungeCd-=dt;
   if(L.lunge>0){L.lunge=Math.max(0,L.lunge-dt);pace*=G.speed;}
-  else if(L.lungeChance>0&&L.lungeCd<=0&&L.stumble<=0&&ctx.sameFloor&&ctx.clear&&!ctx.stairs&&ctx.attackReady&&ctx.dist>G.min&&ctx.dist<G.max){
+  else if(L.lungeChance>0&&L.lungeCd<=0&&L.stumble<=0&&(ctx.hobble||0)<HOBBLE.noLunge&&ctx.sameFloor&&ctx.clear&&!ctx.stairs&&ctx.attackReady&&ctx.dist>G.min&&ctx.dist<G.max){
     if(L.rand()<L.lungeChance)L.lunge=G.time;L.lungeCd=between(L.rand,G.cooldown);
   }
   // Pose weights for the animator: a bell over the trip, an eased lunge.
@@ -72,7 +76,8 @@ export function updateLife(e,dt,ctx){
   L.weavePhase+=ctx.moved*L.weaveFreq;
   const [f0,f1]=LIFE.weaveFade,target=ctx.stairs||L.stumble>0?0:clamp((ctx.dist-f0)/(f1-f0),0,1);
   L.weaveK+=(target-L.weaveK)*(1-Math.exp(-dt*4));
-  return {pace,weave:L.weave*Math.sin(L.weavePhase)*L.weaveK};
+  // A wounded leg can't carry a wide weave.
+  return {pace,weave:L.weave*Math.sin(L.weavePhase)*L.weaveK*(1-HOBBLE.weaveDamp*(ctx.hobble||0))};
 }
 
 // Crawling, attacking-in-place or scripted enemies drop back to plain motion.

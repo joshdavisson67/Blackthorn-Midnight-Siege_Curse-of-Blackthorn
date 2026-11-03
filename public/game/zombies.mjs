@@ -138,8 +138,17 @@ function attackPose(style,t,windup,strike,recover,lead){
 }
 // Crawlers (v124): enough leg damage drops walkers and ferals to the floor.
 export const CRAWL=Object.freeze({legShare:.4,speed:.42,height:.8,drop:.55,hip:.22,pitch:1.42});
-export function noteLegDamage(e,amount){
-  if(e.dog||e.brute||e.dead||e.crawling)return false;
+// v176: each leg keeps its own wound. `side` is the hit tag (-1 left, 1 right);
+// an untagged hit is shared. `hobble` (0..1) is the worse leg's share of the
+// damage that would drop a walker to a crawl. Brutes can't be dropped, but
+// they still limp on a wounded leg.
+export const LIMP=Object.freeze({blend:4,deepen:.6,stanceFloor:.14,slow:.18,bruteSlow:.5});
+export function legWounds(e){const scale=Math.max(1,(e.maxHp||100)*CRAWL.legShare),w=e.legWounds||[0,0];return [clamp(w[0]/scale,0,1),clamp(w[1]/scale,0,1)];}
+export function noteLegDamage(e,amount,side){
+  if(e.dog||e.dead||e.crawling)return false;
+  const w=e.legWounds??=[0,0];if(side>0)w[1]+=amount;else if(side<0)w[0]+=amount;else{w[0]+=amount/2;w[1]+=amount/2;}
+  e.hobble=Math.max(...legWounds(e));
+  if(e.brute)return false;
   e.legDamage=(e.legDamage||0)+amount;
   if(e.hp>0&&e.legDamage>=e.maxHp*CRAWL.legShare){e.crawling=true;e.crawlDrop=CRAWL.drop;e.crawl=e.crawl||0;return true;}
   return false;
@@ -626,7 +635,7 @@ const reach=(th,k)=>THIGH*Math.cos(th)+SHIN*Math.cos(th+k);
 // touch-down. `support` is a weight that rises and falls smoothly through the
 // stance and is zero in the air.
 function stancePose(t,span,drag,bob){
-  const k=(.09*Math.sin(Math.PI*Math.min(1,t*2.2))*bob+.04)*(drag?.6:1),hip=solveHip(-span/2+span*t,k),lift=smooth01((t-.72)/.28);
+  const k=(.09*Math.sin(Math.PI*Math.min(1,t*2.2))*bob+.04)*(1-.4*drag),hip=solveHip(-span/2+span*t,k),lift=smooth01((t-.72)/.28);
   return {hip,knee:k+lift*.25,foot:-(hip+k)+lift*.32,height:reach(hip,k)};
 }
 function legPose(u,stance,span,knee,drag,scuff,bob,pitch=0){
@@ -638,8 +647,8 @@ function legPose(u,stance,span,knee,drag,scuff,bob,pitch=0){
   const s=(u-stance)/(1-stance),A=stancePose(1,span,drag,bob),B=stancePose(0,span,drag,bob);
   const ratio=(1-stance)/stance,mA=(A.hip-stancePose(.97,span,drag,bob).hip)/.03*ratio,mB=(stancePose(.03,span,drag,bob).hip-B.hip)/.03*ratio;
   const s2=s*s,s3=s2*s,hip=(2*s3-3*s2+1)*A.hip+(s3-2*s2+s)*mA+(-2*s3+3*s2)*B.hip+(s3-s2)*mB,e=smooth01(s),bump=Math.pow(Math.sin(Math.PI*s),2);
-  const k=A.knee+(B.knee-A.knee)*e+knee*bump*(drag?1-scuff*.6:1);
-  const foot=A.foot+(B.foot-A.foot)*e+(drag?scuff*.3:-.16)*bump;
+  const k=A.knee+(B.knee-A.knee)*e+knee*bump*(1-scuff*.6*drag);
+  const foot=A.foot+(B.foot-A.foot)*e+(-.16+(scuff*.3+.16)*drag)*bump;
   return {hip:hip-pitch,knee:k,foot,height:reach(hip,k),support:0,planted:false};
 }
 export function animateZombie(e,dt,distance,moved,look=null){
@@ -653,21 +662,31 @@ export function animateZombie(e,dt,distance,moved,look=null){
   const turn=clamp(e.turnRate||0,-4,4);
   // Pelvis pitch (last frame's lurch spring) so the legs can be solved in world angles.
   const pelvisPitch=.055+run*.08+(e.feral?.14:0)+g.hunch*.4+slump*.3+(e.springs?.lurch?.x??0);
+  // v176: leg wounds decide which leg drags and how badly. The dragged leg
+  // hands over gradually (a weight per leg), so a switch never snaps mid-stride.
+  const wound=legWounds(e),score=[0,1].map(j=>wound[j]+(j===g.dragLeg?.05+(e.limp||0)*.1:0)),worse=score[1]>score[0]?1:0;
+  const dw=e.dragW??=[g.dragLeg===0?1:0,g.dragLeg===1?1:0],ease=1-Math.exp(-dt*LIMP.blend);
+  for(let j=0;j<2;j++)dw[j]+=((j===worse?1:0)-dw[j])*ease;
+  e.limpDepth=(e.limpDepth??0)+(LIMP.deepen*wound[worse]-(e.limpDepth??0))*ease;
+  const limpAmount=(e.limp||0)+e.limpDepth,dragSide=dw[1]-dw[0];
   const legPoses=[0,1].map(j=>{
     // Antalgic limp: a short stance on the dragged leg, a longer one on the good
     // leg, never both feet in the air (legs are half a cycle apart).
-    const dragStance=Math.max(.5,STANCE*(1-.75*(e.limp||0))),drag=j===g.dragLeg,stance=drag?dragStance:STANCE+(STANCE-dragStance)*.6,u=(((p+j*Math.PI)/TAU)%1+1)%1;
+    const dragStance=Math.max(.5-LIMP.stanceFloor*e.limpDepth/LIMP.deepen,STANCE*(1-.75*limpAmount)),drag=dw[j],stance=STANCE+(STANCE-dragStance)*.6*(1-drag)+(dragStance-STANCE)*drag,u=(((p+j*Math.PI)/TAU)%1+1)%1;
     const pose=legPose(u,stance,cycle*stance*w*stretch,.62+run*.25+(e.feral?.2:0),drag,g.scuff,g.bob,pelvisPitch);
     return {u,stance,drag,pose};
   });
   // Weight shifts smoothly between the legs: each planted leg's support rises
   // and falls through its stance, so sway, roll and the limp never flip.
   const supports=legPoses.map(l=>l.pose.support),total=Math.max(1e-3,supports[0]+supports[1]),sideOf=j=>j?1:-1;
-  const balance=springTo(e,'balance',(supports[1]-supports[0])/total,dt,9,.85),dragLoad=springTo(e,'dragLoad',supports[g.dragLeg]/total,dt,9,.85);
+  const balance=springTo(e,'balance',(supports[1]-supports[0])/total,dt,9,.85),dragLoad=springTo(e,'dragLoad',(supports[0]*dw[0]+supports[1]*dw[1])/total,dt,9,.85);
   // Pelvis height follows the weighted planted legs, so the feet meet the floor
   // without a hop when the support changes legs.
   const reachDown=total>2e-3?(supports[0]*legPoses[0].pose.height+supports[1]*legPoses[1].pose.height)/total:Math.max(legPoses[0].pose.height,legPoses[1].pose.height);
-  const drop=springTo(e,'drop',LEG_LENGTH-reachDown,dt,18,.9),limp=(e.limp||0)*dragLoad;
+  const drop=springTo(e,'drop',LEG_LENGTH-reachDown,dt,18,.9),limp=limpAmount*dragLoad;
+  // v176: a wound makes the hip drop and the trunk lurch over the bad leg each
+  // time it takes the weight, on top of the rolled limp.
+  const sink=(e.limpDepth||0)*dragLoad*w;
   const breathe=Math.sin(t*1.35+e.lean*9);
   // v175: livelier weight shift, scaled by this zombie's vigor; stumbles,
   // lunges and the lurch of each push-off come from its temperament.
@@ -675,10 +694,10 @@ export function animateZombie(e,dt,distance,moved,look=null){
   e.root.position.set(balance*.024*vig*g.sway*w,.92-drop+.004*breathe*(1-w)-(e.legHit>0?.055:0)-st*.07,0);
   const pelvisYaw=springTo(e,'pelvisYaw',Math.sin(hip)*.065*vig*g.sway*w,dt,6,.75);
   springTo(e,'lurch',(drop*1.6+limp*.06)*w,dt,10,.5);
-  e.root.rotation.set(pelvisPitch+st*.12+lu*.08,pelvisYaw,springTo(e,'pelvisRoll',-balance*.045*vig*g.sway*w+sideOf(g.dragLeg)*limp*.1*w-turn*.025,dt,6,.8));
+  e.root.rotation.set(pelvisPitch+st*.12+lu*.08,pelvisYaw,springTo(e,'pelvisRoll',-balance*.045*vig*g.sway*w+dragSide*limp*.1*w-dragSide*sink*.42-turn*.025,dt,6,.8));
   // Chest counter-twists against the pelvis; each heel strike nods it forward.
-  const nod=springTo(e,'nod',(drop*2.2*g.bob+limp*.12)*w,dt,9,.45);
-  e.spine.rotation.set(.1+run*.07+(e.feral?.12:0)+g.hunch+slump+nod+.02*breathe*(1-w)*.6+st*.4+lu*.24+lp*.3,-pelvisYaw*1.15+Math.sin(hip)*.012*w,e.lean*.3+springTo(e,'spineTilt',balance*.04*vig*w,dt,5,.8)+Math.sin(t*.37+e.lean*5)*.03*(1-w));
+  const nod=springTo(e,'nod',(drop*2.2*g.bob+limp*.12)*w+sink*.3,dt,9,.45);
+  e.spine.rotation.set(.1+run*.07+(e.feral?.12:0)+g.hunch+slump+nod+.02*breathe*(1-w)*.6+st*.4+lu*.24+lp*.3,-pelvisYaw*1.15+Math.sin(hip)*.012*w,e.lean*.3+springTo(e,'spineTilt',balance*.04*vig*w+dragSide*sink*.5,dt,5,.8)+Math.sin(t*.37+e.lean*5)*.03*(1-w));
   // Head: tracks the player with a lagging neck, lolls with the stride, twitches.
   let yawTo=0,pitchTo=0;
   if(look&&e.group){

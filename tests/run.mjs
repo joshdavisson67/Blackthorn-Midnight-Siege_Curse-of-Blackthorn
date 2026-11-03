@@ -314,5 +314,8 @@ verifyCampSpawns(qa,frames);
 const {verifyZombieLife}=await import('./zombie-life.mjs');
 verifyZombieLife(qa,frames);
 
+const {verifyLegLimp}=await import('./leg-limp.mjs');
+verifyLegLimp(qa,frames);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
