@@ -311,5 +311,8 @@ verifyStairUnderside(qa,frames);
 const {verifyCampSpawns}=await import('./camp-spawns.mjs');
 verifyCampSpawns(qa,frames);
 
+const {verifyZombieLife}=await import('./zombie-life.mjs');
+verifyZombieLife(qa,frames);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
