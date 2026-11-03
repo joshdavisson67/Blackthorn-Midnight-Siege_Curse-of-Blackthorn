@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=176';
-import {createChangelog} from './changelog.mjs?v=176';
+import {createLeaderboard} from './leaderboard.mjs?v=177';
+import {createChangelog} from './changelog.mjs?v=177';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=165';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -33,17 +33,17 @@ import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankH
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
 import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=168';
-import {createEnemyAssets} from './enemy-assets.mjs?v=176';
+import {createEnemyAssets} from './enemy-assets.mjs?v=177';
 import {createCombatLights} from './combat-lights.mjs?v=168';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
-import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=176';
+import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=177';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=173';
 import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=173';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=165';
-import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=176';
+import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=177';
 import {addEstateDetail} from './estate-detail.mjs?v=165';
 import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=167';
 import {createReticleHud} from './reticles.mjs?v=167';
@@ -60,6 +60,7 @@ import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=1
 import {createBlackout} from './blackout.mjs?v=135';
 import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-spawns.mjs?v=174';
 import {createLife,updateLife,settleLife} from './zombie-life.mjs?v=176';
+import {BUILD,rollBuild,applyBuild,resetBuild} from './zombie-build.mjs?v=177';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
 const reticleHud=createReticleHud($('crosshair'));
@@ -359,7 +360,7 @@ function bruteCrouchAt(x,z,y){
 function makeZombie(x,z,brute=false,dog=false,rareDog=false,y=0,feral=false,asset={}){
   if(feral){dog=rareDog=brute=false;}else if(rareDog){dog=true;brute=false;}
   const rig=enemyAssets.instantiate({rng,brute,dog,rareDog,feral,...asset}),cfg=curseWaveConfig(wave,curse.rank),hp=cfg.health*(dog?.85:brute?BRUTE.healthMultiplier:1)*(rareDog?2:1);
-  const e={...rig,walkPos:new T.Vector3(x,y,z),floorY:y,hp,maxHp:hp,speed:cfg.speed*(feral?FERAL.speedMultiplier:rareDog?RARE_DOG_SPEED_MULTIPLIER:dog?DOG_SPEED_MULTIPLIER:brute?.77:rand(.85,1.15)),attack:rand(.2,1),enraged:false,dead:false,death:0,groan:rand(4,12),pathTimer:0,clearPath:false};
+  const e={...rig,walkPos:new T.Vector3(x,y,z),floorY:y,hp,maxHp:hp,speed:cfg.speed*(feral?FERAL.speedMultiplier:rareDog?RARE_DOG_SPEED_MULTIPLIER:dog?DOG_SPEED_MULTIPLIER:brute?.77:rand(...BUILD.speed)),attack:rand(.2,1),enraged:false,dead:false,death:0,groan:rand(4,12),pathTimer:0,clearPath:false};
   const body=enemyBody(e);e.radius=body.radius;
   e.staggerProfile=staggerLimits(e);e.staggerMeter=e.staggerLeft=e.staggerCooldown=0;e.staggerShotId=-1;e.staggerShotStrength=0;
   e.crouch=e.brute&&bruteCrouchAt(x,z,y)?1:0;e.bodyHeight=e.crouch?BRUTE.crouchHeight:body.height;
@@ -368,6 +369,8 @@ function makeZombie(x,z,brute=false,dog=false,rareDog=false,y=0,feral=false,asse
   e.canOccupy=(x,z,y)=>crowd.canOccupy(x,z,y,e.radius,e.bodyHeight,e,e.walkPos);
   // v175: a temperament of its own (lurch, surges, weave, stumbles, lunges).
   if(!dog){e.life=createLife(e.navigation.seed,{feral,brute});e.vigor=e.life.vigor;}
+  // v177: and a build of its own: how it stands, holds its arms and carries its head.
+  if(!dog)applyBuild(e,rollBuild(e.navigation.seed,{feral,brute}));
   world.add(e.group);e.group.position.set(x,Math.abs(y)>.1?y-.02:enemyFloorHeight(x,z)-.02,z);tagZombie(e,e);zombies.push(e);return e;
 }
 const spawns=ESTATE_SPAWNS;let upperSpawnSlot=0;const campWatch=createCampWatch();
@@ -563,7 +566,7 @@ function makeElite(kind,x,z,y=0){
   // Both use brute-sized collision and brute routes, whatever rig they wear.
   // Sir Blackthorn cuts like a swordsman; the Gravewarden hammers down.
   e.gait={...e.gait,attack:knight?'swiper':'slammer'};
-  e.brute=true;e.elite=true;e.noEnrage=true;const body=enemyBody(e);e.radius=body.radius;e.bodyHeight=body.height;e.crouch=0;
+  e.brute=true;e.elite=true;e.noEnrage=true;resetBuild(e);const body=enemyBody(e);e.radius=body.radius;e.bodyHeight=body.height;e.crouch=0;
   e.staggerProfile=staggerLimits(e);
   if(knight){e.boss=true;e.maxHp=e.hp=cfg.health*BOSS.healthMultiplier;e.speed=cfg.speed*BOSS.speed;const dress=dressKnight(e);e.orb=dress.orb;}
   else{e.warden=true;e.maxHp=e.hp=cfg.health*BRUTE.healthMultiplier*WARDEN.healthMultiplier;e.speed=cfg.speed*WARDEN.speed;const dress=dressWarden(e);e.shield=dress.shield;}
