@@ -27,6 +27,19 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Damage-driven limp (version 176)
+
+Leg shots used to show only a brief flinch until enough damage dropped a walker to a crawl. Now each leg remembers the hits it took.
+
+- **The shot leg drags:** hits are booked to the leg they struck, using the hit tags on each leg. Within a few strides that leg takes over the drag from the walker's rolled limp. The hand-over is blended per leg, so the stride never snaps.
+- **Worse wounds, worse limp:** as the wound grows toward the crawl threshold, the leg's stride shortens, the hip drops harder and the trunk lurches over it each time it takes the weight. The crawl threshold itself is unchanged.
+- **A little slower:** a walker slows by up to 18% just before it would crawl. Brutes, which can't be dropped, limp visibly and slow by half as much. Elite bosses limp but keep their pace.
+- **Temperament:**
+  - A walker on a bad leg no longer lunges.
+  - Its weave narrows.
+  - It trips up to three times as often.
+- Dogs keep their own gait.
+
 ## Lively walkers (version 175)
 
 Walkers used to glide toward you at a steady speed. Each one now has a temperament that shapes how it moves across the floor, not just how its limbs swing.
