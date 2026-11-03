@@ -27,6 +27,17 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## No safe corners (version 174)
+
+The storm cellar and Olivia's room were safe places to camp, because every zombie had to come in through one doorway or one flight of stairs.
+
+- **The floor gives way:** stay in either room for 4 seconds and one wave spawn in three claws up through the floor inside it, with you. The others still come in through the usual entrance.
+- **Placement:** they rise at the far side of the room, never closer than 3 m, and take about a second to climb out, so there is time to react. A low scrape sounds as each one rises, and a warning shows the first time.
+- **Limits:**
+  - Brutes can rise in the cellar but not under the garret ceiling.
+  - At most 6 floor-born dead are up at once in the cellar, and 3 in Olivia's room.
+- **Passing through is free:** leaving the room resets the clock, so a quick stop at the cellar forge or with Olivia costs nothing.
+
 ## Solid stairs (version 173)
 
 Zombies could wander under the main staircase and get stuck chasing a player on the landing.
