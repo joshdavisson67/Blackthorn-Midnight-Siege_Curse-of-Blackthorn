@@ -46,7 +46,7 @@ export function verifyPathing(qa,frames){
   const approaches=[];
   for(const flank of [-1,1]){
     qa.start();qa.setPlayer(0,26);qa.setHealth(10000);
-    const e=qa.makeZombie(0,17);e.speed=2;e.flank=flank;frames(70);
+    const e=qa.makeZombie(0,17);e.speed=2;e.flank=flank;e.life=null;/* v175: flank styles, measured without the walker's own lurch or trips */frames(70);
     approaches.push(e.walkPos.x);assert(e.walkPos.z>19,'Both approach styles still close on the player');
   }
   assert(approaches[0]*approaches[1]<0&&approaches.every(x=>Math.abs(x)>.1),'Enemies visibly approach from either side');
