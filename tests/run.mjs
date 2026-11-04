@@ -323,5 +323,8 @@ verifyZombieBuilds(qa,frames);
 const {verifyZombieInjuries}=await import('./zombie-injuries.mjs');
 verifyZombieInjuries(qa,frames);
 
+const {verifyLurker}=await import('./lurker.mjs');
+verifyLurker(qa,frames,listeners,elements);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);

@@ -1,8 +1,9 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {createZombieRig,tagZombie,rollGait} from './zombies.mjs?v=177';
-import {createZombieDogRig} from './zombie-dog.mjs?v=177';
+import {createZombieRig,tagZombie,rollGait} from './zombies.mjs?v=179';
+import {createZombieDogRig} from './zombie-dog.mjs?v=179';
 import {createInjuryKit} from './zombie-injuries.mjs?v=178';
+import {addLurkerFeatures} from './lurker.mjs?v=179';
 import {ENEMY_SURFACE,enemySurfaces,atlasUV,enemySurfaceShader,addDetailCoordinates} from './enemy-surfaces.mjs?v=134';
 
 export function bakeEnemyPalette(rig){
@@ -43,10 +44,11 @@ export function bakeEnemyPalette(rig){
 // transforms and gameplay state, so spawning never tessellates or merges meshes.
 export function createEnemyAssets(batch){
   const templates=[],surfaces=enemySurfaces();
-  for(let i=0;i<10;i++){
+  // v179: template 10 is the Grotesque Lurker.
+  for(let i=0;i<11;i++){
     let seed=9147+i*137,first=true;
     const rng=()=>{if(first){first=false;return i<4?(i+.2)/4:i>=5&&i<8?(i-5+.2)/3:.3;}return ((seed=(seed*1664525+1013904223)>>>0)/4294967296);};
-    const rig=i===9?createZombieRig({rng,feral:true}):i>=5?createZombieDogRig({rng,rare:i===8}):createZombieRig({rng,brute:i===4});
+    const rig=i===10?addLurkerFeatures(createZombieRig({rng,lurker:true})):i===9?createZombieRig({rng,feral:true}):i>=5?createZombieDogRig({rng,rare:i===8}):createZombieRig({rng,brute:i===4});
     // Bake paint into vertex colors so equal surface finishes share batches.
     // Roughness, metalness, normals, silhouettes and rage colors are retained.
     bakeEnemyPalette(rig);batch(rig.group);tagZombie(rig,null);
@@ -80,8 +82,8 @@ export function createEnemyAssets(batch){
   function enrage(enemy){enemy.group.traverse(o=>{
     if(o.isMesh)o.material=Array.isArray(o.material)?o.material.map(m=>rageMaterials.get(m)||m):rageMaterials.get(o.material)||o.material;
   });}
-  function instantiate({rng=Math.random,brute=false,dog=false,rareDog=false,feral=false,scale=null}={}){
-    const templateIndex=feral?9:rareDog?8:dog?5+Math.floor(rng()*3):brute?4:Math.floor(rng()*4),template=templates[templateIndex],group=template.group.clone(true),original=[],copies=[],nodes=new Map();
+  function instantiate({rng=Math.random,brute=false,dog=false,rareDog=false,feral=false,lurker=false,scale=null}={}){
+    const templateIndex=lurker?10:feral?9:rareDog?8:dog?5+Math.floor(rng()*3):brute?4:Math.floor(rng()*4),template=templates[templateIndex],group=template.group.clone(true),original=[],copies=[],nodes=new Map();
     template.group.traverse(o=>original.push(o));group.traverse(o=>copies.push(o));for(let i=0;i<original.length;i++)nodes.set(original[i],copies[i]);
     const remap=value=>{if(value?.isObject3D)return nodes.get(value);if(Array.isArray(value))return value.map(remap);if(value&&Object.getPrototypeOf(value)===Object.prototype){const out={};for(const [k,v] of Object.entries(value))out[k]=remap(v);return out;}return value;};
     const rig={};for(const [key,value] of Object.entries(template))rig[key]=key==='resources'?value:remap(value);

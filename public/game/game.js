@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=178';
-import {createChangelog} from './changelog.mjs?v=178';
+import {createLeaderboard} from './leaderboard.mjs?v=179';
+import {createChangelog} from './changelog.mjs?v=179';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=165';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -14,7 +14,7 @@ import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnM
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
 import {buildGraveyard} from './graveyard.mjs?v=165';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
-import {buildCellar,drawCellarMap} from './cellar.mjs?v=168';
+import {buildCellar,drawCellarMap} from './cellar.mjs?v=179';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
 import {buildShed} from './shed.mjs?v=167';
 import * as T from './three.module.js';
@@ -25,25 +25,25 @@ import {suppressedShot} from './gun-audio.mjs?v=150';
 import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
-import {createStationBuilder} from './station-models.mjs?v=168';
+import {createStationBuilder} from './station-models.mjs?v=179';
 import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=167';
-import {drawMinimap} from './minimap.mjs?v=168';
+import {drawMinimap} from './minimap.mjs?v=179';
 import {dropOpacity,fadeMaterials} from './drop-fade.mjs?v=169';
 import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual,rankAuto,rankRecoil} from './weapon-ranks.mjs?v=165';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=168';
-import {createEnemyAssets} from './enemy-assets.mjs?v=178';
-import {createCombatLights} from './combat-lights.mjs?v=168';
+import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=179';
+import {createEnemyAssets} from './enemy-assets.mjs?v=179';
+import {createCombatLights} from './combat-lights.mjs?v=179';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
-import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=177';
+import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=179';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=173';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=173';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=179';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=165';
-import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=177';
+import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=179';
 import {addEstateDetail} from './estate-detail.mjs?v=165';
 import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=167';
 import {createReticleHud} from './reticles.mjs?v=167';
@@ -53,7 +53,7 @@ import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses,configureForgeStation} from './soul-forge.mjs?v=118';
 import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=167';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=168';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=179';
 import {buildRotundaBell} from './rotunda-bell.mjs?v=130';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=170';
@@ -62,6 +62,7 @@ import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-
 import {createLife,updateLife,settleLife} from './zombie-life.mjs?v=176';
 import {BUILD,rollBuild,applyBuild,resetBuild} from './zombie-build.mjs?v=177';
 import {INJURY,rollInjury,applyInjury} from './zombie-injuries.mjs?v=178';
+import {LURKER,lurkerPlayerDamage,lurkerEnemyDamage,setupLurkerGlow,updateLurkerGlow,disposeLurkerGlow} from './lurker.mjs?v=179';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
 const reticleHud=createReticleHud($('crosshair'));
@@ -384,11 +385,45 @@ function injure(e){
   if(injury.legless){e.crawling=true;e.crawl=1;e.crawlDrop=0;e.bodyHeight=CRAWL.height;}
   return e;
 }
+// v179: the Grotesque Lurker. Hunched, boil-covered, belly stitched over a
+// blinking glow; lurches at 125% speed, charges at double that from 12 yards
+// and bursts on reaching you or when killed.
+function lurkerDice(w,slot){let h=(seed^Math.imul(w,0x9E3779B1)^Math.imul(slot+1,0x85EBCA77))>>>0;h=Math.imul(h^h>>>16,0x45d9f3b)>>>0;h=Math.imul(h^h>>>16,0x45d9f3b)>>>0;return ((h^h>>>16)>>>0)/4294967296;}
+function makeLurker(x,z,y=0){
+  const e=makeZombie(x,z,false,false,false,y,false,{lurker:true}),cfg=curseWaveConfig(wave,curse.rank);
+  e.lurker=true;e.style='grotesque lurker';e.speed=cfg.speed*LURKER.speed;e.hp=e.maxHp=e.maxHp*LURKER.health;
+  // Bent double, arms hanging, every step a heavy lurch.
+  e.gait={...e.gait,hunch:.34,arms:'dangle',bob:1.35,sway:1.4,attack:'grabber'};e.limp=.3;
+  if(e.build)e.build={...e.build,kneeBend:.3,headJut:-.32,spineBend:e.build.spineBend*.5};
+  if(e.life){Object.assign(e.life,{type:'lurker',rhythm:.36,lungeChance:0,stumbleIn:1e9,stumbleEvery:[1e9,1e9],weave:e.life.weave*.4});e.life.norm=1+.26*(e.life.rhythm**2+e.life.surge**2);e.vigor=e.life.vigor=1.5;}
+  e.attack=1e9;e.lurkerCharging=false;e.lurkerFuse=0;setupLurkerGlow(e);
+  return e;
+}
+const lurkerBursts=[];
+// A lurker bursts: everything within 4 m with a clear line takes the blast.
+function lurkerBurst(e){
+  // Where it stood when it went off (the ragdoll may already be moving).
+  const at=e.lurkerAt||e.walkPos,ground=new T.Vector3(at.x,Math.abs(at.y)>.1?at.y:enemyFloorHeight(at.x,at.z),at.z),pos=ground.clone().add(new T.Vector3(0,.9,0));
+  noise(.9,.4,420);tone(42,.9,.22,'sawtooth',22);tone(90,.35,.12,'square',30);
+  {const d=Math.hypot(pos.x-player.x,pos.z-player.z);if(d<16)padRumble(1-d/16,.9*(1-d/16),360);}
+  const s=sphere(pos.x,pos.y-.2,pos.z,.42,.42,.42,new T.MeshBasicMaterial({color:0x9dff4a,transparent:true,opacity:.8}));
+  effects.push({mesh:s,vel:new T.Vector3(),life:.4,max:.4,type:'blast'});
+  bloodBurst(pos,26);e.group.visible=false;if(e.ragdoll)e.ragdoll.life=Math.min(e.ragdoll.life,e.death+.05);
+  for(const o of zombies){
+    if(o===e||o.dead)continue;const d=Math.hypot(o.walkPos.x-at.x,o.walkPos.z-at.z),dmg=lurkerEnemyDamage(d);
+    if(dmg>0&&Math.abs(o.walkPos.y-e.walkPos.y)<2.2&&blastLine(pos,o.group.position.clone().add(new T.Vector3(0,.9,0))))
+      damageEnemy(o,dmg,false,{direction:o.group.position.clone().sub(ground),part:'torso',force:2.4*(1-d/12),source:'lurker'});
+  }
+  const pd=lurkerPlayerDamage(Math.hypot(player.x-at.x,player.z-at.z));
+  if(pd>0&&Math.abs(player.y-e.walkPos.y)<2.2&&blastLine(pos,player.clone().add(new T.Vector3(0,.9,0))))hurtPlayer(pd,pos);
+}
 const spawns=ESTATE_SPAWNS;let upperSpawnSlot=0;const campWatch=createCampWatch();
 function spawnEnemy(){
   if(toSpawn<=0)return false;
   const finale=waveFiveFinale?.wave===wave;
-  const kind=finale?waveFiveFinale.kinds[waveFiveFinale.enemies.length]:chooseCurseEnemyKind(wave,spawned,rng(),curse.rank),body=enemyBody({brute:kind==='brute',dog:kind==='dog'||kind==='ashfang',rareDog:kind==='ashfang'}),routes=kind==='brute'?nav.brutes:nav;
+  const rolled=finale?waveFiveFinale.kinds[waveFiveFinale.enemies.length]:chooseCurseEnemyKind(wave,spawned,rng(),curse.rank);
+  // v179: from wave 11, one spawn in twenty is a Grotesque Lurker (its own dice).
+  const kind=!finale&&wave>=LURKER.fromWave&&lurkerDice(wave,spawned)<LURKER.spawnChance?'lurker':rolled,body=enemyBody({brute:kind==='brute',dog:kind==='dog'||kind==='ashfang',rareDog:kind==='ashfang'}),routes=kind==='brute'?nav.brutes:nav;
   function valid([x,z,y=0],near=10){
     const radius=Math.max(.48,body.radius),height=kind==='brute'&&bruteCrouchAt(x,z,y)?BRUTE.crouchHeight:body.height;
     if(isBlocked(x,z,radius,colliders,undefined,y,height)||Math.abs(supportBelow(x,z,y)-y)>.01)return false;
@@ -403,7 +438,7 @@ function spawnEnemy(){
     const far=[];for(const c of campCandidates(camp,player)){if(valid(c,CAMP_RULES.minDistance))far.push(c);if(far.length>=6)break;}
     if(far.length){
       const [x,z,y]=far[Math.floor(rng()*far.length)];
-      const enemy=injure(makeZombie(x,z,kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral'));
+      const enemy=kind==='lurker'?makeLurker(x,z,y):injure(makeZombie(x,z,kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral'));
       enemy.campBorn=camp.id;enemy.emergeLeft=enemy.emergeTime=CAMP_RULES.emergeTime;enemy.emergeDepth=CAMP_RULES.emergeDepth;enemy.group.position.y-=CAMP_RULES.emergeDepth;
       noise(.35,.09,320);tone(46,.7,.06,'sawtooth',28);
       if(campWatch.warn())notify(`${camp.name} · THE DEAD CLAW UP THROUGH THE FLOOR`,3);
@@ -423,9 +458,19 @@ function spawnEnemy(){
   const point=options[Math.floor(rng()*options.length)],y=point[2]||0;
   let candidate=[point[0]+rand(-.2,.2),point[1]+rand(-.2,.2),y];
   if(!valid(candidate))candidate=point;
-  const enemy=injure(makeZombie(candidate[0],candidate[1],kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral'));
+  const enemy=kind==='lurker'?makeLurker(candidate[0],candidate[1],y):injure(makeZombie(candidate[0],candidate[1],kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral'));
   if(finale)waveFiveFinale.enemies.push(enemy);
   spawned++;toSpawn--;if(wave>10&&spawned%4===0)upperSpawnSlot=Math.floor(rng()*4);return true;
+}
+// v179: wave 10 ends in a second frenzied finale, heralded by a foul stench,
+// with two or three Grotesque Lurkers among the dead.
+function beginStenchFinale(){
+  const F=LURKER.finale,lurkers=F.lurkers[lurkerDice(wave,9999)<.5?0:1],slots=F.slots.slice(0,lurkers);
+  waveFiveFinale={wave,kinds:Array.from({length:F.count},(_,slot)=>slots.includes(slot)?'lurker':F.brutes.includes(slot)?'brute':'walker'),enemies:[]};
+  frenzyWave=wave;toSpawn=waveFiveFinale.kinds.length;
+  announce('FRENZIED FINALE',`A DISGUSTING STENCH FILLS THE AIR · WAVE ${String(wave).padStart(2,'0')} · ${F.count} UNDEAD, INCLUDING ${lurkers} GROTESQUE LURKERS`);
+  notify('YOU SMELL SOMETHING ROTTEN ON THE AIR…',5);tone(44,1.6,.12,'sawtooth',120);noise(.8,.05,300);
+  spawnEnemy();spawnTimer=waveConfig(wave).interval*.4;
 }
 function beginWaveFiveFinale(){
   // Four brutes arrive among thirteen walkers. Advance this fixed roster only
@@ -437,7 +482,11 @@ function beginWaveFiveFinale(){
 }
 function unlockShed(){if(!shed.unlock())return false;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('A DOOR HAS BLOWN OPEN SOMEWHERE…',5);noise(.45,.16,350);tone(65,.65,.09,'sawtooth',28);return true;}
 function startWave(){wave++;frenzyWave=0;waveFiveFinale=null;upperSpawnSlot=wave>10?Math.floor(rng()*4):0;if(wave>=SHED.unlockWave)unlockShed();if(wave>MAUSOLEUM.unlockAfterWave)unlockMausoleum();if(wave===CELLAR.unlockWave){setCellarOpen(true);cellar.gate.disabled=true;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('NORTH GROUNDS · THE STORM CELLAR IS OPEN');}const cfg=curseWaveConfig(wave,curse.rank);toSpawn=cfg.count;spawned=0;spawnTimer=.7;waveDelay=0;announce(`WAVE ${String(wave).padStart(2,'0')}`,wave===10?'STORM CELLAR UNSEALED · NORTH GROUNDS':wave===11?'THE DEAD NOW RISE ON THE SECOND FLOOR':wave===1?'THE ESTATE HAS AWAKENED':wave===6?'ASHFANG HOUNDS JOIN THE HUNT':wave===7?'FERAL STALKERS JOIN THE HUNT':wave%5===0?'THE BRUTES HAVE RISEN':'THE DEAD GROW RESTLESS');tone(130,1,.1,'sawtooth',45);worldEvents.beginWave(wave);}
-function killZombie(e,headshot=false,impact={}){if(e.dead)return;e.dead=true;e.death=0;if(impact.source==='Bella'&&!bella.dragon)dropBoneChip(e);endWarCry(e);if(e.boss)defeatBlackthorn(e);else if(e.warden)addPoints(WARDEN.reward);const massKill=impact.source==='nuke';if(massKill)e.hp=0;const reward=addPoints(worldEvents.killReward(headshot?(e.brute?200:75):e.brute?110:50));kills++;if(e.bonusEssence)eventVisuals.dropEssence(e.walkPos.x,e.walkPos.z,e.floorY,pickups);const enraged=massKill?0:enrageNearby(e,zombies,Math.random,enemyAssets.enrage);if(!massKill){if(headshot){notify(`HEADSHOT +${reward}`);}else tone(280,.06,.025,'triangle');}if(Math.random()<.13)dropPickup(e.group.position.x,e.group.position.z,choosePowerup(Math.random()),e.floorY);bloodBurst(e.group.position.clone().add(new T.Vector3(0,e.dog?.55:1.4,0)),massKill?4:10);beginZombieDeath(e,{...impact,source:massKill?'grenade':impact.source,part:headshot?'head':impact.part},rng);
+function killZombie(e,headshot=false,impact={}){if(e.dead)return;e.dead=true;e.death=0;if(impact.source==='Bella'&&!bella.dragon)dropBoneChip(e);endWarCry(e);if(e.boss)defeatBlackthorn(e);else if(e.warden)addPoints(WARDEN.reward);const massKill=impact.source==='nuke';if(massKill)e.hp=0;
+// v179: a lurker that reaches you bursts by itself (no essence); zombies its
+// blast kills pay 35% more.
+const selfBurst=impact.source==='lurkerSelf';if(e.lurker&&!e.lurkerBurst){e.lurkerBurst=true;e.lurkerAt=e.walkPos.clone();lurkerBursts.push(e);}
+const reward=selfBurst?0:addPoints(worldEvents.killReward(headshot?(e.brute?200:75):e.brute?110:50)*(impact.source==='lurker'?LURKER.essenceBonus:1));if(!selfBurst)kills++;if(e.bonusEssence)eventVisuals.dropEssence(e.walkPos.x,e.walkPos.z,e.floorY,pickups);const enraged=massKill?0:enrageNearby(e,zombies,Math.random,enemyAssets.enrage);if(!massKill&&!selfBurst){if(headshot){notify(`HEADSHOT +${reward}`);}else tone(280,.06,.025,'triangle');}if(!selfBurst&&Math.random()<.13)dropPickup(e.group.position.x,e.group.position.z,choosePowerup(Math.random()),e.floorY);bloodBurst(e.group.position.clone().add(new T.Vector3(0,e.dog?.55:1.4,0)),massKill?4:10);beginZombieDeath(e,{...impact,source:massKill?'grenade':impact.source,part:headshot?'head':impact.part},rng);
 if(enraged&&e.walkPos.distanceToSquared(player)<324)notify(`BLOOD RAGE · ${enraged} NEARBY ${enraged===1?'ENEMY':'ENEMIES'} ENRAGED`);
 const corpses=zombies.filter(z=>z.dead&&z.ragdoll.life>z.death);if(corpses.length>14){const oldest=corpses.reduce((a,b)=>a.death>b.death?a:b);oldest.ragdoll.life=oldest.death;}
 }
@@ -865,7 +914,8 @@ function updateHud(){
   const remaining=toSpawn+worldEvents.pendingSpawns+zombies.filter(e=>!e.dead).length;
   const eventMarkup=worldEvents.badge();setMarkup('eventStatus',eventMarkup);
   const bruteRemaining=finale?waveFiveFinale.enemies.filter(e=>e.brute&&!e.dead).length+waveFiveFinale.kinds.slice(waveFiveFinale.enemies.length).filter(kind=>kind==='brute').length:0;
-  $('frenzyHud').textContent=finale?`WAVE 5 FRENZY · ${remaining} UNDEAD · ${bruteRemaining} BRUTES`:'FRENZY · SURVIVE THE CURRENT WAVE';
+  const lurkerRemaining=finale?waveFiveFinale.enemies.filter(e=>e.lurker&&!e.dead).length+waveFiveFinale.kinds.slice(waveFiveFinale.enemies.length).filter(kind=>kind==='lurker').length:0;
+  $('frenzyHud').textContent=finale?`WAVE ${waveFiveFinale.wave} FRENZY · ${remaining} UNDEAD · ${bruteRemaining} BRUTES${waveFiveFinale.wave===LURKER.finale.wave?` · ${lurkerRemaining} LURKERS`:''}`:'FRENZY · SURVIVE THE CURRENT WAVE';
   const rank=armorRank(armorTier);$('armorLabel').textContent=rank?.name||'AEGIS SHIELD';$('armorHud').classList.toggle('nano',!!rank);$('armorHud').classList.toggle('nanoRank2',rank?.rank===2);$('armorHud').classList.toggle('nanoRank3',rank?.rank===3);const recovering=!!rank&&armor<armorMax;const shieldWait=rank?Math.max(0,rank.regenDelay-(runTime-lastHurt)):0;$('armorStatus').classList.toggle('hidden',!rank);$('armorStatus').textContent=!recovering?'FULL SHIELD':shieldWait>0?`RECHARGE IN ${Math.ceil(shieldWait)}s`:`${rank.regenDelay===0?'CONTINUOUS':'RECHARGING'} · ${rank.regenRate} SHIELD/S`;$('armorHud').classList.toggle('regenerating',recovering&&shieldWait===0&&mode==='playing');$('armorHud').classList.toggle('depleted',armorMax>0&&armor<=0);$('armorHud').classList.toggle('hidden',armorMax===0);$('armorValue').textContent=Math.ceil(armor)+' / '+armorMax;$('armorBar').style.width=(armorMax?armor/armorMax*100:0)+'%';$('frenzyHud').classList.toggle('hidden',frenzyWave!==wave||!frenzyWave);const inv=inventory[weapon];$('wave').textContent=String(Math.max(wave,1)).padStart(2,'0');$('points').textContent=points.toLocaleString();$('kills').textContent=kills;$('healthLabel').textContent=doubleTime>0?`SPECTRAL FURY · ${Math.ceil(doubleTime)}s`:'VITAL SIGNS';$('health').textContent=Math.max(0,Math.ceil(health));$('healthBar').style.width=`${Math.max(0,health/maxHealth*100)}%`;$('healthReadout').classList.toggle('critical',health<maxHealth*.35);$('healthReadout').classList.toggle('spectral',doubleTime>0);$('weaponName').textContent=weapons[weapon].name+(inv.weaponRank?` / ${rankInfo(weapon,inv.weaponRank).name.toUpperCase()}`:'')+(inv.forgeRank?` / FORGED ${inv.forgeRank}/3`:'');$('ammo').textContent=inv.ammo;$('reserve').textContent=inv.reserve;$('reloadStatus').innerHTML=`R RELOAD <span> · </span> G GRENADE ${grenadeTime>0?'∞ · '+Math.ceil(grenadeTime)+'s':grenades}`;$('waveState').textContent=boss.stage==='active'?'SIR BLACKTHORN · THE DEAD WAIT ON HIM':waveDelay>0?`NEXT WAVE IN ${Math.ceil(waveDelay)}s`:finale?`FRENZIED FINALE · ${remaining} UNDEAD REMAIN`:`${frenzyWave===wave&&wave?'FRENZY · ':''}${remaining} UNDEAD REMAIN`;const perkMarkup=perkDefs.filter(p=>perkOwned.has(p.id)).map(p=>`<span title="${p.name}" style="color:${p.hex}">${p.icon}</span>`).join('');setMarkup('perks',perkMarkup);const powerupMarkup=[['double',doubleTime],['grenades',grenadeTime]].filter(([,time])=>time>0).map(([type,time])=>`<div class="powerupBadge" style="color:${POWERUPS[type].hex}">${powerupIcon(type)}<span>${POWERUPS[type].name}<b>${Math.ceil(time)}s</b></span></div>`).join('')+(bella.unlocked?`<div class="powerupBadge companionBadge" style="color:#f0dbc1">${BELLA_PAW}<span>IMMORTAL COMPANION<b>BELLA · ${bella.activity}</b></span></div>`:'');setMarkup('powerups',powerupMarkup);}
 const changelog=createChangelog({document,onOpen:pauseGame});
 const leaderboard=createLeaderboard({document,onOpen:()=>{if(mode==='playing')pauseGame();},onNewRun:()=>resetRun()});
@@ -1202,7 +1252,7 @@ function shoulderNeighbour(e,dx,dz,dt){
   const side=Math.sign((q.x-p.x)*(-dz)+(q.z-p.z)*dx)||e.routeSide||1,force=SPREAD.shove*dt*(e.brute?1.4:1)/(blocker.brute?3:1);
   moveWithCollision(q,-dz*side*force,dx*side*force,blocker.radius,blocker);
 }
-function updateEnemies(dt){crowd.plan(player.y);for(let i=zombies.length-1;i>=0;i--){const e=zombies[i];
+function updateEnemies(dt){crowd.plan(player.y);while(lurkerBursts.length)lurkerBurst(lurkerBursts.shift());for(let i=zombies.length-1;i>=0;i--){const e=zombies[i];
 if(e.dead){if(updateZombieDeath(e,dt,corpseBlocked,corpseFloor)){world.remove(e.group);disposeEnemy(e);zombies.splice(i,1);}continue;}
 if(e.waking){animateZombie(e,dt,99,0);continue;}
 if(e.warCry>0){e.warCry-=dt;if(e.warCry<=0)endWarCry(e);}
@@ -1211,6 +1261,7 @@ if(e.emergeLeft>0){
   const floor=(Math.abs(e.floorY)>.1?e.floorY:enemyFloorHeight(e.walkPos.x,e.walkPos.z))-.02;e.group.position.y=floor-(e.emergeDepth||1.65)*(e.emergeLeft/(e.emergeTime||1.05))**2;
   animateZombie(e,dt,99,0);continue;
 }
+if(e.lurker)e.bellaAggro=false;
 advanceStagger(e,dt);
 const onBella=!!(e.bellaAggro&&bella.unlocked),hunt=onBella?bella.pos:player;
 const routes=e.brute?nav.brutes:nav,p=e.walkPos,dist=Math.hypot(hunt.x-p.x,hunt.z-p.z),oldX=p.x,oldZ=p.z,sameFloor=Math.abs(hunt.y-p.y)<.55;
@@ -1234,6 +1285,15 @@ if(e.pathTimer<=0){
   e.pathTimer=.22+(e.phase%1)*.10;
 }
 const casting=e.boss&&updateBlackthorn(e,dt,dist,sameFloor);
+if(e.lurker){
+  // v179: never swings; charges from 12 yards and bursts on reaching you.
+  e.attack=1e9;updateLurkerGlow(e,dt);
+  if(!e.lurkerCharging&&sameFloor&&dist<=LURKER.chargeRange&&(e.clearPath||dist<4)){e.lurkerCharging=true;tone(66,.55,.09,'sawtooth',150);noise(.3,.08,900);}
+  if(e.lurkerFuse>0){
+    e.lurkerFuse-=dt;e.group.scale.setScalar(e.lurkerScale*(1+.18*Math.min(1,1-e.lurkerFuse/LURKER.fuse)));
+    if(e.lurkerFuse<=0){killZombie(e,false,{source:'lurkerSelf',part:'torso',direction:new T.Vector3(0,1,0),force:.4});continue;}
+  }else if(sameFloor&&dist<LURKER.trigger&&Math.abs(player.y-p.y)<.7&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y)){e.lurkerFuse=LURKER.fuse;e.lurkerScale=e.group.scale.x;tone(150,.32,.07,'sine',520);}
+}
 // Out of sight of Bella, follow the usual route toward the player, where she fights.
 let tx=hunt.x,tz=hunt.z;const climbTo=!onBella&&!e.brute&&isAtticOpen()?atticRoute(p.x,p.z,p.y,playerInAttic()):null;
 if((dist>1.3||!sameFloor)&&(!sameFloor||!e.clearPath)){
@@ -1252,12 +1312,13 @@ if(len>.1&&(dist>1.03||!sameFloor)&&!casting){
   dx/=len;dz/=len;crowd.steer(e,dx,dz,elapsed);dx=e.steerX;dz=e.steerZ;
   // v175: each walker's own rhythm, surges, weave, stumbles and lunges.
   const life=e.life&&!e.elite&&!e.crawling&&!casting?updateLife(e,dt,{dist,sameFloor,clear:e.clearPath,stairs:!!stairAt(p.x,p.z)||cellarStairHeight(p.x,p.z)!==null||!!climbTo,attackReady:e.attack<=.3&&e.attackTime<0,moved:e.lastMoved||0,hobble:e.hobble||0}):(settleLife(e,dt),null);
+  if(e.lurker){e.lurkerLean=(e.lurkerLean||0)+((e.lurkerCharging?.85:0)-(e.lurkerLean||0))*(1-Math.exp(-dt*6));e.lungeW=Math.max(e.lungeW||0,e.lurkerLean);}
   if(life?.weave){const c=Math.cos(life.weave),sn=Math.sin(life.weave),wx=dx*c+dz*sn,wz=dz*c-dx*sn;dx=wx;dz=wz;}
   // v139: ease the walking direction (~0.14s) so grid-cell routes curve
   // instead of zig-zagging the body from cell to cell. Sharp turns (over ~70°)
   // are taken at once so nobody grinds into a wall turning round.
   {const k=(e.walkDirX??dx)*dx+(e.walkDirZ??dz)*dz<.3?1:1-Math.exp(-dt*7);let sx=(e.walkDirX??dx)+(dx-(e.walkDirX??dx))*k,sz=(e.walkDirZ??dz)+(dz-(e.walkDirZ??dz))*k;const n=Math.hypot(sx,sz);if(n>.2){sx/=n;sz/=n;}else{sx=dx;sz=dz;}e.walkDirX=sx;e.walkDirZ=sz;dx=sx;dz=sz;}
-  const pace=(e.staggerLeft>0?0:1)*(e.crawling?(e.crawlDrop>0?0:CRAWL.speed):1)*(frenzyWave===wave&&wave?1.4:1)*(e.attackTime>=0?(e.dog?.65:.4):1)*(e.legHit>0?.55:1)*(e.crawling||e.elite?1:1-LIMP.slow*(e.hobble||0)*(e.brute?LIMP.bruteSlow:1))*(e.warCry>0?BOSS.cry.speed:1)*(life?life.pace:1),step=e.speed*worldEvents.speedMultiplier(e)*dt*pace;
+  const pace=(e.staggerLeft>0?0:1)*(e.crawling?(e.crawlDrop>0?0:CRAWL.speed):1)*(frenzyWave===wave&&wave&&!e.lurker?1.4:1)*(e.lurkerCharging?LURKER.charge:1)*(e.attackTime>=0?(e.dog?.65:.4):1)*(e.legHit>0?.55:1)*(e.crawling||e.elite?1:1-LIMP.slow*(e.hobble||0)*(e.brute?LIMP.bruteSlow:1))*(e.warCry>0?BOSS.cry.speed:1)*(life?life.pace:1),step=e.speed*worldEvents.speedMultiplier(e)*dt*pace;
   moveWithCollision(p,dx*step,dz*step,e.radius,e);
   const moved=Math.hypot(p.x-oldX,p.z-oldZ);e.lastMoved=moved;
   e.stuck=moved<step*.15?e.stuck+dt:0;
@@ -1282,7 +1343,7 @@ e.floorY=p.y;e.group.position.set(p.x,Math.abs(p.y)>.1?p.y-.02:enemyFloorHeight(
 if(onBella){if(contact&&!(e.staggerLeft>0)&&dist<1.7&&sameFloor){e.bellaSwings=(e.bellaSwings||0)+1;tone(150,.06,.02,'triangle',110);}}
 else if(contact&&!casting&&!(e.staggerLeft>0)&&dist<1.7&&Math.abs(player.y-p.y)<.7&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y)){
 hurtPlayer(waveConfig(wave).damage*(e.boss?BOSS.meleeMultiplier:e.warden?1.4*WARDEN.damageMultiplier:e.feral?FERAL.damageMultiplier:e.dog?.85:e.brute?1.4:1)*(e.enraged&&!e.elite?ENRAGE.damageMultiplier:1)*(e.warCry>0?BOSS.cry.damage:1)*(e.armless?INJURY.oneArmDamage:1),p);noise(.15,.08,600);tone(70,.14,.06,'sine');if(health<=0)gameOver();}
-e.groan-=dt;if(e.groan<=0){if(dist<12)tone(e.feral?210:e.rareDog?155:e.dog?105:e.brute?45:rand(60,100),e.dog?.22:.6,.035*(1-dist/14),'sawtooth',35);e.groan=rand(6,15);}}}
+e.groan-=dt;if(e.groan<=0){if(dist<12)tone(e.lurker?38:e.feral?210:e.rareDog?155:e.dog?105:e.brute?45:rand(60,100),e.dog?.22:.6,.035*(1-dist/14),'sawtooth',35);e.groan=rand(6,15);}}}
 // v158: a zombie Bella bites turns on her and fights her until it dies.
 // Bosses and elite guardians ignore her and keep hunting the player.
 function bellaBite(enemy,damage,direction){if(!enemy.boss&&!enemy.elite)enemy.bellaAggro=true;damageEnemy(enemy,damage,false,{direction:direction.clone(),part:enemy.dog?'head':'leg',force:.45,source:'Bella'});tone(460,.08,.018,'triangle',620);}
@@ -1307,7 +1368,7 @@ const stick=touchControls?.active?touchControls.move:padPlay()&&gamepad.connecte
 const vertical=updateActorHeight(player,jumpV,dt,grounded,1.8,PLAYER_RADIUS,colliders);jumpV=vertical.velocity;grounded=vertical.grounded;feetY=grounded?0:Math.max(0,player.y-supportBelow(player.x,player.z,player.y));camera.position.set(player.x,1.68+player.y+(moving&&grounded?Math.sin(walkPhase)*.025:0),player.z);camera.rotation.set(clamp(lookPitch+weaponRecoil.pitch,-1.3,1.3),lookYaw+weaponRecoil.yaw,0);camera.fov=T.MathUtils.lerp(camera.fov,aimingWeapon?aimFovOf(weapon):sprint?81:75,dt*9);camera.updateProjectionMatrix();weaponViewFov=zoomOf(weapon)?T.MathUtils.lerp(weaponViewFov,aimingWeapon?(gunGroups[weapon].userData.optic.viewFov??16):sprint?81:75,dt*9):camera.fov;navTimer-=dt;if(navTimer<=0){nav.rebuild(player.x,player.z,player.y);navTimer=.6;}worldEvents.update(dt);eventVisuals.update(worldEvents);if(atticState.opening)updateAtticOpening(dt);oliviaCheer=Math.max(0,oliviaCheer-dt);attic.update(dt,{player,celebrate:oliviaCheer>0});if(boss.stage==='waking')updateWaking(dt);updateEnemies(dt);bossFx.update(dt,{hit:lanceHit,blocked:lanceBlocked});updateBossHud();if(mode==='playing'){bella.update(dt,{player,yaw:lookYaw,enemies:zombies,onBite:bellaBite,onBreath:bellaBreath,climb:(pos,goal)=>atticRoute(pos.x,pos.z,pos.y,goal.y>OLIVIA_ATTIC.y-.3&&inAttic(goal.x,goal.z)),visualFloor:enemyFloorHeight});grenadeThrow.update(dt,releaseGrenade);}updateEffects(dt);updatePickups(dt);
 if(mode==='playing'&&armorTier>=2&&armor<armorMax){const rank=armorRank(armorTier),regenSeconds=rank.regenDelay===0?dt:Math.min(dt,Math.max(0,runTime-lastHurt-rank.regenDelay));armor=Math.min(armorMax,armor+regenSeconds*rank.regenRate);}
 if(runTime-lastHurt>6&&health<maxHealth)health=Math.min(maxHealth,health+dt*11);doubleTime=Math.max(0,doubleTime-dt);grenadeTime=Math.max(0,grenadeTime-dt);
-if(mode==='playing'){campWatch.update(dt,player);if(waveDelay>0){waveDelay-=dt;if(waveDelay<=1e-9)startWave();}else{spawnTimer-=dt;if(toSpawn>0&&spawnTimer<=0&&!blackthornHoldsSpawns()&&zombies.filter(e=>!e.dead).length<CURSE_RULES.aliveLimit){spawnEnemy();spawnTimer=waveConfig(wave).interval*(frenzyWave===wave?.4:1);}if(toSpawn===0&&worldEvents.pendingSpawns===0&&boss.stage!=='waking'&&!zombies.some(e=>!e.dead)){if(wave===5&&!waveFiveFinale){beginWaveFiveFinale();}else{completeWave();}}}}
+if(mode==='playing'){campWatch.update(dt,player);if(waveDelay>0){waveDelay-=dt;if(waveDelay<=1e-9)startWave();}else{spawnTimer-=dt;if(toSpawn>0&&spawnTimer<=0&&!blackthornHoldsSpawns()&&zombies.filter(e=>!e.dead).length<CURSE_RULES.aliveLimit){spawnEnemy();spawnTimer=waveConfig(wave).interval*(frenzyWave===wave?.4:1);}if(toSpawn===0&&worldEvents.pendingSpawns===0&&boss.stage!=='waking'&&!zombies.some(e=>!e.dead)){if(wave===5&&!waveFiveFinale){beginWaveFiveFinale();}else if(wave===LURKER.finale.wave&&!waveFiveFinale){beginStenchFinale();}else{completeWave();}}}}
 const s=closestStation(),interaction=s?`<strong>${padPlay()?'B':touchControls?.enabled?'USE':'E'}</strong> ${s.name} <span style="color:#d4b77a">${s.type==='olivia'?(bella.dragon?'RAT DRAGON':`${Math.min(boneChips,EASTER_EGG.chips)}/${EASTER_EGG.chips} BONE CHIPS`):s.type==='bell'?'DORMANT':s.type==='mausoleumDoor'?(graveyard.open?'OPEN':'CLEAR WAVE 20'):s.type==='cellarDoor'?(isCellarOpen()?'OPEN':'WAVE 10'):s.type==='shedDoor'?(shed.open?'OPEN':'WAVE 7'):s.shedWeapon&&s.purchased?'OWNED':ranksAtRack(s)?(nextRank(s.type,inventory[s.type].weaponRank)?nextRank(s.type,inventory[s.type].weaponRank).price.toLocaleString()+' ESSENCE':'ALL RANKS'):s.type==='glock'&&!nextRank('glock',inventory.glock.weaponRank)&&ammoFull('glock')?'FULL':s.type==='upgrade'&&s.forgeMaximum?'MAX RANK':(s.type==='perk'&&perkOwned.has(s.id))||(s.type==='armor'&&s.used)?'ACTIVE':s.price===0?'FREE':s.price.toLocaleString()+' ESSENCE'}</span><small>${stationDescription(s)}</small>`:'';setMarkup('interaction',interaction);touchControls?.update({playing:true,aiming,canInteract:!!s,flashlight:flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>inventory[k]?.owned).length>1});
 const indoors=player.y<-.3||inMausoleum(player.x,player.z)||inShed(player.x,player.z)||!!roomAt(player.x,player.z);const flight=stairAt(player.x,player.z);const location=inShed(player.x,player.z)&&player.y>-.3?'GROUNDSKEEPER’S SHED':player.y<-.3?'STORM CELLAR / UNDERGROUND ARMORY':flight?.side?upperLocation(player.x,player.z):player.y>2.15?'2ND FLOOR / '+upperLocation(player.x,player.z):flight?'GRAND STAIRCASE':estateLocation(player.x,player.z);const locationMarkup=`BLACKTHORN ESTATE <span> / ${location}</span>`;setMarkup('location',locationMarkup);rain.visible=!indoors;gunRoot.visible=true;
 scene.fog.density=baseFogDensity+(indoors?0:worldEvents.fogStrength()*(inGraveyard(player.x,player.z)?.049:.038));setOpacity('eventPulse',worldEvents.active('surge')?Math.max(0,1-worldEvents.age/1.4)*.24:0);
@@ -1368,4 +1429,4 @@ function combineMeshes(list,parent){if(list.length<2)return;const inverse=new T.
 function batchStaticWorld(){scene.updateMatrixWorld(true);const buckets=new Map();world.traverse(m=>{if(!m.isMesh||m.isInstancedMesh||m.userData.dynamic||m===fire)return;const p=m.getWorldPosition(new T.Vector3());let k=m.material.uuid+":"+Math.floor(p.x/24)+":"+Math.floor(p.z/24)+":"+m.castShadow;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);});for(const list of buckets.values())combineMeshes(list,world);}
 function batchArticulated(group){group.updateMatrixWorld(true);const groups=[];group.traverse(o=>{if(o.isGroup)groups.push(o);});for(const g of groups){const buckets=new Map();for(const m of [...g.children]){if(!m.isMesh)continue;const k=m.material.uuid;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);}for(const list of buckets.values())combineMeshes(list,g);}}
 
-function disposeEnemy(e){if(e.sharedAssets)return;const sharedGeo=new Set([boxGeo,sphereGeo,cylGeo]),sharedMat=new Set([...Object.values(M),...bookMats]),geometries=new Set(),materials=new Set();e.group.traverse(o=>{if(o.isMesh){if(!sharedGeo.has(o.geometry))geometries.add(o.geometry);if(!sharedMat.has(o.material))materials.add(o.material);}});for(const g of e.resources?.geometries||[])geometries.add(g);for(const m of e.resources?.materials||[])materials.add(m);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();}
+function disposeEnemy(e){disposeLurkerGlow(e);if(e.sharedAssets)return;const sharedGeo=new Set([boxGeo,sphereGeo,cylGeo]),sharedMat=new Set([...Object.values(M),...bookMats]),geometries=new Set(),materials=new Set();e.group.traverse(o=>{if(o.isMesh){if(!sharedGeo.has(o.geometry))geometries.add(o.geometry);if(!sharedMat.has(o.material))materials.add(o.material);}});for(const g of e.resources?.geometries||[])geometries.add(g);for(const m of e.resources?.materials||[])materials.add(m);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();}
