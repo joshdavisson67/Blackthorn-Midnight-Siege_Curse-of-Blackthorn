@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import * as T from '../public/game/three.module.js';
 import {CRAWL} from '../public/game/zombies.mjs';
 import {INJURY,PROP_KINDS,rollInjury,applyInjury,clearInjury} from '../public/game/zombie-injuries.mjs';
+import {clearFace} from '../public/game/zombie-faces.mjs';
 
 const near=(v,target,tol)=>Math.abs(v-target)<=tol;
 const visibleMeshes=node=>{let n=0;node.traverse(o=>{if(o.isMesh&&o.visible)n++;});return n;};
@@ -65,7 +66,8 @@ export function verifyZombieInjuries(qa,frames){
 
   // ---- Crushed skull ----------------------------------------------------------------------
   {
-    const a=fresh(6),b=fresh(8);
+    // v183: crushed skulls are made from the body's own head, so start from it.
+    const a=fresh(6),b=fresh(8);clearFace(a);clearFace(b);
     const variant=kit.crushed.get(a.templateIndex);assert(variant&&variant.length===INJURY.skullVariants,'Each walker body has crushed skulls ready from loading');
     const original=ownMesh(a.head).geometry;applyInjury(a,{...blank,major:'skull',skullVariant:1},kit);
     const crushed=ownMesh(a.head).geometry;
@@ -115,6 +117,8 @@ export function verifyZombieInjuries(qa,frames){
     for(const e of seen.filter(e=>e.injury?.legless))assert(e.crawling&&e.crawl===1&&e.bodyHeight===CRAWL.height,'Legless spawns arrive crawling');
     const kitGeos=new Set([...Object.values(kit.props),...Object.values(kit.caps),...[...kit.crushed.values()].flat()]);
     const templateGeos=new Set();for(const r of qa.get().enemyAssets.templates)r.group.traverse(o=>{if(o.isMesh)templateGeos.add(o.geometry);});
+    // v183: the extra faces made at load count as prepared geometry too.
+    for(const list of qa.get().enemyAssets.faces.faces.values())for(const v of list){kitGeos.add(v.head);kitGeos.add(v.jaw);kitGeos.add(v.eyes);}
     assert([...geos].every(g=>kitGeos.has(g)||templateGeos.has(g)),'No spawn creates geometry of its own');
   }
 

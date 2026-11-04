@@ -27,6 +27,24 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## More faces (version 183)
+
+Every zombie used to wear one of only four walker faces. Now there are many more, with no new art: the existing face sculpting is run again while the game loads.
+
+- **Extra faces, made at load:**
+  - Each walker body gets 3 extra heads, so there are 16 walker faces in all.
+  - Brutes and ferals each get 2 extra; Grotesque Lurkers get 1.
+  - Each extra face has its own nose (broken, thin, flat or rotted away), hair (cap, slicked, lank strands, sparse or bald and stitched), ears (whole, chewed or torn off), jaw width, lips or bare gums, sometimes a torn cheek, and its own skull shape.
+  - Only the head is built, not the whole body, except for Lurkers, whose boils need the arms.
+- **Every spawn also gets:**
+  - One of its body's faces, chosen evenly.
+  - Its own head proportions, wider, narrower or longer by up to 7%.
+  - How far its jaw hangs.
+  - One of 12 shared eye glows, from dim embers to hot, shading from blood red toward orange.
+- **Cost:** about 0.7 s more loading and 16 MB of memory. Normals and colours are packed into 8-bit values, which halves the memory. Spawning builds nothing, and no geometry or material is created per zombie.
+- **Injuries:** a crushed skull uses the body's own head shape for the dent.
+- **Bosses:** elite bosses keep their own faces.
+
 ## A stronger flashlight (version 182)
 
 - **Brighter:** intensity is 25% higher, 27.5 up from 22.

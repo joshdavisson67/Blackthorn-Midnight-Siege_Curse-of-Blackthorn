@@ -1,9 +1,10 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {createZombieRig,tagZombie,rollGait} from './zombies.mjs?v=181';
-import {createZombieDogRig} from './zombie-dog.mjs?v=181';
+import {createZombieRig,tagZombie,rollGait} from './zombies.mjs?v=183';
+import {createZombieDogRig} from './zombie-dog.mjs?v=183';
 import {createInjuryKit} from './zombie-injuries.mjs?v=178';
 import {addLurkerFeatures} from './lurker.mjs?v=179';
+import {createFaceKit} from './zombie-faces.mjs?v=183';
 import {ENEMY_SURFACE,enemySurfaces,atlasUV,enemySurfaceShader,addDetailCoordinates} from './enemy-surfaces.mjs?v=134';
 
 export function bakeEnemyPalette(rig){
@@ -95,5 +96,15 @@ export function createEnemyAssets(batch){
   }
   // v178: shared wound caps, props and crushed skulls for injured spawns.
   const injuries=createInjuryKit(templates,[0,1,2,3,9]);
-  return {templates,instantiate,enrage,surfaces,injuries};
+  // v183: extra faces per body, sculpted once here (heads only, except the
+  // Lurker, whose boils need its arms) and baked like the templates.
+  const faces=createFaceKit(templates,(i,v,face)=>{
+    let seed=9147+i*137+(v+1)*7919,first=true;
+    const rng=()=>{if(first){first=false;return i<4?(i+.2)/4:i>=5&&i<8?(i-5+.2)/3:.3;}return ((seed=(seed*1664525+1013904223)>>>0)/4294967296);};
+    const rig=i===10?addLurkerFeatures(createZombieRig({rng,lurker:true,face}),179+v*31):createZombieRig({rng,face,faceOnly:true,brute:i===4,feral:i===9});
+    bakeEnemyPalette(rig);batch(rig.group);
+    rig.group.traverse(o=>{if(o.isMesh&&o.material.userData.bakedPalette&&!o.geometry.attributes.detailUv)addDetailCoordinates(o.geometry);});
+    return rig;
+  });
+  return {templates,instantiate,enrage,surfaces,injuries,faces};
 }

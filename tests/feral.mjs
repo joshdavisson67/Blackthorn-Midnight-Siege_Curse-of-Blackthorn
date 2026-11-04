@@ -32,7 +32,9 @@ export function verifyFeral(qa,frames){
   qa.start();const feral=make(0,17),normal=qa.makeZombie(8,17),feral2=make(-8,17);
   assert.equal(feral.style,'feral stalker');assert(!feral.dog&&!feral.brute);assert(feral.sharedAssets);
   assert(feral.group.getObjectByName('feral ribcage'));assert(!normal.group.getObjectByName('feral ribcage'));
-  const cache=new Set();feral.group.traverse(o=>{if(o.isMesh)cache.add(o.geometry);});feral2.group.traverse(o=>{if(o.isMesh)assert(cache.has(o.geometry));});
+  // v183: ferals share their body's geometry and its prepared faces.
+  const cache=new Set();qa.get().enemyAssets.templates[9].group.traverse(o=>{if(o.isMesh)cache.add(o.geometry);});for(const v of qa.get().enemyAssets.faces.faces.get(9))cache.add(v.head).add(v.jaw).add(v.eyes);
+  for(const f of [feral,feral2])f.group.traverse(o=>{if(o.isMesh)assert(cache.has(o.geometry));});
   let red=false,headshot=false;feral.head.traverse(o=>{if(o.isMesh){red||=o.material.userData.enemyEyes&&o.material.emissive?.r>o.material.emissive?.g*10;headshot||=o.userData.head;}});assert(red&&headshot);
   frames(10);assert(feral.root.rotation.x>normal.root.rotation.x+.1,'Feral has a distinct forward sprint posture');
   const kills=qa.get().kills;qa.damageEnemy(feral,100000,true);assert.equal(qa.get().kills,kills+1);assert(feral.dead&&feral.ragdoll);frames(180);

@@ -19,7 +19,8 @@ export function verifyPerformance(qa,frames,listeners){
   assert.deepEqual(signature(),lights,'Expiring effects must preserve the shader signature');
   qa.start();assert(s.combatLights.lights.every(l=>l.intensity===0));assert.deepEqual(signature(),lights);
 
-  const cacheGeo=new Set(),cacheMat=new Set();for(const r of s.enemyAssets.templates)r.group.traverse(o=>{if(o.isMesh){cacheGeo.add(o.geometry);cacheMat.add(o.material);}});
+  // v183: the face kit (extra heads and shared eye glows) is prepared at load too.
+  const cacheGeo=new Set(),cacheMat=new Set();for(const g of [...s.enemyAssets.templates.map(r=>r.group),s.enemyAssets.faces.group])g.traverse(o=>{if(o.isMesh){cacheGeo.add(o.geometry);cacheMat.add(o.material);}});
   const owners=new Set(),styles=new Set();let a,b;
   for(let i=0;i<64;i++){
     const e=qa.makeZombie(i%8*2-8,18+Math.floor(i/8),i%7===0,i%5===0);styles.add(e.style);
