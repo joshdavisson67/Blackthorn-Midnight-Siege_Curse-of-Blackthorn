@@ -24,7 +24,8 @@ export function verifyBrutes(qa,frames){
     brute.group.scale.setScalar(1.24*1.33);
     const after=new T.Box3().setFromObject(brute.group).getSize(new T.Vector3());
     for(const axis of ['x','y','z'])close(after[axis]/before[axis],1.33,'Rendered dimensions scale exactly once');
-    const second=qa.makeZombie(20,19,true),geometry=new Set();brute.group.traverse(o=>{if(o.isMesh)geometry.add(o.geometry);});second.group.traverse(o=>{if(o.isMesh)assert(geometry.has(o.geometry),'Larger models still reuse cached GPU geometry');});
+    // v183: brutes share their body's geometry and its prepared faces.
+    const second=qa.makeZombie(20,19,true),geometry=new Set();brute.group.traverse(o=>{if(o.isMesh)geometry.add(o.geometry);});qa.get().enemyAssets.templates[4].group.traverse(o=>{if(o.isMesh)geometry.add(o.geometry);});for(const v of qa.get().enemyAssets.faces.faces.get(4))geometry.add(v.head).add(v.jaw).add(v.eyes);second.group.traverse(o=>{if(o.isMesh)assert(geometry.has(o.geometry),'Larger models still reuse cached GPU geometry');});
     const kills=qa.get().kills;qa.damageEnemy(brute,cfg.health*2.4);assert(!brute.dead&&brute.hp>0,'Old lethal damage no longer kills a full-health brute');
     const points=qa.get().points;qa.damageEnemy(brute,brute.hp+1);assert(brute.dead);assert.equal(qa.get().kills,kills+1);assert.equal(qa.get().points-points,120,'Existing 10-point hit plus 110-point brute kill reward');
     const headshotPoints=qa.get().points;qa.damageEnemy(second,second.hp+1,true);assert(second.dead);assert.equal(qa.get().points-headshotPoints,210,'Brute headshots award a 200-point kill bonus plus the separate 10-point hit');

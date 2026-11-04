@@ -83,7 +83,7 @@ export function verifyPathing(qa,frames){
   for(const e of qa.get().zombies)if(e!==upstairs)qa.damageEnemy(e,100000);
   qa.setHealth(10000);upstairs.speed=3;
   for(let i=0;i<2400&&upstairs.floorY>.02;i++)frames(1);
-  assert(upstairs.floorY<.02,`An upstairs spawn must reach the ground floor: ${upstairs.walkPos.toArray()}`);
+  assert(upstairs.floorY<.02,`An upstairs spawn must reach the ground floor: ${upstairs.walkPos.toArray()} (${JSON.stringify({crawling:upstairs.crawling,injury:upstairs.injury,lurker:upstairs.lurker,brute:upstairs.brute,dog:upstairs.dog,feral:upstairs.feral,life:upstairs.life?.type,face:upstairs.face?.variant,t:upstairs.templateIndex,stuck:upstairs.stuck,build:upstairs.build&&{k:upstairs.build.kneeBend},scale:upstairs.group.scale.x})})`);
   console.log('PASS: wave-10 exclusion, wave-11 upstairs spawns, collision-safe supported positions, correct render height, connected navigation and actual descent.');
   qa.start();qa.setPlayer(20,27);qa.setHealth(10000);
   const horde=[];
