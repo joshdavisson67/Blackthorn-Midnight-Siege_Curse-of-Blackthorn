@@ -41,7 +41,7 @@ export function verifyFeral(qa,frames){
 
   function travel(isFeral,rage=false){
     qa.start();for(let i=0;i<7;i++)qa.startWave();qa.setPlayer(0,23);
-    const e=isFeral?make(0,17):qa.makeZombie(0,17);e.flank=0;if(!isFeral)e.speed=waveConfig(7).speed;
+    const e=isFeral?make(0,17):qa.makeZombie(0,17);e.flank=0;e.life=null;/* v175: exact multipliers, without the walker's own rhythm */if(!isFeral)e.speed=waveConfig(7).speed;
     if(rage)enrageNearby({dead:true,walkPos:e.walkPos},[e],()=>0,qa.get().enemyAssets.enrage);
     frames(10);return e.walkPos.z-17;
   }

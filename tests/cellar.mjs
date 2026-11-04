@@ -105,7 +105,7 @@ export function verifyCellar(qa,frames,listeners,elements){
   const victim=qa.makeZombie(cx,-77);const aboveHp=victim.hp;qa.get().scene.updateMatrixWorld(true);qa.explode(new T.Vector3(cx,-4,-77));assert.equal(victim.hp,aboveHp,'Cellar ceiling blocks blast damage to ground floor');
   const corpse=qa.makeZombie(cx+2,-77);corpse.walkPos.y=corpse.floorY=-4.2;corpse.group.position.y=-4.22;qa.damageEnemy(corpse,10000);frames(180);for(const p of Object.values(corpse.ragdoll.points))assert(p.p.y>=-4.2+p.radius+.008-1e-6,'Cellar corpses stay above floor');
   console.log('PASS: cellar grenade bounce, blast ceiling separation and corpse floor support.');
-  function travel(frenzy){qa.start();qa.startWave();qa.setPlayer(0,23);const e=qa.makeZombie(0,17);e.speed=2;e.flank=0;if(frenzy)qa.triggerFrenzy();qa.holdSpawns();frames(15);return e.walkPos.z-17;}
+  function travel(frenzy){qa.start();qa.startWave();qa.setPlayer(0,23);const e=qa.makeZombie(0,17);e.speed=2;e.flank=0;e.life=null;/* v175: exact multiplier, without the walker's own rhythm */if(frenzy)qa.triggerFrenzy();qa.holdSpawns();frames(15);return e.walkPos.z-17;}
   const normal=travel(false),fast=travel(true);assert(Math.abs(fast/normal-1.4)<.005,'Frenzy speeds up already living enemies by 40%');
   qa.start();for(let i=0;i<10;i++)qa.startWave();qa.setHealth(10000);qa.setPoints(5000);qa.setPlayer(cx-3.4,-68.4,-4.2);qa.interact();let ticks=0;
   while(qa.get().waveDelay===0&&ticks++<2600){for(const e of qa.get().zombies)if(!e.dead)qa.damageEnemy(e,100000);frames(1);}

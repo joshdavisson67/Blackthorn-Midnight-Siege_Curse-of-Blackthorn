@@ -308,5 +308,23 @@ verifyHidingSpots(qa);
 const {verifyStairUnderside}=await import('./stair-underside.mjs');
 verifyStairUnderside(qa,frames);
 
+const {verifyCampSpawns}=await import('./camp-spawns.mjs');
+verifyCampSpawns(qa,frames);
+
+const {verifyZombieLife}=await import('./zombie-life.mjs');
+verifyZombieLife(qa,frames);
+
+const {verifyLegLimp}=await import('./leg-limp.mjs');
+verifyLegLimp(qa,frames);
+
+const {verifyZombieBuilds}=await import('./zombie-builds.mjs');
+verifyZombieBuilds(qa,frames);
+
+const {verifyZombieInjuries}=await import('./zombie-injuries.mjs');
+verifyZombieInjuries(qa,frames);
+
+const {verifyLurker}=await import('./lurker.mjs');
+verifyLurker(qa,frames,listeners,elements);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);

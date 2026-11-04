@@ -1,7 +1,9 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {createZombieRig,tagZombie,rollGait} from './zombies.mjs?v=140';
-import {createZombieDogRig} from './zombie-dog.mjs?v=157';
+import {createZombieRig,tagZombie,rollGait} from './zombies.mjs?v=179';
+import {createZombieDogRig} from './zombie-dog.mjs?v=179';
+import {createInjuryKit} from './zombie-injuries.mjs?v=178';
+import {addLurkerFeatures} from './lurker.mjs?v=179';
 import {ENEMY_SURFACE,enemySurfaces,atlasUV,enemySurfaceShader,addDetailCoordinates} from './enemy-surfaces.mjs?v=134';
 
 export function bakeEnemyPalette(rig){
@@ -42,10 +44,11 @@ export function bakeEnemyPalette(rig){
 // transforms and gameplay state, so spawning never tessellates or merges meshes.
 export function createEnemyAssets(batch){
   const templates=[],surfaces=enemySurfaces();
-  for(let i=0;i<10;i++){
+  // v179: template 10 is the Grotesque Lurker.
+  for(let i=0;i<11;i++){
     let seed=9147+i*137,first=true;
     const rng=()=>{if(first){first=false;return i<4?(i+.2)/4:i>=5&&i<8?(i-5+.2)/3:.3;}return ((seed=(seed*1664525+1013904223)>>>0)/4294967296);};
-    const rig=i===9?createZombieRig({rng,feral:true}):i>=5?createZombieDogRig({rng,rare:i===8}):createZombieRig({rng,brute:i===4});
+    const rig=i===10?addLurkerFeatures(createZombieRig({rng,lurker:true})):i===9?createZombieRig({rng,feral:true}):i>=5?createZombieDogRig({rng,rare:i===8}):createZombieRig({rng,brute:i===4});
     // Bake paint into vertex colors so equal surface finishes share batches.
     // Roughness, metalness, normals, silhouettes and rage colors are retained.
     bakeEnemyPalette(rig);batch(rig.group);tagZombie(rig,null);
@@ -79,16 +82,18 @@ export function createEnemyAssets(batch){
   function enrage(enemy){enemy.group.traverse(o=>{
     if(o.isMesh)o.material=Array.isArray(o.material)?o.material.map(m=>rageMaterials.get(m)||m):rageMaterials.get(o.material)||o.material;
   });}
-  function instantiate({rng=Math.random,brute=false,dog=false,rareDog=false,feral=false,scale=null}={}){
-    const template=templates[feral?9:rareDog?8:dog?5+Math.floor(rng()*3):brute?4:Math.floor(rng()*4)],group=template.group.clone(true),original=[],copies=[],nodes=new Map();
+  function instantiate({rng=Math.random,brute=false,dog=false,rareDog=false,feral=false,lurker=false,scale=null}={}){
+    const templateIndex=lurker?10:feral?9:rareDog?8:dog?5+Math.floor(rng()*3):brute?4:Math.floor(rng()*4),template=templates[templateIndex],group=template.group.clone(true),original=[],copies=[],nodes=new Map();
     template.group.traverse(o=>original.push(o));group.traverse(o=>copies.push(o));for(let i=0;i<original.length;i++)nodes.set(original[i],copies[i]);
     const remap=value=>{if(value?.isObject3D)return nodes.get(value);if(Array.isArray(value))return value.map(remap);if(value&&Object.getPrototypeOf(value)===Object.prototype){const out={};for(const [k,v] of Object.entries(value))out[k]=remap(v);return out;}return value;};
     const rig={};for(const [key,value] of Object.entries(template))rig[key]=key==='resources'?value:remap(value);
-    rig.sharedAssets=true;rig.phase=rng()*Math.PI*2;rig.attackHand=Math.floor(rng()*2);rig.limp=feral?.025:.12+rng()*.28;rig.lean=feral?.025:-.12+rng()*.24;rig.stride=feral?1.55+rng()*.15:(dog||rareDog)?.75+rng()*.12:1.12+rng()*.26;
+    rig.sharedAssets=true;rig.templateIndex=templateIndex;rig.phase=rng()*Math.PI*2;rig.attackHand=Math.floor(rng()*2);rig.limp=feral?.025:.12+rng()*.28;rig.lean=feral?.025:-.12+rng()*.24;rig.stride=feral?1.55+rng()*.15:(dog||rareDog)?.75+rng()*.12:1.12+rng()*.26;
     if(!dog&&!rareDog)rig.gait=rollGait(rng,{feral,brute});rig.crawling=false;rig.crawl=0;rig.legDamage=0;
     // Bosses and their tanks pass an explicit uniform scale (v130).
     group.scale.setScalar(scale??(rareDog?1.06+rng()*.045:brute?BRUTE.scale:dog?.97+rng()*.06:.97+rng()*.09));
     return rig;
   }
-  return {templates,instantiate,enrage,surfaces};
+  // v178: shared wound caps, props and crushed skulls for injured spawns.
+  const injuries=createInjuryKit(templates,[0,1,2,3,9]);
+  return {templates,instantiate,enrage,surfaces,injuries};
 }

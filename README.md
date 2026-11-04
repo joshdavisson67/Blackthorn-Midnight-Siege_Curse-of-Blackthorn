@@ -27,6 +27,104 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## The Grotesque Lurker (version 179)
+
+A new enemy, and a second frenzied finale.
+
+- **The Lurker's body:** a hunched, bent-over zombie crusted with large cancerous boils on its back, shoulders, neck, head and limbs. Its swollen belly is slit across and pulled shut with heavy black stitches. A sickly green glow shows between the lips of the wound and through the gut, blinking about every 0.8 s, and faster when it charges.
+- **Movement:** it lurches at 125% of the standard zombie speed. Once you're within 12 yards (11 m) with a clear line, it charges at double that, arms thrown forward. Frenzy does not speed it up further.
+- **Health:** 1.5× a walker's. It never swings at you.
+- **The burst:**
+  - If it reaches you, it swells for a third of a second and bursts for 75 damage, with armor and shield taking it first.
+  - It also bursts when killed, so kill it at range. Popping one at 2.75 m still costs you about 38 health.
+  - The blast reaches 4 m: full damage within 1.5 m, fading to nothing at the edge. It needs a clear line, so walls and floors block it.
+  - It deals 450 to other zombies (half beyond 3 m), and zombies it kills pay **35% more essence**.
+  - Lurkers set each other off. A Lurker's own burst on reaching you pays nothing and isn't your kill.
+- **Spawning:**
+  - **Wave 10** now ends in a second frenzied finale, after the regular wave is cleared. *A disgusting stench fills the air.* It sends 20 undead including 2 brutes and 2 or 3 Grotesque Lurkers. The frenzy HUD counts the Lurkers left.
+  - **From wave 11**, one spawn in twenty is a Lurker.
+- **Map and guide:** Lurkers show as green dots on the radar, and the field guide has an entry for them.
+
+## Battle-worn spawns (version 178)
+
+Zombies that spawn naturally in waves, from graves, or in the cellar or attic can now arrive already damaged. Nothing was modelled per zombie: parts are hidden on the zombie's own joints, crushed skulls are prepared once per body while the game loads, and the stumps and props are a small set of shared meshes.
+
+- **Major injury (1 in 4 walkers and ferals):**
+  - A missing forearm (stump at the elbow) or a whole missing arm (stump at the shoulder).
+  - A missing jaw, which leaves a torn throat under the upper teeth.
+  - A crushed skull: a bloody crater with a rim of broken bone. Two variants are prepared per body.
+- **Something through them (1 in 5, brutes included):**
+  - Driven clean through and out the other side: a stake, rebar, a pipe or a crossbow bolt.
+  - Driven in partway: a kitchen knife, a broken pitchfork or a shard of glass.
+  - They can be in the chest, thigh, arm or head, and about 15% of impaled zombies carry two.
+- **Legless crawlers (1 in 25 walkers):** these spawn already crawling, with one or both lower legs gone.
+- **Light gameplay effects:**
+  - Without a jaw a zombie can't bite, so it grabs instead.
+  - A one-armed zombie hits for 80% damage.
+  - A crushed skull takes 1.25× headshot damage.
+- **Hit detection:** missing parts no longer catch bullets, and props and stumps never do.
+- **Who can be injured:** dogs and bosses spawn whole. Zombies placed directly by scripts and tests stay whole; only natural spawns roll for injuries.
+- **Repeatable:** injuries come from each zombie's own seed, so the same zombie is always injured the same way and no other random draws in the run change.
+
+## Every zombie its own build (version 177)
+
+Each walker is now posed its own way on the same four bodies. Every difference is a small per-zombie offset on joints the animator already drives, so no models, geometry or textures were added.
+
+- **Posture:**
+  - Some walkers have a collapsed shoulder, sagging up to 5 cm on either side.
+  - The spine can bend to one side and twist.
+  - The pelvis can tilt.
+  - The head can jut, turn or tilt.
+- **Stance:**
+  - Some walkers stand crouched, with bent knees and lower hips. Others stand ramrod upright.
+  - Stance width varies, and each foot turns out by its own amount.
+  - Planted feet still meet the floor.
+- **Arms:** each arm has its own hang (forward or back), splay from the body, elbow bend, forearm twist and wrist droop, on top of the existing arm carriages. Many walkers hold their two arms differently.
+- **Speed:** walkers' base speeds now stay within 7% of each other, down from the old ±15% spread. The average is unchanged, and the v175 rhythm still makes each one surge and drag.
+- **Brutes** get a stiffer, straighter build. Dogs and elite bosses keep their own poses.
+- **Seeded:** builds come from each zombie's own seed, so they are reproducible and no other random draws in the run change.
+
+## Damage-driven limp (version 176)
+
+Leg shots used to show only a brief flinch until enough damage dropped a walker to a crawl. Now each leg remembers the hits it took.
+
+- **The shot leg drags:** hits are booked to the leg they struck, using the hit tags on each leg. Within a few strides that leg takes over the drag from the walker's rolled limp. The hand-over is blended per leg, so the stride never snaps.
+- **Worse wounds, worse limp:** as the wound grows toward the crawl threshold, the leg's stride shortens, the hip drops harder and the trunk lurches over it each time it takes the weight. The crawl threshold itself is unchanged.
+- **A little slower:** a walker slows by up to 18% just before it would crawl. Brutes, which can't be dropped, limp visibly and slow by half as much. Elite bosses limp but keep their pace.
+- **Temperament:**
+  - A walker on a bad leg no longer lunges.
+  - Its weave narrows.
+  - It trips up to three times as often.
+- Dogs keep their own gait.
+
+## Lively walkers (version 175)
+
+Walkers used to glide toward you at a steady speed. Each one now has a temperament that shapes how it moves across the floor, not just how its limbs swing.
+
+- **Four temperaments:**
+  - Shamblers rock and drift.
+  - Lurchers surge on every push-off and drag between steps.
+  - Stalkers move evenly, head down, and lunge.
+  - Staggerers weave and trip.
+  - Ferals stalk, and brutes plod heavily.
+- **Rhythm:** speed swells and sags with each step, with slower surges and lulls on top, and the chest pitches into each push.
+- **Weave:** on open floor they drift side to side. They straighten out within a few metres of you, and on every staircase.
+- **Stumbles:** now and then one trips. It pitches forward and throws its arms out, then catches itself and hurries to make up the time. They never trip on stairs or right next to you.
+- **Lunges:** from a few strides away, with a clear line to you, a walker may burst forward with its arms out. Each lunge has a cooldown.
+- **Body:** weight shift, hip roll and head loll are larger and scale with each zombie's vigor, so lively ones rock and heavy ones barely sway.
+- **Same speed:** average speed and arrival times are unchanged; only the shape of the movement is new. Dogs, crawlers and elite bosses keep their own movement.
+
+## No safe corners (version 174)
+
+The storm cellar and Olivia's room were safe places to camp, because every zombie had to come in through one doorway or one flight of stairs.
+
+- **The floor gives way:** stay in either room for 4 seconds and one wave spawn in three claws up through the floor inside it, with you. The others still come in through the usual entrance.
+- **Placement:** they rise at the far side of the room, never closer than 3 m, and take about a second to climb out, so there is time to react. A low scrape sounds as each one rises, and a warning shows the first time.
+- **Limits:**
+  - Brutes can rise in the cellar but not under the garret ceiling.
+  - At most 6 floor-born dead are up at once in the cellar, and 3 in Olivia's room.
+- **Passing through is free:** leaving the room resets the clock, so a quick stop at the cellar forge or with Olivia costs nothing.
+
 ## Solid stairs (version 173)
 
 Zombies could wander under the main staircase and get stuck chasing a player on the landing.

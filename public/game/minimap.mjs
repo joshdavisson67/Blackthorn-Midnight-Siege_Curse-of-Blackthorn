@@ -2,7 +2,7 @@
 // view cone. Red is reserved for zombies: every station uses a non-red map
 // colour. Zombies show across the whole minimap, on other floors as hollow
 // rings, and beyond its edge as red pips on the rim pointing at them.
-export const MINIMAP=Object.freeze({size:150,radius:72,scale:2.6,rimPip:66,cone:{radius:44,halfAngle:.55},zombie:'#ff3b30',zombieRage:'#ff8a7a',
+export const MINIMAP=Object.freeze({size:150,radius:72,scale:2.6,rimPip:66,cone:{radius:44,halfAngle:.55},zombie:'#ff3b30',zombieRage:'#ff8a7a',lurker:'#a8ff3c',
   // v168: palettes for the open world and for a scope's black surround.
   palette:Object.freeze({normal:Object.freeze({disc:'#07111a',wallFill:'#93a19326',wallLine:'#b7c3ab70',rim:'#a8b49c66',rimWidth:1.2}),scoped:Object.freeze({disc:'#16262f',wallFill:'#b9c7b744',wallLine:'#dce6d3a8',rim:'#e6dfc0d0',rimWidth:2.2})})});
 
@@ -60,7 +60,7 @@ export function drawMinimap(c,{width,height,player,yaw,colliders=[],zombies=[],s
     if(d<=R-r){
       shown++;c.beginPath();c.arc(x,z,r,0,Math.PI*2);
       if(otherFloor){c.strokeStyle=M.zombie;c.globalAlpha=.6;c.lineWidth=1;c.stroke();c.globalAlpha=1;}
-      else{c.fillStyle=M.zombie;c.fill();if(e.enraged){c.strokeStyle=M.zombieRage;c.lineWidth=.9;c.beginPath();c.arc(x,z,r+1.6,0,Math.PI*2);c.stroke();}}
+      else{c.fillStyle=e.lurker?M.lurker:M.zombie;c.fill();if(e.enraged){c.strokeStyle=M.zombieRage;c.lineWidth=.9;c.beginPath();c.arc(x,z,r+1.6,0,Math.PI*2);c.stroke();}}
     }else{
       // Beyond the edge: a pip on the rim pointing toward it.
       pips++;const a=Math.atan2(z,x),k=M.rimPip;c.save();c.translate(Math.cos(a)*k,Math.sin(a)*k);c.rotate(a);c.globalAlpha=otherFloor?.45:.85;c.fillStyle=M.zombie;c.beginPath();c.moveTo(4,0);c.lineTo(-1.5,-2.6);c.lineTo(-1.5,2.6);c.closePath();c.fill();c.restore();

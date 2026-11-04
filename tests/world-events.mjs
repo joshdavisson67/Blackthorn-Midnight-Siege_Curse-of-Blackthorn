@@ -50,7 +50,7 @@ export function verifyWorldEvents(qa,frames,listeners,elements){
   shroud.update(40);frames(1);assert.equal(fog.density,.014);assert.equal(elements.get('eventStatus').innerHTML,'');assert.deepEqual(lightIds(),lights);
 
   function travel({boost=false,rage=false,frenzy=false}={}){
-    const ev=ready('surge');if(boost)ev.update(10);const e=qa.makeZombie(0,17);e.speed=2;e.flank=0;
+    const ev=ready('surge');if(boost)ev.update(10);const e=qa.makeZombie(0,17);e.speed=2;e.flank=0;e.life=null;/* v175: exact multipliers, without the walker's own rhythm */
     if(rage)enrageNearby({dead:true,walkPos:e.walkPos},[e],()=>0,qa.get().enemyAssets.enrage);
     if(frenzy){qa.triggerFrenzy();qa.holdSpawns();}frames(12);return {distance:e.walkPos.z-17,storedSpeed:e.speed};
   }
