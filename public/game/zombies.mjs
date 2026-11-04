@@ -143,7 +143,12 @@ function attackPose(style,t,windup,strike,recover,lead){
   return o;
 }
 // Crawlers (v124): enough leg damage drops walkers and ferals to the floor.
-export const CRAWL=Object.freeze({legShare:.4,speed:.65,height:.8,drop:.55,hip:.22,pitch:1.42});
+export const CRAWL=Object.freeze({legShare:.4,speed:.65,height:.8,drop:.55,hip:.3,pitch:1.02,
+  // v181: crawlers carry the chest up off the floor on planted hands. With no
+  // legs left the body is propped higher still, dragged along on near-straight
+  // arms. Poses by legs remaining: [none, one, both].
+  poses:Object.freeze([Object.freeze({hip:.2,pitch:.45,spine:.1,reach:.2,cadence:2.1}),Object.freeze({hip:.23,pitch:.8,spine:.08,reach:.24,cadence:1.75}),Object.freeze({hip:.3,pitch:1.02,spine:.06,reach:.28,cadence:1.5})]),
+  stance:.6,reach:.3,lift:.13});
 // v176: each leg keeps its own wound. `side` is the hit tag (-1 left, 1 right);
 // an untagged hit is shared. `hobble` (0..1) is the worse leg's share of the
 // damage that would drop a walker to a crawl. Brutes can't be dropped, but
@@ -660,7 +665,7 @@ function legPose(u,stance,span,knee,drag,scuff,bob,pitch=0,bend=0){
 export function animateZombie(e,dt,distance,moved,look=null){
   // Pivoting on the spot shuffles the feet round instead of sliding.
   const pivot=moved>0?0:clamp((Math.abs(e.turnRate||0)-.6)/2,0,.5),moving=Math.max(pivot,clamp(moved/Math.max(dt*e.speed,.0001),0,1)),blend=1-Math.exp(-dt*12);
-  e.motion=T.MathUtils.lerp(e.motion||0,moving,blend);e.phase+=moved*6.4/e.stride+pivot*dt*4;e.idle=(e.idle||0)+dt;
+  e.motion=T.MathUtils.lerp(e.motion||0,moving,blend);e.phase+=moved*6.4/e.stride*(e.crawling&&e.crawl>.5?crawlPose(e).cadence:1)+pivot*dt*4;e.idle=(e.idle||0)+dt;
   // v177: this zombie's own build (posture offsets); none for plain rigs.
   const B=e.build||NO_BUILD;
   const p=e.phase,w=e.motion,run=clamp((e.speed-1.1)/1.8,0,1),g=e.gait||DEFAULT_GAIT,hip=p+g.hipLag,t=e.idle,slump=e.slump||0;
@@ -778,18 +783,46 @@ export function animateZombie(e,dt,distance,moved,look=null){
 // Drop to the floor over CRAWL.drop seconds, then haul along on the arms with
 // the legs trailing. Blending from the walk pose keeps the fall continuous.
 const lerp=T.MathUtils.lerp;
+// Legs a crawler still has (spawned legless, v178) decide how high it rides.
+export function crawlPose(e){const lost=e.injury?.legless?e.injury.legless.filter(Boolean).length:0;return CRAWL.poses[2-lost];}
 function applyCrawl(e,dt,w){
   e.crawlDrop=Math.max(0,(e.crawlDrop||0)-dt);e.crawl=Math.min(1,(e.crawl||0)+dt/CRAWL.drop);
-  const c=e.crawl*e.crawl*(3-2*e.crawl),p=e.phase;
-  // Centre the long, low body over its collision cylinder.
-  e.root.position.y=lerp(e.root.position.y,CRAWL.hip,c);e.root.position.z=.15*c;e.root.rotation.x=lerp(e.root.rotation.x,CRAWL.pitch,c);e.root.rotation.z*=1-c;
-  e.spine.rotation.x=lerp(e.spine.rotation.x,.06,c);e.head.rotation.x=lerp(e.head.rotation.x,-1.2,c);
+  const c=e.crawl*e.crawl*(3-2*e.crawl),p=e.phase,P=crawlPose(e),gait=(.5+.5*Math.cos(2*p))*w;
+  // The chest rises a little as each arm pushes through its stance.
+  e.root.position.y=lerp(e.root.position.y,P.hip+.025*gait,c);e.root.position.z=.15*c;e.root.rotation.x=lerp(e.root.rotation.x,P.pitch,c);e.root.rotation.z*=1-c;
+  e.spine.rotation.x=lerp(e.spine.rotation.x,P.spine,c);
+  // Look ahead, not at the floor.
+  e.head.rotation.x=lerp(e.head.rotation.x,-(P.pitch+P.spine)+.32,c);
+  // Hand-over-hand: each hand plants ahead of its shoulder, stays down while
+  // the body drags over it, then lifts and reaches forward again. A two-bone
+  // solve puts the hand on the floor, so the arms carry the weight.
+  const torso=P.pitch+P.spine,spineY=e.spine.position.y;
   for(let j=0;j<2;j++){
-    const v=Math.sin(p+j*Math.PI),side=j?1:-1,arm=e.arms[j],leg=e.legs[j];
-    // Alternating reach and pull; an attacking arm keeps its strike on top.
-    arm.pivot.rotation.x=lerp(arm.pivot.rotation.x,-2.5+v*.5*w,c);arm.pivot.rotation.z=lerp(arm.pivot.rotation.z,side*.28,c);
-    arm.forearm.rotation.x=lerp(arm.forearm.rotation.x,-.3-Math.max(0,v)*.6*w,c);
-    leg.pivot.rotation.x=lerp(leg.pivot.rotation.x,-.18+v*.14*w,c);leg.calf.rotation.x=lerp(leg.calf.rotation.x,.55+Math.max(0,-v)*.35*w,c);leg.foot.rotation.x=lerp(leg.foot.rotation.x,.5,c);
+    const side=j?1:-1,arm=e.arms[j],leg=e.legs[j],L1=-arm.forearm.position.y,L2=-arm.hand.position.y+.07;
+    const sy=arm.pivot.position.y,sz=arm.pivot.position.z;
+    // Shoulder in the body's side view (y up, z forward), from the hip.
+    const shY=P.hip+spineY*Math.cos(P.pitch)+sy*Math.cos(torso)-sz*Math.sin(torso),shZ=.15+spineY*Math.sin(P.pitch)+sy*Math.sin(torso)+sz*Math.cos(torso);
+    const u=(((p+j*Math.PI)/(2*Math.PI))%1+1)%1,S=CRAWL.stance;
+    let hz,hy;
+    // A planted hand slides back exactly as far as the body moves over it.
+    const scale=e.group?.scale?.y||1,cycle=2*Math.PI*(e.stride||1.25)/(6.4*P.cadence)/scale,R=Math.min(P.reach??CRAWL.reach,CRAWL.stance*cycle/2);
+    if(u<S){const t=u/S;hz=R*(1-2*t)+.06;hy=.05;}
+    else{const t=(u-S)/(1-S),k=t*t*(3-2*t);hz=-R+.06+2*R*k;hy=.05+CRAWL.lift*Math.sin(Math.PI*t);}
+    hz=shZ+hz*w+(1-w)*.12;hy=w?hy:.05;
+    // Ease the hand through plant and lift-off rather than turning on a dime.
+    {const H=(e.crawlHands??=[null,null]),prev=H[j],k=1-Math.exp(-dt*24);if(prev&&c>=1){hz=prev.z+(hz-prev.z)*k;hy=prev.y+(hy-prev.y)*k;}H[j]={z:hz,y:hy};}
+    // Ease off near full reach, so the elbow never snaps straight.
+    let dy=hy-shY,dz=hz-shZ,D=Math.hypot(dy,dz);const max=(L1+L2)*.97,k=.06;if(D>max-k){const soft=max-k*Math.exp(-(D-(max-k))/k);dy*=soft/D;dz*=soft/D;D=soft;}
+    const cosE=Math.max(-1,Math.min(1,(D*D-L1*L1-L2*L2)/(2*L1*L2))),elbow=-Math.acos(cosE);
+    const aim=Math.atan2(-dz,-dy),Q1=aim-Math.atan2(L2*Math.sin(elbow),L1+L2*Math.cos(elbow));
+    arm.pivot.rotation.x=lerp(arm.pivot.rotation.x,Q1-torso,c);arm.pivot.rotation.z=lerp(arm.pivot.rotation.z,side*.22,c);
+    arm.forearm.rotation.x=lerp(arm.forearm.rotation.x,elbow,c);
+    // Palm flat on the floor while planted.
+    arm.hand.rotation.x=lerp(arm.hand.rotation.x,Math.max(-1.3,Math.min(.9,-Math.PI/2-Q1-elbow)),c);
+    // What is left of the legs trails behind, lying along the floor.
+    const thigh=-leg.calf.position.y||.41,shin=-leg.foot.position.y||.34,gone=!!e.injury?.legless?.[j],reachDown=Math.max(.05,P.hip-(gone?.07:.03)),lie=Math.acos(Math.min(1,reachDown/(thigh+(gone?0:shin))));
+    const v=Math.sin(p+j*Math.PI);
+    leg.pivot.rotation.x=lerp(leg.pivot.rotation.x,lie-P.pitch+v*.08*w,c);leg.calf.rotation.x=lerp(leg.calf.rotation.x,.06+Math.max(0,-v)*.12*w,c);leg.foot.rotation.x=lerp(leg.foot.rotation.x,.5,c);
   }
 }
 

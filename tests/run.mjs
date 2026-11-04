@@ -329,5 +329,8 @@ verifyLurker(qa,frames,listeners,elements);
 const {verifyCrawlSpeed}=await import('./crawl-speed.mjs');
 verifyCrawlSpeed(qa,frames);
 
+const {verifyCrawlPose}=await import('./crawl-pose.mjs');
+verifyCrawlPose(qa,frames);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
