@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=181';
-import {createChangelog} from './changelog.mjs?v=181';
+import {createLeaderboard} from './leaderboard.mjs?v=182';
+import {createChangelog} from './changelog.mjs?v=182';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=165';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -228,8 +228,10 @@ const grenadeAssets=createGrenadeAssets(batchArticulated),grenadeThrow=createGre
 const flashMat=new T.MeshBasicMaterial({color:0xffd37a,transparent:true,opacity:1,depthWrite:false});const flash=mesh(new T.ConeGeometry(.1,.32,8),flashMat,[0,0,-.9],null,gunRoot,false);flash.rotation.x=-Math.PI/2;flash.renderOrder=3;flash.material.depthTest=true;flash.visible=false;const muzzleLight=new T.PointLight(0xffc278,0,6);gunRoot.add(muzzleLight);muzzleLight.position.set(0,0,-.7);
 gunRoot.traverse(o=>o.layers.set(1));muzzleLight.layers.enable(1);const viewFill=new T.HemisphereLight(0xcbd9df,0x4d5544,2.2);viewFill.layers.set(1);scene.add(viewFill);const viewKey=new T.DirectionalLight(0xe6d0af,2.3);viewKey.layers.set(1);viewKey.position.set(-1,3,2);viewKey.target=gunRoot;camera.add(viewKey);
 // A shaped torch beam: wider cone, soft rim, and a core that no longer clips the floor to white.
-const FLASHLIGHT_INTENSITY=22;
-const flashlight=new T.SpotLight(0xe2eddd,FLASHLIGHT_INTENSITY,28,.5,.35,1.1);flashlight.map=flashlightBeamTexture();flashlight.position.set(.18,-.1,0);camera.add(flashlight);camera.add(flashlight.target);flashlight.target.position.set(0,0,-15);flashlight.visible=true;let flashlightOn=true;
+// v182: 25% brighter, reaching 25% further and 15% wider than before (22, 28 m, 0.5 rad).
+const FLASHLIGHT=Object.freeze({intensity:22*1.25,distance:28*1.25,angle:.5*1.15,penumbra:.35,decay:1.1});
+const FLASHLIGHT_INTENSITY=FLASHLIGHT.intensity;
+const flashlight=new T.SpotLight(0xe2eddd,FLASHLIGHT_INTENSITY,FLASHLIGHT.distance,FLASHLIGHT.angle,FLASHLIGHT.penumbra,FLASHLIGHT.decay);flashlight.map=flashlightBeamTexture();flashlight.position.set(.18,-.1,0);camera.add(flashlight);camera.add(flashlight.target);flashlight.target.position.set(0,0,-15);flashlight.visible=true;let flashlightOn=true;
 // Clear each frame and resolve with spatial antialiasing; preserve the 15% brightness boost.
 const film=makeFilmPass(innerWidth,innerHeight);const rt=film.target,postMat=film.material;const postScene=new T.Scene();const postCamera=new T.OrthographicCamera(-1,1,1,-1,0,1);postScene.add(new T.Mesh(new T.PlaneGeometry(2,2),postMat));
 // The night sky uses layered clouds instead of a flat backdrop.

@@ -27,6 +27,13 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## A stronger flashlight (version 182)
+
+- **Brighter:** intensity is 25% higher, 27.5 up from 22.
+- **Longer:** the beam reaches 25% further, 35 m up from 28 m. The falloff is unchanged, so the brighter beam also holds its old edge brightness about 20–25% further out.
+- **Wider:** the cone is 15% wider, 0.575 rad up from 0.5. The soft edge and beam texture are unchanged.
+- **Unchanged:** toggling it off and on restores the new beam, and blackouts still leave the flashlight alone.
+
 ## Crawlers off the floor (version 181)
 
 Crawlers no longer lie flat on the floor with their arms flung ahead. They now carry the chest up on planted hands.

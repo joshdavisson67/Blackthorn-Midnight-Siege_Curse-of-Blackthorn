@@ -332,5 +332,8 @@ verifyCrawlSpeed(qa,frames);
 const {verifyCrawlPose}=await import('./crawl-pose.mjs');
 verifyCrawlPose(qa,frames);
 
+const {verifyFlashlight}=await import('./flashlight.mjs');
+verifyFlashlight(qa,listeners);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
