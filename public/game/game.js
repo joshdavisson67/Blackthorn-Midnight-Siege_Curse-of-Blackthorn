@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=177';
-import {createChangelog} from './changelog.mjs?v=177';
+import {createLeaderboard} from './leaderboard.mjs?v=178';
+import {createChangelog} from './changelog.mjs?v=178';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=165';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -33,7 +33,7 @@ import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankH
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
 import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=168';
-import {createEnemyAssets} from './enemy-assets.mjs?v=177';
+import {createEnemyAssets} from './enemy-assets.mjs?v=178';
 import {createCombatLights} from './combat-lights.mjs?v=168';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
@@ -61,6 +61,7 @@ import {createBlackout} from './blackout.mjs?v=135';
 import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-spawns.mjs?v=174';
 import {createLife,updateLife,settleLife} from './zombie-life.mjs?v=176';
 import {BUILD,rollBuild,applyBuild,resetBuild} from './zombie-build.mjs?v=177';
+import {INJURY,rollInjury,applyInjury} from './zombie-injuries.mjs?v=178';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
 const reticleHud=createReticleHud($('crosshair'));
@@ -291,7 +292,7 @@ const enemyAssets=createEnemyAssets(batchArticulated),combatLights=createCombatL
 // Sir Blackthorn and the curse ladder (v130).
 const bossFx=createBossEffects(world),curseLadder=createCurseLadder();
 let boss={stage:'dormant',enemy:null,clock:0,summons:0,lance:0,cry:0,cast:null,victories:0};
-for(const rig of enemyAssets.templates){prepareLightingMaterials(rig.group);const rage=rig.group.clone(true);enemyAssets.enrage({group:rage});prepareLightingMaterials(rage);}
+prepareLightingMaterials(enemyAssets.injuries.group);for(const rig of enemyAssets.templates){prepareLightingMaterials(rig.group);const rage=rig.group.clone(true);enemyAssets.enrage({group:rage});prepareLightingMaterials(rage);}
 const powerupAssets=createPowerupAssets();
 const {weapons,weaponAimFov,waveConfig,isBlocked,indexColliders}=await import('./core.mjs?v=165');indexColliders(colliders);let nav=makeNavigation();
 function makeNavigation(){
@@ -329,7 +330,7 @@ function spawnGraveEnemy({grave,slot}){
     const x=grave.x+dx,z=grave.z+dz;
     if(isBlocked(x,z,body.radius,colliders,undefined,0,body.height)||supportBelow(x,z,0)!==0||!nav.direction(x,z,0)?.reachable)continue;
     if(Math.hypot(x-player.x,z-player.z)<body.radius+PLAYER_RADIUS+.12||!crowd.canOccupy(x,z,0,body.radius+.06,body.height))continue;
-    const e=makeZombie(x,z);e.graveBorn=true;e.bonusEssence=EVENT_RULES.graveBonus;e.emergeLeft=1.05;e.group.position.y-=1.65;return true;
+    const e=injure(makeZombie(x,z));e.graveBorn=true;e.bonusEssence=EVENT_RULES.graveBonus;e.emergeLeft=1.05;e.group.position.y-=1.65;return true;
   }
   return false;
 }
@@ -373,6 +374,16 @@ function makeZombie(x,z,brute=false,dog=false,rareDog=false,y=0,feral=false,asse
   if(!dog)applyBuild(e,rollBuild(e.navigation.seed,{feral,brute}));
   world.add(e.group);e.group.position.set(x,Math.abs(y)>.1?y-.02:enemyFloorHeight(x,z)-.02,z);tagZombie(e,e);zombies.push(e);return e;
 }
+// v178: natural spawns may arrive battle-worn (missing arm or jaw, crushed
+// skull, legless and crawling, something driven through them).
+function injure(e){
+  if(e.dog||e.elite)return e;
+  const injury=rollInjury(e.navigation.seed,{brute:e.brute,feral:e.feral});
+  if(!injury.major&&!injury.legless&&!injury.props.length)return e;
+  applyInjury(e,injury,enemyAssets.injuries);
+  if(injury.legless){e.crawling=true;e.crawl=1;e.crawlDrop=0;e.bodyHeight=CRAWL.height;}
+  return e;
+}
 const spawns=ESTATE_SPAWNS;let upperSpawnSlot=0;const campWatch=createCampWatch();
 function spawnEnemy(){
   if(toSpawn<=0)return false;
@@ -392,7 +403,7 @@ function spawnEnemy(){
     const far=[];for(const c of campCandidates(camp,player)){if(valid(c,CAMP_RULES.minDistance))far.push(c);if(far.length>=6)break;}
     if(far.length){
       const [x,z,y]=far[Math.floor(rng()*far.length)];
-      const enemy=makeZombie(x,z,kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral');
+      const enemy=injure(makeZombie(x,z,kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral'));
       enemy.campBorn=camp.id;enemy.emergeLeft=enemy.emergeTime=CAMP_RULES.emergeTime;enemy.emergeDepth=CAMP_RULES.emergeDepth;enemy.group.position.y-=CAMP_RULES.emergeDepth;
       noise(.35,.09,320);tone(46,.7,.06,'sawtooth',28);
       if(campWatch.warn())notify(`${camp.name} · THE DEAD CLAW UP THROUGH THE FLOOR`,3);
@@ -412,7 +423,7 @@ function spawnEnemy(){
   const point=options[Math.floor(rng()*options.length)],y=point[2]||0;
   let candidate=[point[0]+rand(-.2,.2),point[1]+rand(-.2,.2),y];
   if(!valid(candidate))candidate=point;
-  const enemy=makeZombie(candidate[0],candidate[1],kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral');
+  const enemy=injure(makeZombie(candidate[0],candidate[1],kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral'));
   if(finale)waveFiveFinale.enemies.push(enemy);
   spawned++;toSpawn--;if(wave>10&&spawned%4===0)upperSpawnSlot=Math.floor(rng()*4);return true;
 }
@@ -435,7 +446,7 @@ function bloodBurst(pos,count){for(let i=0;i<count;i++){const sx=rand(.01,.025),
 const raycaster=new T.Raycaster();const dir=new T.Vector3();let shotId=0;
 function shoot(){if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||shotTimer>0)return;const inv=inventory[weapon],w=weapons[weapon];if(inv.ammo<=0){shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;shotTimer=w.rate/rankFireRate(weapon,inv.weaponRank);{const r=SHOT_RUMBLE[weapon];if(r)padRumble(...r);}const id=++shotId;if(weapon==='glock')gunGroups.glock.userData.slideTime=.12;if(dualOn())fireDualSide();flashTime=.045;if(weapon==='smg')suppressedReport();else{noise(weapon==='shotgun'?.22:.12,.18,weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);}const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
 camera.rotation.set(clamp(lookPitch+weaponRecoil.pitch,-1.3,1.3),lookYaw+weaponRecoil.yaw,0);camera.updateMatrixWorld();
-for(let i=0;i<w.pellets;i++){const spread=aiming?(w.aimSpread??w.spread*.28):w.spread;dir.set(rand(-spread,spread),rand(-spread,spread),-1).normalize().applyQuaternion(camera.quaternion);raycaster.set(camera.position,dir);const hits=raycaster.intersectObjects(hitObjects,true);if(hits.length){const h=hits[0],e=h.object.userData.enemy;if(e&&!e.dead){const head=h.object.userData.head;const damage=w.damage*(perkOwned.has('eye')?1.5:1)*forgeBonuses(inv.forgeRank).damageMultiplier*rankDamage(weapon,inv.weaponRank)*(head?2.6:1)*(doubleTime>0?2:1);damageEnemy(e,damage,head,{direction:dir.clone(),point:h.point.clone(),part:h.object.userData.part,side:h.object.userData.side,limb:h.object.userData.limb,force:COMBAT[weapon].force,source:weapon,shotId:id});bloodBurst(h.point,3);}else if(Math.random()<.5){const effect=markPool.acquire();if(effect){effect.mesh.position.copy(h.point);effect.mesh.scale.set(.025,.025,.025);effect.vel.set(0,0,0);effect.life=effect.max=6;effects.push(effect);}}}}
+for(let i=0;i<w.pellets;i++){const spread=aiming?(w.aimSpread??w.spread*.28):w.spread;dir.set(rand(-spread,spread),rand(-spread,spread),-1).normalize().applyQuaternion(camera.quaternion);raycaster.set(camera.position,dir);const hits=raycaster.intersectObjects(hitObjects,true);if(hits.length){const h=hits[0],e=h.object.userData.enemy;if(e&&!e.dead){const head=h.object.userData.head;const damage=w.damage*(perkOwned.has('eye')?1.5:1)*forgeBonuses(inv.forgeRank).damageMultiplier*rankDamage(weapon,inv.weaponRank)*(head?2.6*(e.crushed?INJURY.crushedHeadshot:1):1)*(doubleTime>0?2:1);damageEnemy(e,damage,head,{direction:dir.clone(),point:h.point.clone(),part:h.object.userData.part,side:h.object.userData.side,limb:h.object.userData.limb,force:COMBAT[weapon].force,source:weapon,shotId:id});bloodBurst(h.point,3);}else if(Math.random()<.5){const effect=markPool.acquire();if(effect){effect.mesh.position.copy(h.point);effect.mesh.scale.set(.025,.025,.025);effect.vel.set(0,0,0);effect.life=effect.max=6;effects.push(effect);}}}}
 weaponRecoil.fire(weapon,aiming,rankRecoil(weapon,inv.weaponRank));if(inv.ammo===0)notify('MAGAZINE EMPTY · PRESS R');updateHud();}
 function reload(){const inv=inventory[weapon],w=weapons[weapon];if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||inv.ammo>=ammoCapacity().mag||inv.reserve<=0)return;reloadDuration=w.reload*forgeBonuses(inv.forgeRank).reloadMultiplier*rankReloadTime(weapon,inv.weaponRank)*(perkOwned.has('quick')?.5:1);reloadLeft=reloadDuration;updateReloadHud();tone(330,.12,.06,'square');}
 function finishReload(){const inv=inventory[weapon],needed=Math.max(0,ammoCapacity().mag-inv.ammo),n=Math.min(needed,inv.reserve);inv.ammo+=n;inv.reserve-=n;tone(500,.1,.05,'square');}
@@ -1270,7 +1281,7 @@ e.floorY=p.y;e.group.position.set(p.x,Math.abs(p.y)>.1?p.y-.02:enemyFloorHeight(
 // Bella cannot be hurt: blows aimed at her only land with a dull thud.
 if(onBella){if(contact&&!(e.staggerLeft>0)&&dist<1.7&&sameFloor){e.bellaSwings=(e.bellaSwings||0)+1;tone(150,.06,.02,'triangle',110);}}
 else if(contact&&!casting&&!(e.staggerLeft>0)&&dist<1.7&&Math.abs(player.y-p.y)<.7&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y)){
-hurtPlayer(waveConfig(wave).damage*(e.boss?BOSS.meleeMultiplier:e.warden?1.4*WARDEN.damageMultiplier:e.feral?FERAL.damageMultiplier:e.dog?.85:e.brute?1.4:1)*(e.enraged&&!e.elite?ENRAGE.damageMultiplier:1)*(e.warCry>0?BOSS.cry.damage:1),p);noise(.15,.08,600);tone(70,.14,.06,'sine');if(health<=0)gameOver();}
+hurtPlayer(waveConfig(wave).damage*(e.boss?BOSS.meleeMultiplier:e.warden?1.4*WARDEN.damageMultiplier:e.feral?FERAL.damageMultiplier:e.dog?.85:e.brute?1.4:1)*(e.enraged&&!e.elite?ENRAGE.damageMultiplier:1)*(e.warCry>0?BOSS.cry.damage:1)*(e.armless?INJURY.oneArmDamage:1),p);noise(.15,.08,600);tone(70,.14,.06,'sine');if(health<=0)gameOver();}
 e.groan-=dt;if(e.groan<=0){if(dist<12)tone(e.feral?210:e.rareDog?155:e.dog?105:e.brute?45:rand(60,100),e.dog?.22:.6,.035*(1-dist/14),'sawtooth',35);e.groan=rand(6,15);}}}
 // v158: a zombie Bella bites turns on her and fights her until it dies.
 // Bosses and elite guardians ignore her and keep hunting the player.
@@ -1333,7 +1344,7 @@ async function prepareRendering(){
   // v169: compile the see-through variants used while drops fade out.
   const coin=eventVisuals.coins[0].mesh,warmFading=[...Object.keys(POWERUPS).map(type=>powerupAssets.create(type)),boneChipModel(),coin.clone(true)];
   for(const g of warmFading){g.visible=true;prepareLightingMaterials(g);fadeMaterials(g).set(.5);}
-  const warm=[warmBella,warmNuke,...warmNano,...enemyAssets.templates.map(r=>r.group),...warmRage,...warmPickups,...warmFading,grenadeAssets.create()];
+  const warm=[warmBella,warmNuke,...warmNano,...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create()];
   warm.forEach((g,i)=>{g.userData.lightingTransient=true;g.position.set((i%5-2)*.8,0,15-Math.floor(i/5));world.add(g);});
   try{
     renderer.setRenderTarget(rt);

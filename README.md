@@ -27,6 +27,27 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Battle-worn spawns (version 178)
+
+Zombies that spawn naturally in waves, from graves, or in the cellar or attic can now arrive already damaged. Nothing was modelled per zombie: parts are hidden on the zombie's own joints, crushed skulls are prepared once per body while the game loads, and the stumps and props are a small set of shared meshes.
+
+- **Major injury (1 in 4 walkers and ferals):**
+  - A missing forearm (stump at the elbow) or a whole missing arm (stump at the shoulder).
+  - A missing jaw, which leaves a torn throat under the upper teeth.
+  - A crushed skull: a bloody crater with a rim of broken bone. Two variants are prepared per body.
+- **Something through them (1 in 5, brutes included):**
+  - Driven clean through and out the other side: a stake, rebar, a pipe or a crossbow bolt.
+  - Driven in partway: a kitchen knife, a broken pitchfork or a shard of glass.
+  - They can be in the chest, thigh, arm or head, and about 15% of impaled zombies carry two.
+- **Legless crawlers (1 in 25 walkers):** these spawn already crawling, with one or both lower legs gone.
+- **Light gameplay effects:**
+  - Without a jaw a zombie can't bite, so it grabs instead.
+  - A one-armed zombie hits for 80% damage.
+  - A crushed skull takes 1.25× headshot damage.
+- **Hit detection:** missing parts no longer catch bullets, and props and stumps never do.
+- **Who can be injured:** dogs and bosses spawn whole. Zombies placed directly by scripts and tests stay whole; only natural spawns roll for injuries.
+- **Repeatable:** injuries come from each zombie's own seed, so the same zombie is always injured the same way and no other random draws in the run change.
+
 ## Every zombie its own build (version 177)
 
 Each walker is now posed its own way on the same four bodies. Every difference is a small per-zombie offset on joints the animator already drives, so no models, geometry or textures were added.

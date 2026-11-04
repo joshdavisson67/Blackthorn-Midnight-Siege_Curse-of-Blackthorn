@@ -320,5 +320,8 @@ verifyLegLimp(qa,frames);
 const {verifyZombieBuilds}=await import('./zombie-builds.mjs');
 verifyZombieBuilds(qa,frames);
 
+const {verifyZombieInjuries}=await import('./zombie-injuries.mjs');
+verifyZombieInjuries(qa,frames);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
