@@ -143,7 +143,7 @@ function attackPose(style,t,windup,strike,recover,lead){
   return o;
 }
 // Crawlers (v124): enough leg damage drops walkers and ferals to the floor.
-export const CRAWL=Object.freeze({legShare:.4,speed:.42,height:.8,drop:.55,hip:.22,pitch:1.42});
+export const CRAWL=Object.freeze({legShare:.4,speed:.65,height:.8,drop:.55,hip:.22,pitch:1.42});
 // v176: each leg keeps its own wound. `side` is the hit tag (-1 left, 1 right);
 // an untagged hit is shared. `hobble` (0..1) is the worse leg's share of the
 // damage that would drop a walker to a crawl. Brutes can't be dropped, but
