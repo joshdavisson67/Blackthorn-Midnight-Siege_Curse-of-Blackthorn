@@ -27,6 +27,10 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Faster crawlers (version 180)
+
+Crawlers now haul themselves along at **65%** of a walker's speed, up from 42%. This covers zombies dropped by leg damage and the legless spawns from v178, and their crawl animation speeds up to match. Like walking speed, it is relative to each zombie's own pace, so a crawling feral is still quicker than a crawling walker.
+
 ## The Grotesque Lurker (version 179)
 
 A new enemy, and a second frenzied finale.

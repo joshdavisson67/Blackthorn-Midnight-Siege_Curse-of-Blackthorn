@@ -326,5 +326,8 @@ verifyZombieInjuries(qa,frames);
 const {verifyLurker}=await import('./lurker.mjs');
 verifyLurker(qa,frames,listeners,elements);
 
+const {verifyCrawlSpeed}=await import('./crawl-speed.mjs');
+verifyCrawlSpeed(qa,frames);
+
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
