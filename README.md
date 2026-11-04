@@ -27,6 +27,24 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## The Grotesque Lurker (version 179)
+
+A new enemy, and a second frenzied finale.
+
+- **The Lurker's body:** a hunched, bent-over zombie crusted with large cancerous boils on its back, shoulders, neck, head and limbs. Its swollen belly is slit across and pulled shut with heavy black stitches. A sickly green glow shows between the lips of the wound and through the gut, blinking about every 0.8 s, and faster when it charges.
+- **Movement:** it lurches at 125% of the standard zombie speed. Once you're within 12 yards (11 m) with a clear line, it charges at double that, arms thrown forward. Frenzy does not speed it up further.
+- **Health:** 1.5× a walker's. It never swings at you.
+- **The burst:**
+  - If it reaches you, it swells for a third of a second and bursts for 75 damage, with armor and shield taking it first.
+  - It also bursts when killed, so kill it at range. Popping one at 2.75 m still costs you about 38 health.
+  - The blast reaches 4 m: full damage within 1.5 m, fading to nothing at the edge. It needs a clear line, so walls and floors block it.
+  - It deals 450 to other zombies (half beyond 3 m), and zombies it kills pay **35% more essence**.
+  - Lurkers set each other off. A Lurker's own burst on reaching you pays nothing and isn't your kill.
+- **Spawning:**
+  - **Wave 10** now ends in a second frenzied finale, after the regular wave is cleared. *A disgusting stench fills the air.* It sends 20 undead including 2 brutes and 2 or 3 Grotesque Lurkers. The frenzy HUD counts the Lurkers left.
+  - **From wave 11**, one spawn in twenty is a Lurker.
+- **Map and guide:** Lurkers show as green dots on the radar, and the field guide has an entry for them.
+
 ## Battle-worn spawns (version 178)
 
 Zombies that spawn naturally in waves, from graves, or in the cellar or attic can now arrive already damaged. Nothing was modelled per zombie: parts are hidden on the zombie's own joints, crushed skulls are prepared once per body while the game loads, and the stumps and props are a small set of shared meshes.

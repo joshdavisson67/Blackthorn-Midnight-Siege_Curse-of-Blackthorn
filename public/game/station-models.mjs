@@ -1,7 +1,7 @@
 import * as T from './three.module.js';
 import {createWeaponModel} from './weapon-models.mjs?v=167';
 import {configureArmorStation} from './armor.mjs?v=94';
-import {mapColor} from './minimap.mjs?v=168';
+import {mapColor} from './minimap.mjs?v=179';
 import {configureForgeStation} from './soul-forge.mjs?v=118';
 
 // Shared low-poly exhibit parts: built once, then statically batched with the

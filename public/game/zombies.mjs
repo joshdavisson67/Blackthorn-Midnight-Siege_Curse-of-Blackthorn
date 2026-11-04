@@ -14,6 +14,9 @@ const styles=[
   {name:'caretaker',coat:0x5f5b50,pants:0x3a3932,shirt:0x70695a,skin:0x7b6d65,build:'bloated',hair:'sparse',nose:'broken',jaw:1.12,ears:[1,1]},
 ];
 const BRUTE_STYLE={name:'estate brute',coat:0x3f3128,pants:0x2a2c26,shirt:0x6e6656,skin:0x6e6a57,build:'brute',hair:'none',nose:'flat',jaw:1.22,ears:[1,0]};
+// v179: the Grotesque Lurker. A bloated, bent-over body under a ragged gown;
+// its boils, stitched belly and glow are added by lurker.mjs.
+const LURKER_STYLE={name:'grotesque lurker',coat:0x4a4a3c,pants:0x2b2924,shirt:0x6f6a55,skin:0x7d7a5c,build:'lurker',hair:'strands',nose:'rotted',jaw:1.02,ears:[0,1],torn:true,slack:.18};
 const FERAL_STYLE={name:'feral stalker',coat:0x52432f,pants:0x2a2723,shirt:0x6f6555,skin:0x8c8170,build:'feral',hair:'none',nose:'rotted',jaw:.9,ears:[0,0],torn:true,lipless:true,slack:.08};
 // Body builds: chest/waist/depth/neck multipliers, limb thickness, exposed
 // rib relief, belly, back hump and a resting slump the walk cycle adds.
@@ -23,6 +26,7 @@ const BUILDS={
   starved:{chest:.86,waist:.7,  depth:.8,  neck:.8,  limb:.8,  ribs:.09,belly:-.22,hump:.08,slump:.08,head:{w:.92,h:1.02,d:.98,brow:.95,hollow:1.8,cheek:1.5}},
   bloated:{chest:1.07,waist:1.2,depth:1.12,neck:1.28,limb:1.14,ribs:0,  belly:.5,  hump:.1, slump:.13,head:{w:1.08,h:.94,d:1.04,brow:1.1,hollow:.45,cheek:.7,square:.86}},
   brute:  {chest:1.12,waist:1.04,depth:1.1, neck:1.45,limb:1.2, ribs:0,  belly:.1,  hump:.4, slump:.07,head:{w:1.04,h:.94,d:1.0,brow:1.6,hollow:1.1,cheek:1.2,square:.76}},
+  lurker: {chest:1.02,waist:1.22,depth:1.16,neck:1.1, limb:.92,ribs:0,  belly:.68, hump:.62,slump:.26,head:{w:1.02,h:.98,d:1.04,brow:1.35,hollow:1.2,cheek:1.1,square:.9}},
   feral:  {chest:.82,waist:.64,depth:.78, neck:.78, limb:.78, ribs:.13,belly:-.3, hump:.12,slump:0,  head:{w:.94,h:1.0,d:1.02,brow:1.3,hollow:2,cheek:1.6}},
 };
 
@@ -35,6 +39,7 @@ const ARM_BUILDS={
   bloated:{muscle:.35,bony:.25, fat:1,  girth:1.05},
   brute:  {muscle:1.7,bony:.5,  fat:.12,girth:1},
   feral:  {muscle:.95,bony:1.4, fat:0,  girth:.86},
+  lurker: {muscle:.4, bony:.6,  fat:.85,girth:1.02},
 };
 // Half-width and half-depth down the upper arm (shoulder joint at y=0, elbow
 // at -.32) and the forearm (wrist at -.29). Both ends close over, so a bent
@@ -192,8 +197,8 @@ function sculptSkull(rng,h){
   g.computeVertexNormals();return g;
 }
 
-export function createZombieRig({rng=Math.random,brute=false,feral=false}={}){
-  const rand=(a,b)=>a+(b-a)*rng(),style=feral?FERAL_STYLE:brute?BRUTE_STYLE:styles[Math.floor(rng()*styles.length)],B=BUILDS[style.build];
+export function createZombieRig({rng=Math.random,brute=false,feral=false,lurker=false}={}){
+  const rand=(a,b)=>a+(b-a)*rng(),style=lurker?LURKER_STYLE:feral?FERAL_STYLE:brute?BRUTE_STYLE:styles[Math.floor(rng()*styles.length)],B=BUILDS[style.build];
   const group=new T.Group(),root=new T.Group();group.add(root);root.position.y=.92;
   const resources={geometries:new Set(),materials:new Set()};
   function material(color,roughness=.87,metalness=0){const m=new T.MeshStandardMaterial({color,roughness,metalness,vertexColors:true});resources.materials.add(m);return m;}
