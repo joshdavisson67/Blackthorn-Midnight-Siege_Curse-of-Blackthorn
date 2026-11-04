@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=182';
-import {createChangelog} from './changelog.mjs?v=182';
+import {createLeaderboard} from './leaderboard.mjs?v=183';
+import {createChangelog} from './changelog.mjs?v=183';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=165';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -33,17 +33,17 @@ import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankH
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=44';
 import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=179';
-import {createEnemyAssets} from './enemy-assets.mjs?v=181';
+import {createEnemyAssets} from './enemy-assets.mjs?v=183';
 import {createCombatLights} from './combat-lights.mjs?v=179';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
-import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=181';
+import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=173';
 import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=179';
 import {BELLA,BELLA_PAW,createBellaCompanion} from './bella.mjs?v=165';
-import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=181';
+import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=183';
 import {addEstateDetail} from './estate-detail.mjs?v=165';
 import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=167';
 import {createReticleHud} from './reticles.mjs?v=167';
@@ -63,6 +63,7 @@ import {createLife,updateLife,settleLife} from './zombie-life.mjs?v=176';
 import {BUILD,rollBuild,applyBuild,resetBuild} from './zombie-build.mjs?v=177';
 import {INJURY,rollInjury,applyInjury} from './zombie-injuries.mjs?v=178';
 import {LURKER,lurkerPlayerDamage,lurkerEnemyDamage,setupLurkerGlow,updateLurkerGlow,disposeLurkerGlow} from './lurker.mjs?v=179';
+import {rollFace,applyFace,resetFaceGeometry,clearFace,disposeFace} from './zombie-faces.mjs?v=183';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
 const reticleHud=createReticleHud($('crosshair'));
@@ -295,7 +296,7 @@ const enemyAssets=createEnemyAssets(batchArticulated),combatLights=createCombatL
 // Sir Blackthorn and the curse ladder (v130).
 const bossFx=createBossEffects(world),curseLadder=createCurseLadder();
 let boss={stage:'dormant',enemy:null,clock:0,summons:0,lance:0,cry:0,cast:null,victories:0};
-prepareLightingMaterials(enemyAssets.injuries.group);for(const rig of enemyAssets.templates){prepareLightingMaterials(rig.group);const rage=rig.group.clone(true);enemyAssets.enrage({group:rage});prepareLightingMaterials(rage);}
+prepareLightingMaterials(enemyAssets.injuries.group);prepareLightingMaterials(enemyAssets.faces.group);for(const rig of enemyAssets.templates){prepareLightingMaterials(rig.group);const rage=rig.group.clone(true);enemyAssets.enrage({group:rage});prepareLightingMaterials(rage);}
 const powerupAssets=createPowerupAssets();
 const {weapons,weaponAimFov,waveConfig,isBlocked,indexColliders}=await import('./core.mjs?v=165');indexColliders(colliders);let nav=makeNavigation();
 function makeNavigation(){
@@ -375,6 +376,8 @@ function makeZombie(x,z,brute=false,dog=false,rareDog=false,y=0,feral=false,asse
   if(!dog){e.life=createLife(e.navigation.seed,{feral,brute});e.vigor=e.life.vigor;}
   // v177: and a build of its own: how it stands, holds its arms and carries its head.
   if(!dog)applyBuild(e,rollBuild(e.navigation.seed,{feral,brute}));
+  // v183: and a face of its own: one of its body's heads, proportions, jaw hang and eye glow.
+  if(!dog)applyFace(e,rollFace(e.navigation.seed,enemyAssets.faces.count(e.templateIndex)),enemyAssets.faces);
   world.add(e.group);e.group.position.set(x,Math.abs(y)>.1?y-.02:enemyFloorHeight(x,z)-.02,z);tagZombie(e,e);zombies.push(e);return e;
 }
 // v178: natural spawns may arrive battle-worn (missing arm or jaw, crushed
@@ -383,6 +386,8 @@ function injure(e){
   if(e.dog||e.elite)return e;
   const injury=rollInjury(e.navigation.seed,{brute:e.brute,feral:e.feral});
   if(!injury.major&&!injury.legless&&!injury.props.length)return e;
+  // A crushed skull is made from the body's own head shape.
+  if(injury.major==='skull')resetFaceGeometry(e);
   applyInjury(e,injury,enemyAssets.injuries);
   if(injury.legless){e.crawling=true;e.crawl=1;e.crawlDrop=0;e.bodyHeight=CRAWL.height;}
   return e;
@@ -628,7 +633,7 @@ function makeElite(kind,x,z,y=0){
   // Both use brute-sized collision and brute routes, whatever rig they wear.
   // Sir Blackthorn cuts like a swordsman; the Gravewarden hammers down.
   e.gait={...e.gait,attack:knight?'swiper':'slammer'};
-  e.brute=true;e.elite=true;e.noEnrage=true;resetBuild(e);const body=enemyBody(e);e.radius=body.radius;e.bodyHeight=body.height;e.crouch=0;
+  e.brute=true;e.elite=true;e.noEnrage=true;resetBuild(e);clearFace(e);const body=enemyBody(e);e.radius=body.radius;e.bodyHeight=body.height;e.crouch=0;
   e.staggerProfile=staggerLimits(e);
   if(knight){e.boss=true;e.maxHp=e.hp=cfg.health*BOSS.healthMultiplier;e.speed=cfg.speed*BOSS.speed;const dress=dressKnight(e);e.orb=dress.orb;}
   else{e.warden=true;e.maxHp=e.hp=cfg.health*BRUTE.healthMultiplier*WARDEN.healthMultiplier;e.speed=cfg.speed*WARDEN.speed;const dress=dressWarden(e);e.shield=dress.shield;}
@@ -1407,7 +1412,7 @@ async function prepareRendering(){
   // v169: compile the see-through variants used while drops fade out.
   const coin=eventVisuals.coins[0].mesh,warmFading=[...Object.keys(POWERUPS).map(type=>powerupAssets.create(type)),boneChipModel(),coin.clone(true)];
   for(const g of warmFading){g.visible=true;prepareLightingMaterials(g);fadeMaterials(g).set(.5);}
-  const warm=[warmBella,warmNuke,...warmNano,...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create()];
+  const warm=[warmBella,warmNuke,...warmNano,...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,enemyAssets.faces.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create()];
   warm.forEach((g,i)=>{g.userData.lightingTransient=true;g.position.set((i%5-2)*.8,0,15-Math.floor(i/5));world.add(g);});
   try{
     renderer.setRenderTarget(rt);
@@ -1431,4 +1436,4 @@ function combineMeshes(list,parent){if(list.length<2)return;const inverse=new T.
 function batchStaticWorld(){scene.updateMatrixWorld(true);const buckets=new Map();world.traverse(m=>{if(!m.isMesh||m.isInstancedMesh||m.userData.dynamic||m===fire)return;const p=m.getWorldPosition(new T.Vector3());let k=m.material.uuid+":"+Math.floor(p.x/24)+":"+Math.floor(p.z/24)+":"+m.castShadow;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);});for(const list of buckets.values())combineMeshes(list,world);}
 function batchArticulated(group){group.updateMatrixWorld(true);const groups=[];group.traverse(o=>{if(o.isGroup)groups.push(o);});for(const g of groups){const buckets=new Map();for(const m of [...g.children]){if(!m.isMesh)continue;const k=m.material.uuid;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);}for(const list of buckets.values())combineMeshes(list,g);}}
 
-function disposeEnemy(e){disposeLurkerGlow(e);if(e.sharedAssets)return;const sharedGeo=new Set([boxGeo,sphereGeo,cylGeo]),sharedMat=new Set([...Object.values(M),...bookMats]),geometries=new Set(),materials=new Set();e.group.traverse(o=>{if(o.isMesh){if(!sharedGeo.has(o.geometry))geometries.add(o.geometry);if(!sharedMat.has(o.material))materials.add(o.material);}});for(const g of e.resources?.geometries||[])geometries.add(g);for(const m of e.resources?.materials||[])materials.add(m);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();}
+function disposeEnemy(e){disposeLurkerGlow(e);disposeFace(e);if(e.sharedAssets)return;const sharedGeo=new Set([boxGeo,sphereGeo,cylGeo]),sharedMat=new Set([...Object.values(M),...bookMats]),geometries=new Set(),materials=new Set();e.group.traverse(o=>{if(o.isMesh){if(!sharedGeo.has(o.geometry))geometries.add(o.geometry);if(!sharedMat.has(o.material))materials.add(o.material);}});for(const g of e.resources?.geometries||[])geometries.add(g);for(const m of e.resources?.materials||[])materials.add(m);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();}

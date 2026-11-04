@@ -202,8 +202,12 @@ function sculptSkull(rng,h){
   g.computeVertexNormals();return g;
 }
 
-export function createZombieRig({rng=Math.random,brute=false,feral=false,lurker=false}={}){
-  const rand=(a,b)=>a+(b-a)*rng(),style=lurker?LURKER_STYLE:feral?FERAL_STYLE:brute?BRUTE_STYLE:styles[Math.floor(rng()*styles.length)],B=BUILDS[style.build];
+// v183: `face` overrides the head's features (nose, hair, ears, jaw, lips,
+// torn cheek, slack, skull proportions) for a face variant; `faceOnly` stops
+// once the head is built, so variants cost a fraction of a full body.
+export function createZombieRig({rng=Math.random,brute=false,feral=false,lurker=false,face=null,faceOnly=false}={}){
+  const rand=(a,b)=>a+(b-a)*rng(),baseStyle=lurker?LURKER_STYLE:feral?FERAL_STYLE:brute?BRUTE_STYLE:styles[Math.floor(rng()*styles.length)];
+  const style=face?.style?{...baseStyle,...face.style}:baseStyle,base=BUILDS[style.build],mul=face?.headMul,B=mul?{...base,head:Object.fromEntries(Object.entries(base.head).map(([k,v])=>[k,v*(mul[k]??1)]))}:base;
   const group=new T.Group(),root=new T.Group();group.add(root);root.position.y=.92;
   const resources={geometries:new Set(),materials:new Set()};
   function material(color,roughness=.87,metalness=0){const m=new T.MeshStandardMaterial({color,roughness,metalness,vertexColors:true});resources.materials.add(m);return m;}
@@ -441,6 +445,7 @@ export function createZombieRig({rng=Math.random,brute=false,feral=false,lurker=
     for(let i=0;i<6;i++){const z=.06-i*.035,x=.02-z*.25;S(head,boot,[[x-.012,.176-Math.abs(z)*.12,z],[x+.012,.178-Math.abs(z)*.12,z+.004]],.0016,{sides:3,segments:2});}
   }
 
+  if(faceOnly)return {group,root,spine,head,jaw,resources,faceSnarl,style:style.name};
   // ---- Limbs ----------------------------------------------------------------------------------
   const legs=[],arms=[],pieces=[{node:root,a:'pelvis',b:'chest',frame:true},{node:spine,a:'pelvis',b:'chest',frame:true},{node:head,a:'chest',b:'skull'}];
   const barefoot=[feral||style.name==='fallen guest',feral];
