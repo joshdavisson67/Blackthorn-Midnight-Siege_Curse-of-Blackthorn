@@ -27,6 +27,18 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Crawlers off the floor (version 181)
+
+Crawlers no longer lie flat on the floor with their arms flung ahead. They now carry the chest up on planted hands.
+
+- **Hand-over-hand:** each hand plants ahead of its shoulder and stays down while the body drags over it, then lifts and reaches forward again. A two-bone solve (shoulder and elbow angles worked out from where the hand should land) puts the hand on the floor, so the arms bear the weight. A planted hand slides back exactly as far as the body moves over it, so hands don't skate.
+- **Height by legs left:**
+  - Both legs: chest up at shoulder height about 0.55 m, with the legs trailing flat along the floor.
+  - One leg lost: higher and more upright.
+  - No legs: propped well up, nearly upright on straighter arms, with the thigh stumps dragging behind.
+- **Pace:** legless crawlers work their hands quicker, but every crawler still moves at 65% speed.
+- **Smoothness:** the drop into a crawl stays continuous, and plant and lift-off are eased so nothing snaps.
+
 ## Faster crawlers (version 180)
 
 Crawlers now haul themselves along at **65%** of a walker's speed, up from 42%. This covers zombies dropped by leg damage and the legless spawns from v178, and their crawl animation speeds up to match. Like walking speed, it is relative to each zombie's own pace, so a crawling feral is still quicker than a crawling walker.

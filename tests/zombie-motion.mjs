@@ -142,8 +142,10 @@ export function verifyZombieMotion(qa,frames){
     for(let i=0;i<Math.ceil(CRAWL.drop*60);i++){contacts+=+animateZombie(e,1/60,1.2,0);biggest=Math.max(biggest,Math.abs(e.root.rotation.x-previous));previous=e.root.rotation.x;assert.equal(e.attackTime,-1,'No attack while dropping');}
     assert(biggest<.12,`The drop is continuous (${biggest.toFixed(3)} rad/frame)`);assert.equal(contacts,0);
     for(let i=0;i<30;i++)animateZombie(e,1/60,6,.01);
-    assert(Math.abs(e.root.position.y-CRAWL.hip)<.02&&Math.abs(e.root.rotation.x-CRAWL.pitch)<.06,'Crawlers lie low and pitched forward');
-    assert(e.arms.every(a=>a.pivot.rotation.x<-1.8),'Both arms reach ahead to haul');
+    assert(Math.abs(e.root.position.y-CRAWL.hip)<.035&&Math.abs(e.root.rotation.x-CRAWL.pitch)<.06,'Crawlers ride low with the chest up, pitched forward');
+    // v181: the hands plant on the floor under the raised chest and haul.
+    {const v=new T.Vector3(),low=[9,9];let sh=9;for(let i=0;i<120;i++){animateZombie(e,1/60,6,.65/60);e.group.updateMatrixWorld(true);e.arms.forEach((a,j)=>{a.hand.getWorldPosition(v);low[j]=Math.min(low[j],v.y);});e.arms[0].pivot.getWorldPosition(v);sh=Math.min(sh,v.y);}
+     assert(sh>.45&&low.every(y=>y<.16),`Both hands plant on the floor under a raised chest (shoulder ${sh.toFixed(2)}, wrists ${low.map(y=>y.toFixed(2))})`);}
     const swing=range(cycle(e,r=>r.arms[0].pivot.rotation.x));assert(swing>.5,'Arms alternate reach and pull while crawling');
   }
 

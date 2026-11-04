@@ -1,7 +1,7 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {createZombieRig,tagZombie,rollGait} from './zombies.mjs?v=180';
-import {createZombieDogRig} from './zombie-dog.mjs?v=180';
+import {createZombieRig,tagZombie,rollGait} from './zombies.mjs?v=181';
+import {createZombieDogRig} from './zombie-dog.mjs?v=181';
 import {createInjuryKit} from './zombie-injuries.mjs?v=178';
 import {addLurkerFeatures} from './lurker.mjs?v=179';
 import {ENEMY_SURFACE,enemySurfaces,atlasUV,enemySurfaceShader,addDetailCoordinates} from './enemy-surfaces.mjs?v=134';

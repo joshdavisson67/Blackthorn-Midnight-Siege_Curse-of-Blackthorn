@@ -74,7 +74,8 @@ export function verifyZombieBuilds(qa,frames){
     }
     // A built walker still drops into the same crawl pose.
     const c=walker(63);applyBuild(c,extreme(0));step(c,60);noteLegDamage(c,1000,1);step(c,Math.ceil(CRAWL.drop*60)+30,true);
-    assert(Math.abs(c.root.position.y-CRAWL.hip)<.03&&c.arms.every(a=>a.pivot.rotation.x<-1.7),'Crawlers still lie low and haul on both arms');
+    {c.group.updateMatrixWorld(true);const v=new T.Vector3(),low=[9,9];for(let i=0;i<120;i++){step(c);c.group.updateMatrixWorld(true);c.arms.forEach((a,j)=>{a.hand.getWorldPosition(v);low[j]=Math.min(low[j],v.y);});}
+     assert(Math.abs(c.root.position.y-CRAWL.hip)<.035&&low.every(y=>y<.18),'A built walker still drops into the same crawl, hauling on both hands');}
   }
 
   // ---- In the estate ---------------------------------------------------------------------
