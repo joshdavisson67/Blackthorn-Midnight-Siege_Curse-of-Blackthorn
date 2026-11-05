@@ -27,6 +27,27 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Bella's ranks (version 184)
+
+Bella now costs **1,500 essence** to free (rank I) and has three more ranks. You buy them at her kennel with the **bone chips** her kills drop: walk over a chip to collect it, then go back to the kennel and press E.
+
+| Rank | Cost | What she gets |
+|---|---|---|
+| I | 1,500 essence | Bella as before: she follows you and bites undead within 15 yards of you. |
+| II | 25 bone chips | A gun harness with a back-mounted pistol. It fires every 0.5 s at undead in range, for the starting pistol's damage (32). She still bites. |
+| III | 50 bone chips | The back gun becomes a laser: every 0.4 s, 25% more damage than the pistol (40). |
+| IV | 75 bone chips | She tows a little cart with a grenade launcher. It fires every second for a hand grenade's damage and blast (450, half at the edge). She also becomes the winged, fire-breathing rat dragon. |
+
+- **Damage is flat at every rank,** like her bite: weapon upgrades, the Soul Forge and Double Damage don't change it.
+- **Her guns follow her bite's limits:**
+  - They only fire at undead inside her 15-yard guard radius around you, within 14 m of her.
+  - They need a clear line of sight.
+- **Her shells never hurt you.**
+- **Gun kills count as her kills:** they drop bone chips (until rank IV) and earn the usual rewards. Only bites make a zombie turn and fight her.
+- **The rat dragon:** it used to be Olivia's bone-chip gift, and now comes with rank IV. The attic hatch still opens when you collect your 25th chip. Olivia cheers Bella on and sends you to the kennel.
+- **No per-shot cost:** tracers, laser beams and shells come from small pools made at load, so shooting builds nothing new each time.
+- **New runs reset everything:** Bella goes back to her kennel at rank 0 with no gear.
+
 ## More faces (version 183)
 
 Every zombie used to wear one of only four walker faces. Now there are many more, with no new art: the existing face sculpting is run again while the game loads.

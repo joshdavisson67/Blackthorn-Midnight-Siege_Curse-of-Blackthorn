@@ -50,7 +50,7 @@ export function advanceStagger(enemy,dt){
 }
 
 export function registerStagger(enemy,impact={}){
-  const strength=COMBAT[impact.source]?.stagger??(impact.source==='grenade'?95:0);
+  const strength=COMBAT[impact.source]?.stagger??(impact.source==='grenade'||impact.blast?95:0);
   if(!strength||enemy.dead||enemy.hp<=0||enemy.staggerCooldown>0)return false;
   const weight=impact.part==='head'?2.5:impact.part==='leg'?1.2:impact.part==='arm'?.85:1;
   const amount=strength*weight;

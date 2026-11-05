@@ -11,15 +11,15 @@ export function verifyBella(qa,frames,listeners,elements,document){
     for(let i=0;i<Math.ceil(seconds/.05);i++)b.update(.05,{player:s.player,yaw:0,enemies,onBite});
   };
   qa.start();let s=qa.get(),b=s.bella;
-  assert.equal(b.station.type,'kennel');assert.equal(b.station.price,670);assert.equal(b.station.y,UPPER_Y);assert(!b.unlocked&&b.kennel.doorCollider.disabled!==true);
+  assert.equal(b.station.type,'kennel');assert.equal(b.station.price,1500);assert.equal(b.station.y,UPPER_Y);assert(!b.unlocked&&b.kennel.doorCollider.disabled!==true);
   assert(!isBlocked(b.station.x,b.station.z+1.5,.32,s.colliders,undefined,UPPER_Y),'Bedroom purchase approach is walkable');
-  qa.setPoints(1000);qa.setPlayer(b.station.x,b.station.z+1.5,0);qa.interact();assert(!b.unlocked);assert.equal(qa.get().points,1000,'Purchase cannot happen from the room below');
-  qa.setPlayer(b.station.x,b.station.z+1.5,UPPER_Y);qa.setPoints(669);qa.interact();assert(!b.unlocked);assert.equal(qa.get().points,669);assert(elements.get('toast').textContent.includes('1 MORE'));
-  qa.setPoints(670);qa.interact();assert(b.unlocked);assert.equal(qa.get().points,0);assert.equal(qa.get().totalScore,0,'Freeing Bella spends essence without reducing earned score');
-  assert(b.station.used&&b.kennel.doorCollider.disabled);qa.setPoints(400);qa.interact();assert.equal(qa.get().points,400,'Kennel is purchased only once per run');
+  qa.setPoints(2000);qa.setPlayer(b.station.x,b.station.z+1.5,0);qa.interact();assert(!b.unlocked);assert.equal(qa.get().points,2000,'Purchase cannot happen from the room below');
+  qa.setPlayer(b.station.x,b.station.z+1.5,UPPER_Y);qa.setPoints(1499);qa.interact();assert(!b.unlocked);assert.equal(qa.get().points,1499);assert(elements.get('toast').textContent.includes('1 MORE'));
+  qa.setPoints(1500);qa.interact();assert(b.unlocked);assert.equal(qa.get().points,0);assert.equal(qa.get().totalScore,0,'Freeing Bella spends essence without reducing earned score');
+  assert(b.station.used&&b.kennel.doorCollider.disabled);qa.setPoints(400);qa.interact();assert.equal(qa.get().points,400,'Kennel is purchased only once per run (later ranks cost bone chips)');
   advance(s,b,3,[]);assert(b.pos.z>BELLA.z+1.9,'Bella exits the open gate instead of remaining stuck at her stop radius');assert.equal(b.kennel.progress,1);assert(b.kennel.gate.rotation.y<-1.5);
   assert(!Object.hasOwn(b,'hp')&&!Object.hasOwn(b,'health'));assert(!s.zombies.some(e=>e.group===b.rig.group),'Friendly companion is excluded from hostile counts and targeting');
-  console.log('PASS: upstairs-only 670-essence purchase, insufficient funds, one purchase per run, separate earned score and a walkable animated kennel exit.');
+  console.log('PASS: upstairs-only 1,500-essence purchase, insufficient funds, one purchase per run, separate earned score and a walkable animated kennel exit.');
 
   // Use Bella's actual navigation/movement loop across bedroom doors, the
   // landing, both stair directions, the grounds, and the underground armory.
@@ -65,7 +65,7 @@ export function verifyBella(qa,frames,listeners,elements,document){
   const oldGate=b.kennel.gate.rotation.y;qa.start();assert(!b.unlocked&&!b.station.used&&!b.target);assert(!b.kennel.doorCollider.disabled);assert.equal(b.kennel.gate.rotation.y,0);assert(oldGate!==0);assert.equal(b.attackTime,-1);assert(b.pos.distanceTo(new T.Vector3(BELLA.x,BELLA.y+.17,BELLA.z))<.001);
   b.rig.group.traverse(o=>{if(o.isMesh){assert(geo.has(o.geometry)&&mat.has(o.material),'Restarts reuse warmed geometry/materials');}});
   assert(geo.size<32,'The small companion stays below 32 batched meshes');
-  assert(elements.get('guideEstate').textContent.includes('670 essence')&&elements.get('guideEstate').textContent.includes('15 yards'));
+  assert(elements.get('guideEstate').textContent.includes('1,500 essence')&&elements.get('guideEstate').textContent.includes('15 yards'));
   assert(!elements.get('powerups').textContent.includes('BELLA'),'New runs remove the companion HUD badge');
   console.log('PASS: pause/resume, grenade immunity, no hostile health/rage membership, dynamic joint transforms, reset/relock, cached batched model and field-guide instructions.');
   qa.start();

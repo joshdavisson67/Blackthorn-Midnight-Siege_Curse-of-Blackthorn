@@ -1,10 +1,20 @@
 import * as T from './three.module.js';
-import {isBlocked} from './core.mjs?v=165';
+import {isBlocked,weapons} from './core.mjs?v=165';
 import {UPPER_Y,moveActor,updateActorHeight,supportBelow,stairHeight} from './vertical.mjs?v=165';
 import {cellarStairHeight} from './cellar-layout.mjs?v=28';
 
 // v158: a 15-yard guard radius (was 12) and 25% more bite reach (was .95).
-export const BELLA=Object.freeze({price:670,radius:15*.9144,bodyRadius:.22,height:.82,damage:48,biteInterval:.9,biteReach:.95*1.25,x:-30.3,z:-10.8,y:UPPER_Y,
+// v184: Bella costs 1,500 essence to free (rank 1). Ranks 2-4 are bought at her
+// kennel with the bone chips her kills drop. Every rank's damage is flat, like
+// her bite: the vest pistol hits as hard as the starting Glock, the laser 25%
+// harder, and the cart's launcher as hard as a hand grenade.
+const RANKS=Object.freeze([
+  Object.freeze({rank:2,numeral:'II',chips:25,name:'Gun harness',effect:'A vest-mounted pistol shoots undead in range every 0.5s',gun:Object.freeze({kind:'pistol',interval:.5,damage:weapons.glock.damage})}),
+  Object.freeze({rank:3,numeral:'III',chips:50,name:'Laser',effect:'Her back gun becomes a laser: every 0.4s, 25% harder than the pistol',gun:Object.freeze({kind:'laser',interval:.4,damage:weapons.glock.damage*1.25})}),
+  Object.freeze({rank:4,numeral:'IV',chips:75,name:'Grenade cart',effect:'She tows a cart with a grenade launcher (every 1s) and becomes the rat dragon',launcher:Object.freeze({interval:1,flight:.55})}),
+]);
+export const nextBellaRank=rank=>RANKS.find(r=>r.rank===rank+1)||null;
+export const BELLA=Object.freeze({price:1500,maxRank:4,ranks:RANKS,gunRange:14,radius:15*.9144,bodyRadius:.22,height:.82,damage:48,biteInterval:.9,biteReach:.95*1.25,x:-30.3,z:-10.8,y:UPPER_Y,
   // Rat dragon (v131 Easter egg): a cone of fire, pulsed so every enemy in it
   // burns four times a second. v158: twice as long (4.6 -> 9.2) and twice as
   // wide at every distance (half-angle .5 -> atan(2 tan .5)), and 25% hotter:
@@ -54,6 +64,80 @@ function createFlames(world){
       p.mesh.material.color.copy(f<.35?hot.clone().lerp(mid,f/.35):mid.clone().lerp(ember,(f-.35)/.65));p.mesh.material.opacity=.85*(1-f);if(p.life<=0)p.mesh.visible=false;}},
     clear(){for(const p of puffs){p.life=0;p.mesh.visible=false;}},
     get active(){return puffs.filter(p=>p.life>0).length;}
+  };
+}
+
+// v184: rank gear, built once and hidden until bought. A webbing harness with
+// a back mount (pistol at rank 2, laser from rank 3) and, at rank 4, a little
+// towed cart carrying a grenade launcher. A handful of shared primitives keeps
+// the companion's mesh count small.
+function createBellaGear(rig){
+  const mat=(color,roughness=.6,metalness=0,emissive=0)=>new T.MeshStandardMaterial({color,roughness,metalness,emissive,emissiveIntensity:emissive?1.6:0});
+  const webbing=mat(0x3d4630,.9),buckle=mat(0x8d8a7c,.4,.6),gunmetal=mat(0x26292c,.38,.75),grip=mat(0x17181a,.7),wood=mat(0x6b4a2c,.85),steel=mat(0x5a5f63,.42,.7),rubber=mat(0x141414,.95),olive=mat(0x4b5532,.7,.15),laserWhite=mat(0xd9e3e6,.3,.5),glow=mat(0x1b4f57,.3,0,0x55f2ff);
+  const box=new T.BoxGeometry(1,1,1),cyl=new T.CylinderGeometry(1,1,1,12),ring=new T.TorusGeometry(1,.12,6,22);
+  const part=(parent,geometry,material,pos,scale,rot=null,name='')=>{const m=new T.Mesh(geometry,material);m.position.set(...pos);m.scale.set(...scale);if(rot)m.rotation.set(...rot);m.castShadow=true;m.name=name;parent.add(m);return m;};
+  const rod=(parent,material,a,b,r,name='')=>{const A=new T.Vector3(...a),B=new T.Vector3(...b),m=part(parent,cyl,material,[0,0,0],[r,A.distanceTo(B),r],null,name);m.position.copy(A).add(B).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),B.sub(A).normalize());return m;};
+  // Harness: chest and belly straps, a back pad and a mount plate.
+  const harness=new T.Group();harness.name='Bella gun harness';rig.root.add(harness);
+  for(const [z,r] of [[.08,.215],[-.24,.225]])part(harness,ring,webbing,[0,0,z],[r,r*1.02,r],null,'Harness strap');
+  part(harness,box,webbing,[0,.2,-.08],[.2,.04,.42],null,'Harness back pad');
+  part(harness,box,buckle,[0,.226,-.04],[.11,.022,.13],null,'Gun mount plate');
+  for(const side of [-1,1])part(harness,box,buckle,[side*.205,0,.08],[.02,.05,.04],null,'Strap buckle');
+  // The swivel mount; the gun on it turns to face her target.
+  const swivel=new T.Group();swivel.name='Bella gun swivel';swivel.position.set(0,.25,-.04);swivel.scale.setScalar(1.3);harness.add(swivel);
+  part(swivel,cyl,steel,[0,.015,0],[.035,.03,.035]);
+  const pistol=new T.Group();pistol.name='Bella back pistol';swivel.add(pistol);
+  part(pistol,box,gunmetal,[0,.07,.02],[.05,.055,.2],null,'Pistol slide');
+  part(pistol,box,grip,[0,.04,-.04],[.045,.045,.09],null,'Pistol frame');
+  rod(pistol,gunmetal,[0,.075,.12],[0,.075,.17],.012,'Pistol barrel');
+  const laser=new T.Group();laser.name='Bella back laser';swivel.add(laser);
+  part(laser,box,laserWhite,[0,.07,0],[.07,.07,.24],null,'Laser housing');
+  for(const z of [-.06,0,.06])part(laser,cyl,glow,[0,.07,z],[.05,.018,.05],[Math.PI/2,0,0],'Laser cooling coil');
+  rod(laser,steel,[0,.07,.12],[0,.07,.2],.02,'Laser emitter');
+  part(laser,cyl,glow,[0,.07,.205],[.016,.01,.016],[Math.PI/2,0,0],'Laser lens');
+  // The cart hangs off her group (not her bobbing body) at a hitch behind her.
+  const cart=new T.Group();cart.name='Bella grenade cart';cart.position.set(0,.3,-.36);rig.group.add(cart);
+  for(const side of [-1,1])rod(cart,steel,[side*.14,-.08,-.42],[0,0,0],.012,'Tow bar');
+  part(cart,box,wood,[0,-.1,-.62],[.44,.1,.42],null,'Cart bed');
+  for(const side of [-1,1])part(cart,box,wood,[side*.21,-.03,-.62],[.03,.08,.42],null,'Cart side board');
+  part(cart,box,wood,[0,-.03,-.82],[.44,.08,.03],null,'Cart tailboard');
+  rod(cart,steel,[-.27,-.16,-.62],[.27,-.16,-.62],.012,'Cart axle');
+  const wheels=[];for(const side of [-1,1]){const w=new T.Group();w.position.set(side*.26,-.16,-.62);cart.add(w);part(w,cyl,rubber,[0,0,0],[.14,.045,.14],[0,0,Math.PI/2],'Cart wheel');for(let i=0;i<3;i++)part(w,box,steel,[side*.024,0,0],[.005,.2,.02],[i*Math.PI/3,0,0],'Wheel spoke');wheels.push(w);}
+  const turret=new T.Group();turret.name='Cart launcher turret';turret.position.set(0,-.04,-.62);cart.add(turret);
+  part(turret,cyl,steel,[0,.02,0],[.09,.04,.09]);
+  const elevation=new T.Group();elevation.position.y=.1;turret.add(elevation);elevation.rotation.x=-.55;
+  rod(elevation,olive,[0,0,-.14],[0,0,.24],.05,'Grenade launcher tube');
+  part(elevation,cyl,olive,[0,-.02,-.02],[.075,.12,.075],[0,0,Math.PI/2],'Launcher drum');
+  part(elevation,cyl,gunmetal,[0,0,.245],[.056,.03,.056],[Math.PI/2,0,0],'Launcher muzzle ring');
+  part(cart,box,olive,[.12,-.02,-.75],[.12,.08,.09],null,'Grenade crate');
+  const parts=[harness,cart];
+  for(const p of parts){p.visible=false;p.traverse(o=>{o.userData.dynamic=true;o.userData.companion='Bella';if(o.isMesh)o.raycast=()=>{};});}
+  return {harness,swivel,pistol,laser,cart,wheels,turret,elevation,parts,yaw:0,cartYaw:0};
+}
+
+// Pooled tracers and laser beams, and lobbed launcher shells that burst where
+// they land. Nothing is allocated per shot.
+function createBellaShots(world){
+  const unit=new T.CylinderGeometry(1,1,1,6,1,true),ball=new T.SphereGeometry(1,10,8),up=new T.Vector3(0,1,0),d=new T.Vector3();
+  const beam=(color)=>{const m=new T.Mesh(unit,new T.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending}));m.visible=false;m.raycast=()=>{};m.castShadow=false;m.userData.dynamic=true;world.add(m);return {mesh:m,life:0,max:.06};};
+  const tracers=Array.from({length:8},()=>beam(0xffd27a)),lasers=Array.from({length:8},()=>beam(0x7ff8ff));
+  const shellMat=new T.MeshStandardMaterial({color:0x3e4a2c,roughness:.5,metalness:.3});
+  const shells=Array.from({length:6},()=>{const m=new T.Mesh(ball,shellMat);m.scale.set(.05,.05,.07);m.visible=false;m.raycast=()=>{};m.userData.dynamic=true;world.add(m);return {mesh:m,from:new T.Vector3(),to:new T.Vector3(),t:-1,flight:.55,arc:1};});
+  const flashes=Array.from({length:6},()=>{const m=new T.Mesh(ball,new T.MeshBasicMaterial({color:0xffb45b,transparent:true,opacity:0,depthWrite:false}));m.visible=false;m.raycast=()=>{};m.userData.dynamic=true;world.add(m);return {mesh:m,life:0,max:.35};});
+  let nt=0,nl=0,ns=0,nf=0;
+  return {
+    fire(kind,from,to){const pool=kind==='laser'?lasers:tracers,b=pool[(kind==='laser'?nl++:nt++)%pool.length];b.max=kind==='laser'?.09:.05;b.life=b.max;
+      d.copy(to).sub(from);const len=d.length();b.mesh.position.copy(from).addScaledVector(d,.5);b.mesh.quaternion.setFromUnitVectors(up,d.normalize());const r=kind==='laser'?.022:.008;b.mesh.scale.set(r,len,r);b.mesh.visible=true;b.mesh.material.opacity=1;},
+    lob(from,to,flight){const s=shells[ns++%shells.length];s.from.copy(from);s.to.copy(to);s.t=0;s.flight=flight;s.arc=.6+from.distanceTo(to)*.12;s.mesh.position.copy(from);s.mesh.visible=true;},
+    update(dt,onLand){
+      for(const pool of [tracers,lasers])for(const b of pool){if(b.life<=0)continue;b.life-=dt;b.mesh.material.opacity=Math.max(0,b.life/b.max);if(b.life<=0)b.mesh.visible=false;}
+      for(const s of shells){if(s.t<0)continue;s.t+=dt;const f=Math.min(1,s.t/s.flight);s.mesh.position.lerpVectors(s.from,s.to,f);s.mesh.position.y+=4*s.arc*f*(1-f);s.mesh.rotation.x+=dt*14;
+        if(f>=1){s.t=-1;s.mesh.visible=false;const fl=flashes[nf++%flashes.length];fl.life=fl.max;fl.mesh.position.copy(s.to);fl.mesh.visible=true;onLand?.(s.to.clone());}}
+      for(const f of flashes){if(f.life<=0)continue;f.life-=dt;const k=1-Math.max(0,f.life)/f.max;f.mesh.scale.setScalar(.3+k*3.2);f.mesh.material.opacity=.8*(1-k);if(f.life<=0)f.mesh.visible=false;}
+    },
+    clear(){for(const b of [...tracers,...lasers,...flashes]){b.life=0;b.mesh.visible=false;}for(const s of shells){s.t=-1;s.mesh.visible=false;}},
+    get active(){return [...tracers,...lasers].filter(b=>b.life>0).length;},
+    get inFlight(){return shells.filter(s=>s.t>=0).length;},
   };
 }
 export const BELLA_PAW='<svg viewBox="0 0 32 32" aria-hidden="true"><ellipse cx="8" cy="10" rx="3.2" ry="4.2"/><ellipse cx="15" cy="7" rx="3.2" ry="4.2"/><ellipse cx="23" cy="10" rx="3.2" ry="4.2"/><ellipse cx="27" cy="17" rx="2.7" ry="3.6"/><path d="M7 24c0-4 5-10 10-10s9 6 9 10-5 5-9 3-10 1-10-3z"/></svg>';
@@ -126,7 +210,8 @@ function animateBella(rig,dt,moved,biteTime,unlocked,dragon=null,breathing=false
     // Wings beat faster when she runs and flare wide while she breathes fire.
     const beat=breathing?.95:.35+.25*w;
     for(const {pivot,side} of dragon.wings){pivot.rotation.z=side*(beat*Math.sin(rig.time*(breathing?14:6+6*w))*.5+(breathing?.5:.15));pivot.rotation.y=side*(breathing?-.25:.05);}
-    for(const [i,j] of dragon.segments.entries()){j.rotation.y=Math.sin(rig.time*3.2-i*.65)*.2*(1+w);j.rotation.x=i?-.06:.25;}
+    // v184: with the cart in tow the tail arches up over it.
+    for(const [i,j] of dragon.segments.entries()){j.rotation.y=Math.sin(rig.time*3.2-i*.65)*.2*(1+w)*(dragon.raised?.5:1);j.rotation.x=i?(dragon.raised?-.1:-.06):(dragon.raised?.95:.25);}
     if(breathing){rig.head.rotation.x=-.18;rig.jaw.rotation.x=.55;rig.tongue.visible=false;}
   }
 }
@@ -158,7 +243,8 @@ function buildKennel({world,colliders,solidMeshes,batchArticulated,interactables
     E:[[[1,1],[0,1],[0,0],[1,0]],[[0,.5],[.85,.5]]],L:[[[0,1],[0,0],[1,0]]],
     A:[[[0,0],[.5,1],[1,0]],[[.2,.4],[.8,.4]]],
     6:[[[.9,1],[.28,1],[0,.73],[0,.22],[.25,0],[.75,0],[1,.22],[1,.43],[.75,.63],[0,.63]]],
-    7:[[[0,1],[1,1],[.24,0]]],0:[[[.24,0],[.76,0],[1,.24],[1,.76],[.76,1],[.24,1],[0,.76],[0,.24],[.24,0]]]
+    7:[[[0,1],[1,1],[.24,0]]],1:[[[.2,.78],[.55,1],[.55,0]],[[.2,0],[.9,0]]],
+    5:[[[.95,1],[.12,1],[.06,.56],[.62,.62],[.95,.42],[.95,.2],[.7,0],[.25,0],[.02,.14]]],0:[[[.24,0],[.76,0],[1,.24],[1,.76],[.76,1],[.24,1],[0,.76],[0,.24],[.24,0]]]
   };
   function lettering(text,y,height,width,gap,thickness){
     const left=-(text.length*width+(text.length-1)*gap)/2;
@@ -167,7 +253,7 @@ function buildKennel({world,colliders,solidMeshes,batchArticulated,interactables
       const line=b(group,left+i*(width+gap)+(a[0]+c[0])*width/2,y+(a[1]+c[1])*height/2,.887,thickness,Math.hypot(dx,dy)+thickness,.008,brass,'Raised '+text+' lettering');line.rotation.z=-Math.atan2(dx,dy);
     }
   }
-  lettering('BELLA',1.385,.155,.092,.040,.013);lettering('670',1.275,.075,.048,.026,.008);
+  lettering('BELLA',1.385,.155,.092,.040,.013);lettering(String(BELLA.price),1.275,.075,.048,.026,.008);
   const collider=(x,z,w,d,minY,maxY)=>{const c={x:BELLA.x+x,z:BELLA.z+z,w,d,minY:BELLA.y+minY,maxY:BELLA.y+maxY,kennel:true};colliders.push(c);return c;};
   for(const side of [-1,1])collider(side*.86,0,.07,1.65,0,1.27);
   collider(0,-.8,1.78,.07,0,1.27);collider(0,0,1.85,1.75,1.17,1.27);
@@ -186,18 +272,22 @@ export function createBellaCompanion(options){
   const pos=new T.Vector3(BELLA.x,BELLA.y+.17,BELLA.z),goal=new T.Vector3(),biteDirection=new T.Vector3();
   let navigation=null,navTimer=0,selectionTimer=0,waypoint=null,velocity=0,grounded=true,emerging=false,stuck=0,failedTarget=null,failedTime=0,breathPulse=0;
   const dragon=createDragonParts(rig),flames=createFlames(world),mouth=new T.Vector3(),breathDir=new T.Vector3();
+  const gear=createBellaGear(rig),shots=createBellaShots(world),muzzle=new T.Vector3(),aim=new T.Vector3();let lastHeading=0;
   const companion={rig,kennel,station:kennel.station,pos,unlocked:false,target:null,activity:'KENNELED',attackTime:-1,cooldown:0,attacks:0,
     dragon:false,breath:-1,breathCooldown:0,breaths:0,dragonParts:dragon,flames,
+    rank:0,gear,shots,gunCooldown:0,launchCooldown:0,shotsFired:0,launches:0,gunTarget:null,
+    // v184: the next rank's gear goes on. Rank 4 adds the cart and makes her a rat dragon.
+    upgrade(){if(!companion.unlocked||companion.rank>=BELLA.maxRank)return false;companion.rank++;showGear();if(companion.rank===BELLA.maxRank){companion.becomeDragon();dragon.raised=true;}return companion.rank;},
     // Olivia's upgrade: wings, tail, horns and fire breath for the rest of the run.
     becomeDragon(){if(companion.dragon)return false;companion.dragon=true;for(const p of dragon.parts)p.visible=true;for(const m of rig.tail.children)m.visible=false;companion.breathCooldown=.5;return true;},
     setNavigation(value){navigation=value;navTimer=0;waypoint=null;},
-    unlock(){if(companion.unlocked)return false;companion.unlocked=true;kennel.station.used=true;kennel.doorCollider.disabled=true;emerging=true;companion.activity='JOINING YOU';return true;},
-    reset(){companion.dragon=false;companion.breath=-1;companion.breathCooldown=0;companion.breaths=0;breathPulse=0;for(const p of dragon.parts)p.visible=false;for(const m of rig.tail.children)m.visible=true;flames.clear();companion.unlocked=false;companion.target=null;companion.activity='KENNELED';companion.attackTime=-1;companion.cooldown=0;companion.attacks=0;kennel.station.used=false;kennel.doorCollider.disabled=false;kennel.progress=0;kennel.gate.rotation.y=0;pos.set(BELLA.x,BELLA.y+.17,BELLA.z);velocity=0;grounded=true;emerging=false;waypoint=null;navTimer=selectionTimer=stuck=failedTime=0;failedTarget=null;rig.phase=rig.motion=rig.time=0;rig.group.rotation.y=0;animateBella(rig,0,0,-1,false);rig.group.position.copy(pos);},
-    update(dt,{player,yaw=0,enemies,onBite,onBreath=()=>{},climb=null,visualFloor=()=>0}){
-      const oldX=pos.x,oldZ=pos.z;flames.update(dt);
+    unlock(){if(companion.unlocked)return false;companion.unlocked=true;companion.rank=1;kennel.station.name='UPGRADE BELLA / KENNEL';kennel.station.used=true;kennel.doorCollider.disabled=true;emerging=true;companion.activity='JOINING YOU';return true;},
+    reset(){companion.rank=0;dragon.raised=false;companion.gunCooldown=companion.launchCooldown=0;companion.shotsFired=companion.launches=0;companion.gunTarget=null;gear.yaw=gear.cartYaw=0;lastHeading=0;shots.clear();showGear();kennel.station.name='FREE BELLA / MALTIPOO';companion.dragon=false;companion.breath=-1;companion.breathCooldown=0;companion.breaths=0;breathPulse=0;for(const p of dragon.parts)p.visible=false;for(const m of rig.tail.children)m.visible=true;flames.clear();companion.unlocked=false;companion.target=null;companion.activity='KENNELED';companion.attackTime=-1;companion.cooldown=0;companion.attacks=0;kennel.station.used=false;kennel.doorCollider.disabled=false;kennel.progress=0;kennel.gate.rotation.y=0;pos.set(BELLA.x,BELLA.y+.17,BELLA.z);velocity=0;grounded=true;emerging=false;waypoint=null;navTimer=selectionTimer=stuck=failedTime=0;failedTarget=null;rig.phase=rig.motion=rig.time=0;rig.group.rotation.y=0;animateBella(rig,0,0,-1,false);rig.group.position.copy(pos);},
+    update(dt,{player,yaw=0,enemies,onBite,onBreath=()=>{},onShot=()=>{},onBlast=()=>{},canSee=null,climb=null,visualFloor=()=>0}){
+      const oldX=pos.x,oldZ=pos.z;flames.update(dt);shots.update(dt,onBlast);
       if(!companion.unlocked){animateBella(rig,dt,0,-1,false);return;}
       kennel.progress=Math.min(1,kennel.progress+dt/ .8);kennel.gate.rotation.y=-kennel.progress*Math.PI*.56;
-      companion.cooldown=Math.max(0,companion.cooldown-dt);companion.breathCooldown=Math.max(0,companion.breathCooldown-dt);failedTime=Math.max(0,failedTime-dt);
+      companion.cooldown=Math.max(0,companion.cooldown-dt);companion.breathCooldown=Math.max(0,companion.breathCooldown-dt);companion.gunCooldown=Math.max(0,companion.gunCooldown-dt);companion.launchCooldown=Math.max(0,companion.launchCooldown-dt);failedTime=Math.max(0,failedTime-dt);
       if(kennel.progress<.8){animateBella(rig,dt,0,-1,true);return;}
       const location=e=>e.walkPos||e.group.position;
       const inRange=e=>!e.dead&&location(e).distanceToSquared(player)<=BELLA.radius**2;
@@ -254,13 +344,45 @@ export function createBellaCompanion(options){
         if(previous<.24&&companion.attackTime>=.24&&canBite){biteDirection.copy(p).sub(pos).normalize();onBite(target,BELLA.damage,biteDirection);companion.attacks++;}
         if(companion.attackTime>=.58)companion.attackTime=-1;
       }
+      // v184: ranged rank gear. The back gun and the cart's launcher pick the
+      // nearest undead she can see inside her guard radius and range.
+      const see=canSee||((a,b)=>Math.abs(a.y-b.y)<1.2&&clearPath({x:a.x,y:pos.y,z:a.z},{x:b.x,y:pos.y,z:b.z}));
+      const aimAt=(e,out)=>out.copy(location(e)).setY(location(e).y+(e.dog?.5:e.crawling?.35:e.brute?1.4:1.15));
+      const pick=from=>{
+        const list=[];for(const e of enemies)if(inRange(e)&&!e.waking){const d=pos.distanceToSquared(location(e));if(d<=BELLA.gunRange**2)list.push([e===companion.target?d*.5:d,e]);}
+        list.sort((a,b)=>a[0]-b[0]);for(let i=0;i<Math.min(4,list.length);i++){const e=list[i][1];if(see(from,aimAt(e,aim)))return e;}return null;
+      };
+      const gun=!emerging&&companion.rank>=2?RANKS[companion.rank>=3?1:0].gun:null;
+      if(gun&&companion.gunCooldown===0){
+        muzzle.set(pos.x,pos.y+.7,pos.z);const shot=pick(muzzle);
+        if(shot){aimAt(shot,aim);companion.gunCooldown=gun.interval;companion.gunTarget=shot;companion.shotsFired++;shots.fire(gun.kind,muzzle,aim);onShot(shot,gun.damage,aim.clone().sub(muzzle).normalize(),gun.kind);}
+        else companion.gunTarget=null;
+      }
+      if(!emerging&&companion.rank>=4&&companion.launchCooldown===0){
+        const back=rig.group.rotation.y;muzzle.set(pos.x-Math.sin(back)*.95,pos.y+.6,pos.z-Math.cos(back)*.95);const lobbed=pick(muzzle);
+        if(lobbed){const L=RANKS[2].launcher;companion.launchCooldown=L.interval;companion.launches++;shots.lob(muzzle,aim.copy(location(lobbed)).setY(location(lobbed).y+.15),L.flight);gear.lobYaw=Math.atan2(location(lobbed).x-muzzle.x,location(lobbed).z-muzzle.z);gear.recoil=1;}
+      }
       let heading=rig.group.rotation.y;const moved=Math.hypot(pos.x-oldX,pos.z-oldZ);
       if((companion.attackTime>=0||companion.breath>=0)&&p)heading=Math.atan2(p.x-pos.x,p.z-pos.z);else if(moved>.001)heading=Math.atan2(pos.x-oldX,pos.z-oldZ);
       rig.group.rotation.y+=Math.atan2(Math.sin(heading-rig.group.rotation.y),Math.cos(heading-rig.group.rotation.y))*(1-Math.exp(-dt*10));
       companion.activity=emerging?'JOINING YOU':companion.breath>=0?'BREATHING FIRE':companion.target?'GUARDING':'FOLLOWING';
-      animateBella(rig,dt,moved,companion.attackTime,true,companion.dragon?dragon:null,companion.breath>=0);rig.group.position.set(pos.x,Math.abs(pos.y)>.1?pos.y+.006:Math.max(pos.y,visualFloor(pos.x,pos.z)),pos.z);
+      animateBella(rig,dt,moved,companion.attackTime,true,companion.dragon?dragon:null,companion.breath>=0);
+      animateGear(dt,moved);rig.group.position.set(pos.x,Math.abs(pos.y)>.1?pos.y+.006:Math.max(pos.y,visualFloor(pos.x,pos.z)),pos.z);
     }
   };
+  function showGear(){const r=companion.rank;gear.harness.visible=r>=2;gear.pistol.visible=r===2;gear.laser.visible=r>=3;gear.cart.visible=r>=4;}
+  // The back gun swivels toward its target; the cart swings behind her on its
+  // hitch, wheels rolling, and the launcher turns and kicks as it fires.
+  function animateGear(dt,moved){
+    const heading=rig.group.rotation.y,turn=Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading));lastHeading=heading;
+    const t=companion.gunTarget,tp=t&&!t.dead?(t.walkPos||t.group.position):null;
+    const want=tp?Math.atan2(tp.x-pos.x,tp.z-pos.z)-heading:0;gear.yaw+=Math.atan2(Math.sin(want-gear.yaw),Math.cos(want-gear.yaw))*(1-Math.exp(-dt*14));gear.swivel.rotation.y=gear.yaw;
+    if(companion.rank<4)return;
+    gear.cartYaw=T.MathUtils.clamp(gear.cartYaw*Math.exp(-dt*3)+turn*.9,-.6,.6);gear.cart.rotation.y=gear.cartYaw;
+    for(const w of gear.wheels)w.rotation.x+=moved/.14;
+    const lob=gear.lobYaw!==undefined?gear.lobYaw-heading-gear.cartYaw:0;gear.turret.rotation.y+=Math.atan2(Math.sin(lob-gear.turret.rotation.y),Math.cos(lob-gear.turret.rotation.y))*(1-Math.exp(-dt*8));
+    gear.recoil=Math.max(0,(gear.recoil||0)-dt*5);gear.elevation.rotation.x=-.55-gear.recoil*.25;
+  }
   function clearPath(from,to){
     if(Math.abs(from.y-to.y)>.55)return false;
     const dist=Math.hypot(to.x-from.x,to.z-from.z),steps=Math.max(1,Math.ceil(dist/.22));
