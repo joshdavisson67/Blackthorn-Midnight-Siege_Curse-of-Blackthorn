@@ -283,6 +283,8 @@ verifyPistolBench(qa,frames,elements);
 
 const {verifyBellaUpgrades}=await import('./bella-upgrades.mjs');
 verifyBellaUpgrades(qa,frames,elements);
+const {verifyBellaRanks}=await import('./bella-ranks.mjs');
+verifyBellaRanks(qa,frames,elements);
 
 const {verifyPistolRanks}=await import('./pistol-ranks.mjs');
 verifyPistolRanks(qa,frames,listeners,elements,gameCanvas);

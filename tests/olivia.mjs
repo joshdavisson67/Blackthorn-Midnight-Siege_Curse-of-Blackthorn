@@ -4,8 +4,8 @@ import {EASTER_EGG} from '../public/game/olivia.mjs';
 import {OLIVIA_ATTIC as A} from '../public/game/vertical.mjs';
 import {BELLA} from '../public/game/bella.mjs';
 
-// The Olivia Easter egg (v131): bone chips from Bella's kills open the attic,
-// and Olivia turns Bella into a fire-breathing rat dragon.
+// The Olivia Easter egg (v131): bone chips from Bella's kills open the attic.
+// v184: chips buy Bella's ranks at her kennel; rank IV is the rat dragon.
 export function verifyOliviaEasterEgg(qa,frames,listeners,elements){
   const st=()=>qa.get(),bella=st().bella,S=A.stair;
   qa.start();qa.holdSpawns();qa.setHealth(1e6);frames(2);
@@ -46,16 +46,25 @@ export function verifyOliviaEasterEgg(qa,frames,listeners,elements){
   assert(Math.abs(bella.pos.y-A.y)<.05,'Bella climbs up after you');
 
   // ---- Olivia ------------------------------------------------------------------------------------
+  // v184: Olivia cheers Bella on; the rat dragon now comes with rank IV at the kennel.
   const o=st().attic.station;qa.setPlayer(o.x,o.z,o.y);frames(2);
-  assert(elements.get('interaction').innerHTML.includes('OLIVIA'));assert(elements.get('interaction').innerHTML.includes('25/25 BONE CHIPS'));
+  assert(elements.get('interaction').innerHTML.includes('OLIVIA'));assert(elements.get('interaction').innerHTML.includes('BELLA RANK I'));
   const tail=bella.rig.tail.children;
   assert(!bella.dragon&&bella.dragonParts.parts.every(p=>!p.visible));
   qa.interact();
-  assert(bella.dragon,'Olivia turns Bella into a rat dragon');assert.equal(st().boneChips,0,'She takes the 25 chips');
+  assert(!bella.dragon,'Olivia no longer transforms Bella herself');assert.equal(st().boneChips,25,'and takes no chips');
+  assert(elements.get('toast').textContent.includes('KENNEL'),'She sends you to Bella’s kennel');assert(st().oliviaCheer>0,'Olivia cheers');
+  // Ranks II-IV at the kennel: 25, 50 and 75 chips; rank IV is the rat dragon.
+  const k=bella.station;qa.setPlayer(k.x,k.z+1.5,k.y);frames(2);
+  qa.interact();assert.equal(bella.rank,2);assert.equal(st().boneChips,0);
+  for(let i=0;i<50;i++)qa.collectBoneChip();qa.interact();assert.equal(bella.rank,3);
+  for(let i=0;i<75;i++)qa.collectBoneChip();qa.interact();assert.equal(bella.rank,4);
+  assert(bella.dragon,'Rank IV makes Bella a rat dragon');assert.equal(st().boneChips,0);
   assert(bella.dragonParts.wings.length===2&&bella.dragonParts.wings.every(w=>w.pivot.visible),'Bella has dragon wings');
   assert(bella.dragonParts.tailRoot.visible&&bella.dragonParts.segments.length>=6,'and a dragon tail');assert(tail.every(m=>!m.visible),'which replaces her curly tail');
-  assert(elements.get('banner').textContent.includes('BELLA THE RAT DRAGON'));assert(st().oliviaCheer>0,'Olivia cheers');
-  frames(1);assert(elements.get('boneHud').classList.contains('hidden'));assert(elements.get('interaction').innerHTML.includes('RAT DRAGON'));
+  assert(elements.get('banner').textContent.includes('RANK IV'));
+  frames(1);assert(elements.get('boneHud').classList.contains('hidden'));
+  qa.setPlayer(o.x,o.z,o.y);frames(2);assert(elements.get('interaction').innerHTML.includes('RAT DRAGON'));
   qa.interact();assert(elements.get('toast').textContent.includes('LOOKS SO COOL'));
   // Wings beat and the tail sways as she moves.
   const before=bella.dragonParts.wings[0].pivot.rotation.z;frames(10);assert.notEqual(bella.dragonParts.wings[0].pivot.rotation.z,before);
@@ -96,5 +105,5 @@ export function verifyOliviaEasterEgg(qa,frames,listeners,elements){
   qa.setPlayer(S.x,S.bottomZ+.7,4.3);qa.setAim(0,0);qa.setKeys(['KeyW']);frames(90);qa.setKeys([]);
   assert.equal(st().player.y,4.3,'Sealed, there is nothing to climb');
   qa.start();
-  console.log(`PASS: Olivia Easter egg — bone chips only from Bella’s kills, a HUD tally, the 25th chip opening the hatch and dropping ${S.steps} treads, keyboard climb into the attic with Bella following, Olivia’s 25-chip upgrade to a winged, dragon-tailed rat dragon, cone fire at ${dps} per pulse that stops at walls, no chips afterwards, walkers climbing after you while brutes can’t, and a sealed attic on every new run.`);
+  console.log(`PASS: Olivia Easter egg — bone chips only from Bella’s kills, a HUD tally, the 25th chip opening the hatch and dropping ${S.steps} treads, keyboard climb into the attic with Bella following, Olivia cheering Bella on while chips buy ranks II–IV at the kennel, rank IV a winged, dragon-tailed rat dragon, cone fire at ${dps} per pulse that stops at walls, no chips afterwards, walkers climbing after you while brutes can’t, and a sealed attic on every new run.`);
 }
