@@ -72,7 +72,7 @@ export function buildOliviaAttic({world,M,box,colliders,solidMeshes,interactable
 
   // ---- The hatch and its pull-down stairs (dynamic) ----
   const S=A.stair,run=S.bottomZ-S.topZ,rise=S.topY-S.baseY,length=Math.hypot(run,rise),pitch=Math.atan2(rise,run);
-  const hatchMat=M.wall.clone();hatchMat.color.set(0x9e9583);
+  const hatchMat=(M.vault??M.wall).clone();
   const hatch=new T.Group();hatch.name='Attic hatch';hatch.position.set(h.x,UPPER_CEILING,hz0);world.add(hatch);
   const door=new T.Mesh(new T.BoxGeometry(h.w-.04,.06,h.d-.04),hatchMat);door.position.set(0,.03,h.d/2);door.castShadow=door.receiveShadow=true;hatch.add(door);
   const pull=new T.Mesh(new T.TorusGeometry(.05,.012,6,16),M.gold);pull.position.set(0,-.05,h.d-.25);hatch.add(pull);

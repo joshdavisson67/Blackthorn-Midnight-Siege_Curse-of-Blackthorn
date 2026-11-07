@@ -6,12 +6,14 @@ import {UPPER_Y,UPPER_CEILING,hasUpperFloor} from '../public/game/vertical.mjs';
 
 export function verifyInteriors(qa,frames,listeners){
   qa.start();qa.holdSpawns();const s=qa.get(),assets=s.furnishings.records;
-  const required=['Tufted leather sofa','Open oak bookcase','Double oak bed','Single oak bed','Infirmary iron bed','Writing desk','Dining chair','Oak wardrobe','Curved grand piano','Brass refractor telescope','Potted conservatory plant','Tabletop terrestrial globe'];
+  const required=['Tufted leather sofa','Open oak bookcase','Double oak bed','Single oak bed','Infirmary iron bed','Writing desk','Dining chair','Oak wardrobe','Curved grand piano','Brass refractor telescope','Potted conservatory plant','Tabletop terrestrial globe',
+    // v187: the stone house
+    'Stone fireplace','Suit of armour','Iron candelabrum','Iron-bound chest','Refectory table','Stone altar','Stone bench','Stone urn','Oak settle','Carved armchair','Oak lectern','Woven tapestry','Heraldic banner','Shield and crossed swords'];
   for(const name of required)assert(assets.some(r=>r.type===name),'Missing room-appropriate furnishing: '+name);
   for(const r of assets){
     const size=r.bounds.getSize(new T.Vector3());
     assert(size.x>0&&size.z>0&&Number.isFinite(size.y));
-    if(r.y>=UPPER_Y){assert(r.bounds.max.y<UPPER_CEILING,'Upper furniture fits the ceiling');for(const x of [r.bounds.min.x,r.bounds.max.x])for(const z of [r.bounds.min.z,r.bounds.max.z])assert(hasUpperFloor(x,z),'Upper furniture stays on supported floor');}
+    if(r.y>=UPPER_Y){assert(r.bounds.max.y<UPPER_CEILING,'Upper furniture fits the ceiling');if(!r.wall)for(const x of [r.bounds.min.x,r.bounds.max.x])for(const z of [r.bounds.min.z,r.bounds.max.z])assert(hasUpperFloor(x,z),'Upper furniture stays on supported floor');}
     if(!r.collider)continue;
     const a=r.collider;assert(a.w>=size.x&&a.d>=size.z,'The collision volume contains the rotated model');
     for(const c of s.colliders){
@@ -20,8 +22,12 @@ export function verifyInteriors(qa,frames,listeners){
       assert(overlapX<.045||overlapZ<.045,r.type+' clips another furnishing or a wall at '+r.x+','+r.z);
     }
   }
-  const reversedSofa=assets.find(r=>r.type==='Tufted leather sofa'&&r.rotation===Math.PI);
-  assert(reversedSofa.collider.w>2.6&&reversedSofa.collider.d<1.2,'A 180-degree sofa keeps its real width and depth');
+  const reversedSettle=assets.find(r=>r.type==='Oak settle'&&r.rotation===Math.PI);
+  assert(reversedSettle.collider.w>2.3&&reversedSettle.collider.d<1.0,'A 180-degree settle keeps its real width and depth');
+  const turnedHearth=assets.find(r=>r.type==='Stone fireplace'&&Math.abs(Math.abs(r.rotation)-Math.PI/2)<1e-9);
+  assert(turnedHearth.collider.d>2.8&&turnedHearth.collider.w<1.4,'A fireplace on a side wall turns with it');
+  for(const h of assets.filter(r=>r.type==='Stone fireplace'))assert(h.collider.minY<.2&&h.bounds.max.y<(h.y>=UPPER_Y?UPPER_CEILING:4.06+(Math.abs(h.z)>12||Math.abs(h.x)>42?2.74:0)),'Each fireplace fits under its ceiling');
+  assert(s.furnishings.hearths.length>=4&&s.furnishings.hearths.every(h=>Number.isFinite(h.x)),'Every hearth has a flame');
   const M=Object.fromEntries(['wood','leather','red','white','gold','stone'].map(name=>[name,new T.MeshStandardMaterial({color:0x888888})]));
   const kit=createFurnishings({world:new T.Group(),M,colliders:[]}),piano=kit.grandPiano(0,0),caseModel=kit.bookcase(5,0),sofa=kit.sofa(10,0);
   const names=[];piano.traverse(o=>names.push(o.name));
@@ -55,6 +61,6 @@ export function verifyInteriors(qa,frames,listeners){
   qa.holdSpawns();qa.setPlayer(-9.5,2.15);listeners.keydown({code:'Space',preventDefault(){}});qa.setKeys(['KeyS']);frames(29);qa.setKeys([]);frames(45);
   assert(qa.get().grounded&&qa.get().player.y>.50,'A jump onto the coffee table lands on its top rather than inside it');
   qa.setKeys(['KeyS']);frames(70);qa.setKeys([]);frames(30);assert.equal(qa.get().player.y,0,'Player can leave low furniture and return to the floor');
-  console.log('PASS: 127 room-appropriate furnishings, rotated collision bounds and wall/ceiling clearance; 88-key curved piano, visible shelf books, shared geometry; all 16 rugs use uniform weave scale, fixed borders and upward, non-overlapping surfaces; safe table jumps and exits.');
+  console.log(`PASS: ${assets.length} room-appropriate furnishings (stone hearths, armour, tapestries, banners, settles, altar and more),`+' rotated collision bounds and wall/ceiling clearance; 88-key curved piano, visible shelf books, shared geometry; all 16 rugs use uniform weave scale, fixed borders and upward, non-overlapping surfaces; safe table jumps and exits.');
   qa.start();
 }

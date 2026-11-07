@@ -1,18 +1,30 @@
 import * as T from './three.module.js';
-import {drawStationMarker} from './station-models.mjs?v=179';
+import {drawStationMarker} from './station-models.mjs?v=187';
 import {UPPER_Y as Y,UPPER_HEIGHT,UPPER_CEILING,UPPER_TILES,UPPER_ROOMS,STAIR,EXTERIOR_STAIRS,OLIVIA_ATTIC} from './vertical.mjs?v=165';
 import {prepareUpperShell,UPPER_SLAB_THICKNESS,UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {buildExteriorStairs} from './exterior-stairs.mjs?v=109';
+// v187: depth of the lime-plaster soffit under the upper floor slab.
+export const UPPER_SOFFIT=.024;
 export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,colliders,solidMeshes,interactables,station,furnishings,rugs}){
   const shellReport=prepareUpperShell(world,colliders,solidMeshes);
   const windowOpenings=[],doors=[],banisters=[];
   const group=new T.Group();group.name='Second floor';world.add(group);
   const glass=new T.MeshStandardMaterial({color:0xb5ccd0,transparent:true,opacity:.065,roughness:.14,metalness:.05,depthWrite:false,side:T.DoubleSide});
-  const cream=M.wall.clone();cream.color.set(0x9e9583);const blue=M.wall.clone();blue.color.set(0x65747a);
-  const fixtures=[];
-  function block(x,y,z,w,h,d,m=M.wood,solid=false){const o=box(x,y,z,w,h,d,m,group);if(solid){colliders.push({x,z,w,d,minY:y-h/2,maxY:y+h/2});solidMeshes.push(o);}return o;}
-  function floor(t){const o=block(t.x,Y-UPPER_SLAB_THICKNESS/2,t.z,t.w,UPPER_SLAB_THICKNESS,t.d,M.floor);solidMeshes.push(o);o.userData.upperFloor=true;}
+  // v187: upstairs is dressed limestone too (two tones), under lime-plaster ceilings.
+  const cream=M.wall.clone();cream.color.set(0xbbb2a2);const blue=M.wall.clone();blue.color.set(0xa9a8a0);
+  const carved=M.carved??M.wood,iron=M.iron??M.gold,vault=M.vault??cream,flagstone=M.flagstone??M.floor;
+  const fixtures=[],flame=M.flame??new T.MeshBasicMaterial({color:0xffcf8a});
+  const flameGeo=new T.SphereGeometry(1,6,4),candleGeo=new T.CylinderGeometry(1,1,1,8),crownGeo=new T.TorusGeometry(.3,.024,6,20);
+  function block(x,y,z,w,h,d,m=carved,solid=false){const o=box(x,y,z,w,h,d,m,group);if(solid){colliders.push({x,z,w,d,minY:y-h/2,maxY:y+h/2});solidMeshes.push(o);}return o;}
+  function floor(t){const o=block(t.x,Y-UPPER_SLAB_THICKNESS/2,t.z,t.w,UPPER_SLAB_THICKNESS,t.d,flagstone);solidMeshes.push(o);o.userData.upperFloor=true;}
   UPPER_TILES.forEach(floor);
+  // v187: the rooms below see a lime-plastered soffit under the stone floor, with
+  // carved stone ribs in the big front rooms (clear of every door and window).
+  for(const t of UPPER_TILES){const o=block(t.x,UPPER_SLAB_BOTTOM-UPPER_SOFFIT/2,t.z,t.w,UPPER_SOFFIT,t.d,vault);o.name='Plaster soffit';o.castShadow=false;}
+  for(const side of [-1,1]){
+    for(const xx of [-10.5,-3.5,3.5,10.5])block(side*28+xx,UPPER_SLAB_BOTTOM-.13,0,.26,.22,23.5,carved).name='Soffit rib';
+    for(const z of [-7.5,7.5])block(side*9.8,UPPER_SLAB_BOTTOM-.13,z,8.0,.22,.26,carved).name='Soffit rib';
+  }
   const exteriorStairs=buildExteriorStairs({world,M,box,colliders,solidMeshes,stairs:EXTERIOR_STAIRS,y:Y,slab:UPPER_SLAB_THICKNESS});
   const RAIL_HEIGHT=.72,RAIL_BEAM=.075,POST_HEIGHT=RAIL_HEIGHT-RAIL_BEAM;
   // Correct rise/tread dimensions. A separate continuous walking surface avoids
@@ -20,8 +32,9 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
   const run=(STAIR.bottomZ-STAIR.topZ)/STAIR.steps;
   for(let i=0;i<STAIR.steps;i++){
     const top=Y*(i+1)/STAIR.steps,z=STAIR.bottomZ-(i+.5)*run;
-    solidMeshes.push(block(STAIR.x,top-.11,z,STAIR.w,.22,run,M.wood));
-    block(STAIR.x,top+.003,z+run*.43,STAIR.w,.009,.018,M.gold);
+    // Stone treads with a rounded nosing.
+    solidMeshes.push(block(STAIR.x,top-.11,z,STAIR.w,.22,run,carved));
+    block(STAIR.x,top-.035,z+run*.5,STAIR.w,.07,.05,carved);
   }
   // A continuous banister and matching sloped collider avoid the old tall,
   // overlapping collision boxes at each tread. Its top is the balcony height.
@@ -29,15 +42,15 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
   const stairPostHeight=RAIL_HEIGHT-RAIL_BEAM/Math.cos(angle);
   for(const side of [-1,1]){
     const x=STAIR.x+side*(STAIR.w/2+.045);
-    const beam=block(x,Y/2+RAIL_HEIGHT-RAIL_BEAM/(2*Math.cos(angle)),midZ,RAIL_BEAM,RAIL_BEAM,Math.hypot(Y,depth),M.gold);
+    const beam=block(x,Y/2+RAIL_HEIGHT-RAIL_BEAM/(2*Math.cos(angle)),midZ,RAIL_BEAM,RAIL_BEAM,Math.hypot(Y,depth),iron);
     beam.rotation.x=angle;banisters.push(beam);
     for(let i=0;i<STAIR.steps;i++){
       const z=STAIR.bottomZ-(i+.5)*run,base=Y*(i+.5)/STAIR.steps;
-      cylinder(x,base+stairPostHeight/2,z,.024,stairPostHeight,M.gold,group);
+      cylinder(x,base+stairPostHeight/2,z,.02,stairPostHeight,iron,group);
     }
     colliders.push({x,z:midZ,w:.09,d:depth,minY:-.25,maxY:Y+RAIL_HEIGHT,railing:true,slope,baseY:Y/2,topY:Y/2+RAIL_HEIGHT});
   }
-  for(const side of [-1,1]){const stringer=block(STAIR.x+side*(STAIR.w/2-.1),Y/2-.17,(STAIR.bottomZ+STAIR.topZ)/2,.16,.20,Math.hypot(Y,STAIR.bottomZ-STAIR.topZ),M.wood);stringer.rotation.x=Math.atan2(Y,STAIR.bottomZ-STAIR.topZ);solidMeshes.push(stringer);}
+  for(const side of [-1,1]){const stringer=block(STAIR.x+side*(STAIR.w/2-.1),Y/2-.17,(STAIR.bottomZ+STAIR.topZ)/2,.16,.20,Math.hypot(Y,STAIR.bottomZ-STAIR.topZ),carved);stringer.rotation.x=Math.atan2(Y,STAIR.bottomZ-STAIR.topZ);solidMeshes.push(stringer);}
   // v173: the space under the flight is closed in, from the hall wall to the
   // right-hand banister, so nothing can wander underneath and get stuck. A
   // sloped collider follows the treads 0.25 m below their surface, so the
@@ -46,13 +59,13 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
     const x0=-5.41,x1=STAIR.x+STAIR.w/2+.02,cx=(x0+x1)/2,width=x1-x0,under=Y-UPPER_SLAB_THICKNESS;
     const profile=new T.Shape();profile.moveTo(-STAIR.bottomZ+.38,0);profile.lineTo(-STAIR.topZ,0);profile.lineTo(-STAIR.topZ,under);profile.closePath();
     const panelGeo=new T.ExtrudeGeometry(profile,{depth:.05,bevelEnabled:false});panelGeo.rotateY(Math.PI/2);
-    for(const x of [x1-.025,x0+.035]){const p=new T.Mesh(panelGeo,M.wood);p.position.set(x-.025,0,0);p.name='Under-stair panelling';p.castShadow=p.receiveShadow=true;group.add(p);solidMeshes.push(p);}
+    for(const x of [x1-.025,x0+.035]){const p=new T.Mesh(panelGeo,cream);p.position.set(x-.025,0,0);p.name='Under-stair panelling';p.castShadow=p.receiveShadow=true;group.add(p);solidMeshes.push(p);}
     // Battens on the hall-facing side, each stopping under the stringer.
-    for(let i=1;i<=6;i++){const z=STAIR.bottomZ-(STAIR.bottomZ-STAIR.topZ)*i/7,h=Math.min(under,Y*(STAIR.bottomZ-z)/(STAIR.bottomZ-STAIR.topZ)-.12);block(x1+.015,h/2,z,.035,h,.07,M.wood);}
-    block(x1+.02,.09,(STAIR.bottomZ+STAIR.topZ)/2,.04,.18,STAIR.bottomZ-STAIR.topZ-.3,M.wood);
+    for(let i=1;i<=6;i++){const z=STAIR.bottomZ-(STAIR.bottomZ-STAIR.topZ)*i/7,h=Math.min(under,Y*(STAIR.bottomZ-z)/(STAIR.bottomZ-STAIR.topZ)-.12);block(x1+.015,h/2,z,.035,h,.07,carved);}
+    block(x1+.02,.09,(STAIR.bottomZ+STAIR.topZ)/2,.04,.18,STAIR.bottomZ-STAIR.topZ-.3,carved);
     // The back face sits just inside the flight, so the wide hall doorway's
     // approach under the landing stays clear; the sloped fill is what blocks.
-    block(cx,under/2,STAIR.topZ+.08,width,under,.1,M.wood);
+    block(cx,under/2,STAIR.topZ+.08,width,under,.1,cream);
     // Its east edge stops 0.1 m inside the stringer (too narrow for anyone)
     // to keep clear of that doorway's lane.
     const depth=STAIR.bottomZ-STAIR.topZ,cx1=STAIR.x+STAIR.w/2-.1;
@@ -60,9 +73,9 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
   }
   // Keep the balcony guarded while letting the existing jump clear its top.
   function rail(x,z,w,d){
-    block(x,Y+RAIL_HEIGHT-RAIL_BEAM/2,z,w,RAIL_BEAM,d,M.gold);
+    block(x,Y+RAIL_HEIGHT-RAIL_BEAM/2,z,w,RAIL_BEAM,d,iron);
     const long=w>d,count=Math.ceil((long?w:d)/.48);
-    for(let i=0;i<=count;i++){const off=(i/count-.5)*(long?w:d);cylinder(x+(long?off:0),Y+POST_HEIGHT/2,z+(long?0:off),.021,POST_HEIGHT,M.gold,group);}
+    for(let i=0;i<=count;i++){const off=(i/count-.5)*(long?w:d);cylinder(x+(long?off:0),Y+POST_HEIGHT/2,z+(long?0:off),.019,POST_HEIGHT,iron,group);}
     colliders.push({x,z,w,d,minY:Y,maxY:Y+RAIL_HEIGHT,railing:true});
   }
   rail(.3,-9,5.8,.09);rail(.05,9,6.3,.09);rail(3.2,0,.09,18);rail(-3.1,3.4,.09,11.2);rail(-5.6,-5.6,.09,6.8);
@@ -87,7 +100,7 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
     const o=block(x,bottom+height/2,z,w,height,d,m,true);
     // Recess the ends of each molding instead of sharing wall end-cap faces.
     const alongX=w>d,trimW=alongX?w-.10:w+.035,trimD=alongX?d+.035:d-.10;
-    block(x,Y+.12,z,trimW,.18,trimD,M.wood);
+    block(x,Y+.12,z,trimW,.18,trimD,carved);
     block(x,UPPER_CEILING-.075,z,alongX?w-.10:w+.045,.10,alongX?d+.045:d-.10,M.trim);
     return o;
   }
@@ -98,8 +111,8 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
       segment(cursor,at-width/2);
       const x=horizontal?at:fixed,z=horizontal?fixed:at,header=UPPER_HEIGHT-DOOR_HEIGHT;
       block(x,Y+DOOR_HEIGHT+header/2,z,horizontal?width:.20,header,horizontal?.20:width,m,true);
-      for(const side of [-1,1])block(x+(horizontal?side*width/2:0),Y+DOOR_HEIGHT/2,z+(horizontal?0:side*width/2),horizontal?.10:.28,DOOR_HEIGHT,horizontal?.28:.10,M.wood);
-      block(x,Y+DOOR_HEIGHT,z,horizontal?width+.1:.28,.10,horizontal?.28:width+.1,M.wood);
+      for(const side of [-1,1])block(x+(horizontal?side*width/2:0),Y+DOOR_HEIGHT/2,z+(horizontal?0:side*width/2),horizontal?.10:.28,DOOR_HEIGHT,horizontal?.28:.10,carved);
+      block(x,Y+DOOR_HEIGHT,z,horizontal?width+.1:.28,.10,horizontal?.28:width+.1,carved);
       doors.push({x,z,axis,width,height:DOOR_HEIGHT});cursor=at+width/2;
     }segment(cursor,b);
   }
@@ -130,17 +143,17 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
       }
       const lo=at-WINDOW_WIDTH/2,hi=at+WINDOW_WIDTH/2,x=horizontal?at:fixed,z=horizontal?fixed:at;
       part(cursor,lo,WALL_BOTTOM+WALL_HEIGHT/2,WALL_HEIGHT,true);part(lo,hi,(WALL_BOTTOM+SILL)/2,SILL-WALL_BOTTOM,true);part(lo,hi,(HEAD+UPPER_CEILING)/2,UPPER_CEILING-HEAD);
-      for(const edge of [-1,1])block(x+(horizontal?edge*WINDOW_WIDTH/2:0),(SILL+HEAD)/2,z+(horizontal?0:edge*WINDOW_WIDTH/2),horizontal?.10:.55,HEAD-SILL+.12,horizontal?.55:.10,M.wood);
-      for(const yy of [SILL,HEAD])block(x,yy,z,horizontal?WINDOW_WIDTH+.16:.62,.10,horizontal?.62:WINDOW_WIDTH+.16,M.wood);
-      block(x,(SILL+HEAD)/2,z,horizontal?.045:.08,HEAD-SILL,horizontal?.08:.045,M.gold);
+      for(const edge of [-1,1])block(x+(horizontal?edge*WINDOW_WIDTH/2:0),(SILL+HEAD)/2,z+(horizontal?0:edge*WINDOW_WIDTH/2),horizontal?.10:.55,HEAD-SILL+.12,horizontal?.55:.10,carved);
+      for(const yy of [SILL,HEAD])block(x,yy,z,horizontal?WINDOW_WIDTH+.16:.62,.10,horizontal?.62:WINDOW_WIDTH+.16,carved);
+      block(x,(SILL+HEAD)/2,z,horizontal?.045:.08,HEAD-SILL,horizontal?.08:.045,iron);
       const pane=mesh(new T.PlaneGeometry(WINDOW_WIDTH-.1,HEAD-SILL-.1),glass,[x,(SILL+HEAD)/2,z],[1,1,1],group);if(!horizontal)pane.rotation.y=Math.PI/2;
       pane.castShadow=false;pane.userData.dynamic=true;pane.name='Clear upstairs window';
       colliders.push({x,z,w:horizontal?WINDOW_WIDTH:thickness,d:horizontal?thickness:WINDOW_WIDTH,minY:SILL,maxY:HEAD});
       windowOpenings.push({x,z,axis,outward,width:WINDOW_WIDTH,sill:SILL,head:HEAD,pane});cursor=hi;
     }part(cursor,b,WALL_BOTTOM+WALL_HEIGHT/2,WALL_HEIGHT,true);
     if(exit){
-      for(const [lo,hi] of [[a,-exit.doorWidth/2],[exit.doorWidth/2,b]])block(fixed,Y+.12,(lo+hi)/2,.53,.18,hi-lo-.07,M.wood);
-    }else block(horizontal?(a+b)/2:fixed,Y+.12,horizontal?fixed:(a+b)/2,horizontal?b-a-.10:.53,.18,horizontal?.53:b-a-.10,M.wood);
+      for(const [lo,hi] of [[a,-exit.doorWidth/2],[exit.doorWidth/2,b]])block(fixed,Y+.12,(lo+hi)/2,.53,.18,hi-lo-.07,carved);
+    }else block(horizontal?(a+b)/2:fixed,Y+.12,horizontal?fixed:(a+b)/2,horizontal?b-a-.10:.53,.18,horizontal?.53:b-a-.10,carved);
     block(horizontal?(a+b)/2:fixed,UPPER_CEILING-.07,horizontal?fixed:(a+b)/2,horizontal?b-a-.10:.55,.1,horizontal?.55:b-a-.10,M.trim);
   }
   exterior('x',12,-42,42,[-36,-28,-20,-10,0,10,20,28,36],1);
@@ -157,8 +170,8 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
     piece(x0,hx0,z0,z1);piece(hx1,x1,z0,z1);piece(hx0,hx1,z0,hz0);piece(hx0,hx1,hz1,z1);return parts;
   }
   for(const x of [-28,0,28]){
-    if(x===-28){for(const c of holedSlab(x,UPPER_CEILING+.12,0,28,.24,24,cream,OLIVIA_ATTIC.hole))solidMeshes.push(c);holedSlab(x,UPPER_CEILING+.40,0,28.35,.30,24.35,M.roof,OLIVIA_ATTIC.hole);continue;}
-    const ceiling=block(x,UPPER_CEILING+.12,0,28,.24,24,cream);solidMeshes.push(ceiling);
+    if(x===-28){for(const c of holedSlab(x,UPPER_CEILING+.12,0,28,.24,24,vault,OLIVIA_ATTIC.hole))solidMeshes.push(c);holedSlab(x,UPPER_CEILING+.40,0,28.35,.30,24.35,M.roof,OLIVIA_ATTIC.hole);continue;}
+    const ceiling=block(x,UPPER_CEILING+.12,0,28,.24,24,vault);solidMeshes.push(ceiling);
     if(x!==0)block(x,UPPER_CEILING+.40,0,28.35,.30,24.35,M.roof);
   }
   // A narrow attic fascia seals the gap beneath the raised pitched roof.
@@ -192,7 +205,22 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
   furnishings.sofa(10,8.6,{y:Y});furnishings.table(10,6.8,{y:Y,w:1.4,d:.65,h:.42});
   for(const x of [-28,28])rugs.add(x,0,25,2.25,Y);
   for(const [x,z] of [[-37,0],[-22,0],[-10,2],[10,2],[22,0],[37,0],[0,-10.5],[0,10.5],[-35,-7],[35,-7],[-21,-7],[21,-7],[-28,7],[28,7]]){
-    cylinder(x,UPPER_CEILING-.065,z,.24,.10,M.gold,group);const bulb=sphere(x,UPPER_CEILING-.19,z,.15,.15,.15,M.white,group);bulb.castShadow=false;fixtures.push({x,y:UPPER_CEILING-.3,z,floor:Y});
+    // v187: a small wrought-iron candle crown on a short drop.
+    const parts=[mesh(candleGeo,iron,[x,UPPER_CEILING-.03,z],[.09,.05,.09],group),mesh(candleGeo,iron,[x,UPPER_CEILING-.24,z],[.014,.4,.014],group)];
+    const crown=mesh(crownGeo,iron,[x,UPPER_CEILING-.45,z],[1,1,1],group);crown.rotation.x=Math.PI/2;parts.push(crown);
+    for(let i=0;i<5;i++){const a=i/5*Math.PI*2;parts.push(mesh(candleGeo,M.white,[x+Math.cos(a)*.3,UPPER_CEILING-.38,z+Math.sin(a)*.3],[.022,.12,.022],group),mesh(flameGeo,flame,[x+Math.cos(a)*.3,UPPER_CEILING-.3,z+Math.sin(a)*.3],[.014,.034,.014],group));}
+    for(const o of parts)o.castShadow=false;
+    fixtures.push({x,y:UPPER_CEILING-.3,z,floor:Y});
+  }
+  // v187: hangings, armour, chests and candlelight for the upstairs rooms.
+  const tap=(x,z,rotation,design,w=1.8,h=1.7)=>furnishings.tapestry?.(x,Y+1.75,z,{rotation,w,h,design});
+  tap(-31.5,-11.7,0,'tree');tap(17,-11.7,0,'hunt',2.0);tap(33.4,-11.7,0,'tree',1.6);tap(-13.86,6,Math.PI/2,'hunt',2.0);
+  if(furnishings.armour){
+    furnishings.armour(-40,11.3,{y:Y,rotation:Math.PI});furnishings.armour(40,11.3,{y:Y,rotation:Math.PI});
+    furnishings.chest(24,11.35,{y:Y,rotation:Math.PI});furnishings.chest(-24,11.35,{y:Y,rotation:Math.PI});
+    furnishings.candelabrum(-26.6,-11.2,{y:Y});furnishings.candelabrum(-6.3,-5.5,{y:Y});furnishings.candelabrum(26.6,-11.2,{y:Y});
+    furnishings.armchair(7.9,6.7,{y:Y,rotation:Math.PI/2});furnishings.armchair(12.1,6.7,{y:Y,rotation:-Math.PI/2});
+    for(const x of [-2.5,2.5])furnishings.banner(x,Y+1.55,-11.7,{h:1.9,w:.7});
   }
   // Place supplies along each gallery's solid corridor wall, away from its door.
   // Leave clearance for the ammunition case's rearward-tilted lid.

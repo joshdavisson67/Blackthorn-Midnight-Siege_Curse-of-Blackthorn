@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {tiledBox} from './graphics.mjs?v=167';
+import {tiledBox} from './graphics.mjs?v=187';
 import {UPPER_CEILING} from './vertical.mjs?v=165';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 

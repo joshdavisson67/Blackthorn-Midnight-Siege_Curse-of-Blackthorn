@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=186';
-import {createChangelog} from './changelog.mjs?v=186';
+import {createLeaderboard} from './leaderboard.mjs?v=187';
+import {createChangelog} from './changelog.mjs?v=187';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -14,9 +14,9 @@ import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnM
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
 import {buildGraveyard} from './graveyard.mjs?v=165';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
-import {buildCellar,drawCellarMap} from './cellar.mjs?v=179';
+import {buildCellar,drawCellarMap} from './cellar.mjs?v=187';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
-import {buildShed} from './shed.mjs?v=167';
+import {buildShed} from './shed.mjs?v=187';
 import * as T from './three.module.js';
 import {createRenderScale} from './render-scale.mjs?v=120';
 import {createTouchControls,TOUCH} from './touch-controls.mjs?v=148';
@@ -25,36 +25,36 @@ import {suppressedShot} from './gun-audio.mjs?v=150';
 import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
-import {createStationBuilder} from './station-models.mjs?v=179';
-import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=167';
+import {createStationBuilder} from './station-models.mjs?v=187';
+import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=187';
 import {drawMinimap} from './minimap.mjs?v=179';
 import {dropOpacity,fadeMaterials} from './drop-fade.mjs?v=169';
 import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual,rankAuto,rankRecoil} from './weapon-ranks.mjs?v=165';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=179';
+import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=187';
 import {createEnemyAssets} from './enemy-assets.mjs?v=183';
-import {createCombatLights} from './combat-lights.mjs?v=179';
+import {createCombatLights} from './combat-lights.mjs?v=187';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
-import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=173';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=179';
+import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=187';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=187';
 import {BELLA,BELLA_PAW,createBellaCompanion,nextBellaRank} from './bella.mjs?v=185';
 import {createExplosionFx,EXPLOSION_FX} from './explosion-fx.mjs?v=185';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=183';
-import {addEstateDetail} from './estate-detail.mjs?v=165';
-import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=167';
+import {addEstateDetail} from './estate-detail.mjs?v=187';
+import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=187';
 import {createReticleHud} from './reticles.mjs?v=167';
-import {createFurnishings} from './furnishings.mjs?v=59';
+import {createFurnishings} from './furnishings.mjs?v=187';
 import {createRugBuilder} from './rugs.mjs?v=59';
 import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses,configureForgeStation} from './soul-forge.mjs?v=118';
-import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=167';
+import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=187';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=179';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=187';
 import {buildRotundaBell} from './rotunda-bell.mjs?v=130';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=170';
@@ -85,13 +85,14 @@ const groundDoors=[
 ];
 let seed=7123;function rng(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
 function texture(kind,size=512){const c=document.createElement('canvas');c.width=c.height=size;const x=c.getContext('2d');
-const palettes={wood:['#31281f','#433227'],floor:['#40362b','#59452f'],stone:['#485050','#354043'],plaster:['#4c5149','#636358'],brick:['#333b3d','#545951'],cloth:['#292d27','#45423a'],skin:['#65715d','#808067'],metal:['#313c3c','#4c5752'],roof:['#273035','#3c4647']};const p=palettes[kind]||palettes.stone;x.fillStyle=p[0];x.fillRect(0,0,size,size);
+const palettes={lime:['#b9b3a5','#c4beb0'],wood:['#31281f','#433227'],floor:['#40362b','#59452f'],stone:['#485050','#354043'],plaster:['#4c5149','#636358'],brick:['#333b3d','#545951'],cloth:['#292d27','#45423a'],skin:['#65715d','#808067'],metal:['#313c3c','#4c5752'],roof:['#273035','#3c4647']};const p=palettes[kind]||palettes.stone;x.fillStyle=p[0];x.fillRect(0,0,size,size);
 for(let i=0;i<16000;i++){const b=rng()*80;x.fillStyle=`rgba(${b+80},${b+80},${b+60},${rng()*.075})`;x.fillRect(rng()*size,rng()*size,rand(1,5),rand(1,4));}
 if(kind==='wood'||kind==='floor'){let boards=kind==='floor'?8:4;for(let j=0;j<boards;j++){const y=j*size/boards;x.fillStyle=j%2?p[1]:p[0];x.globalAlpha=.5;x.fillRect(0,y,size,size/boards);x.globalAlpha=1;x.fillStyle='#101714';x.fillRect(0,y,size,2);for(let k=0;k<80;k++){x.strokeStyle=`rgba(0,0,0,${rng()*.12})`;x.beginPath();let yy=y+rng()*size/boards;x.moveTo(0,yy);for(let q=0;q<=size;q+=20)x.lineTo(q,yy+Math.sin(q*.018+k)*rand(.2,2));x.stroke();}if(kind==='floor'){x.fillStyle='#151a17';x.fillRect((j%2)*size/2+size/4,y,2,size/boards);}}}
 if(kind==='brick'||kind==='stone'||kind==='roof'){let rows=kind==='roof'?14:8;for(let j=0;j<rows;j++)for(let k=-1;k<5;k++){let xx=k*size/4+(j%2)*size/8,yy=j*size/rows;x.fillStyle=`rgba(100,111,108,${rng()*.25})`;x.fillRect(xx+3,yy+3,size/4-6,size/rows-6);x.strokeStyle='#192729';x.lineWidth=2;x.strokeRect(xx,yy,size/4,size/rows);}}
+if(kind==='lime'){for(let i=0;i<70;i++){const cx=rng()*size,cy=rng()*size,r=rand(20,90),tone=rng()<.5?'255,250,238':'70,66,58',a=rand(.03,.08);for(const ox of [-size,0,size])for(const oy of [-size,0,size]){const g=x.createRadialGradient(cx+ox,cy+oy,0,cx+ox,cy+oy,r);g.addColorStop(0,`rgba(${tone},${a})`);g.addColorStop(1,`rgba(${tone},0)`);x.fillStyle=g;x.fillRect(cx+ox-r,cy+oy-r,r*2,r*2);}}}
 if(kind==='plaster'){for(let i=0;i<35;i++){x.strokeStyle='rgba(14,25,20,.2)';x.beginPath();let xx=rng()*size,yy=rng()*size;x.moveTo(xx,yy);for(let j=0;j<4;j++){xx+=rand(-15,15);yy+=rand(5,22);x.lineTo(xx,yy);}x.stroke();}}
 const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.colorSpace=T.SRGBColorSpace;t.anisotropy=8;return t;}
-const maps={};for(const k of ['wood','floor','stone','plaster','brick','cloth','skin','metal','roof'])maps[k]=texture(k);for(const k of ['wood','floor','stone','plaster','brick','roof'])maps[k].repeat.set(k==='floor'?7:k==='wood'?2:4,k==='floor'?7:k==='wood'?2:4);
+const maps={};for(const k of ['wood','floor','stone','plaster','brick','cloth','skin','metal','roof','lime','ashlar','flagstone'])maps[k]=texture(k);for(const k of ['wood','floor','stone','plaster','brick','roof'])maps[k].repeat.set(k==='floor'?7:k==='wood'?2:4,k==='floor'?7:k==='wood'?2:4);
 await loadEstateTextures(maps);
 function mat(color,map=null,roughness=.85,metalness=0){return new T.MeshStandardMaterial({color,map:map?maps[map]:null,roughness,metalness,bumpMap:['brick','stone','wood','floor','plaster'].includes(map)?maps[map]:null,bumpScale:map==='brick'?.009:map==='plaster'?.003:.004});}
 const M={wall:mat(0x969d87,'plaster'),wood:mat(0x807569,'wood'),floor:mat(0xaaa08c,'floor'),stone:mat(0x9ca5a0,'stone'),brick:mat(0x8d9994,'brick'),roof:mat(0x616f72,'roof'),dark:mat(0x151c1d,'metal',.5,.65),gold:mat(0x93724c,null,.35,.7),leather:mat(0x29342b,'cloth'),red:mat(0x62352e,'cloth'),skin:mat(0xa2ab88,'skin'),shirt:mat(0x7a7663,'cloth'),pants:mat(0x4c554e,'cloth'),white:mat(0xc4c2a6),glass:new T.MeshStandardMaterial({color:0x4e7f96,metalness:.05,roughness:.38,emissive:0x163949,emissiveIntensity:.08}),blood:mat(0x402018,null,.6),trim:mat(0x6f7462,'stone')};
@@ -104,9 +105,20 @@ M.wetStone=new T.MeshPhysicalMaterial({color:0xb0b9b5,map:maps.stone,bumpMap:map
 M.floor=new T.MeshStandardMaterial({color:0xf4ead7,map:maps.floor,bumpMap:maps.floor,bumpScale:.0018,roughness:.8,envMapIntensity:.55});
 {const oak=finishMapFrom(maps.floor,OAK_FINISH);if(oak){M.floor.roughnessMap=oak;M.floor.roughness=1;}
  const wet=finishMapFrom(maps.stone,WET_STONE_FINISH);if(wet){M.wetStone.clearcoatMap=wet;M.wetStone.clearcoatRoughnessMap=wet;M.wetStone.clearcoat=.55;M.wetStone.clearcoatRoughness=.52;}}
+// Stone interior (v187): limestone ashlar walls to match the facade, honed
+// flagstone floors, pale lime-plastered ceilings between carved stone ribs,
+// carved stone trim and wrought iron. Oak stays for furniture and doors.
+M.wall=new T.MeshStandardMaterial({color:0xb4ad9f,map:maps.ashlar,bumpMap:maps.ashlar,bumpScale:.012,roughness:.93});M.wall.name='ashlar';
+M.flagstone=new T.MeshStandardMaterial({color:0xe6e0d3,map:maps.flagstone,bumpMap:maps.flagstone,bumpScale:.0035,roughness:.72,envMapIntensity:.5});M.flagstone.name='flagstone';
+{const honed=finishMapFrom(maps.flagstone,FLAGSTONE_FINISH);if(honed){M.flagstone.roughnessMap=honed;M.flagstone.roughness=1;}}
+M.vault=new T.MeshStandardMaterial({color:0xd3cdbf,map:maps.lime,bumpMap:maps.lime,bumpScale:.0015,roughness:.97});M.vault.name='lime-plaster';
+M.carved=new T.MeshStandardMaterial({color:0xa8a193,map:maps.stone,bumpMap:maps.stone,bumpScale:.006,roughness:.86});M.carved.name='carved-stone';
+M.iron=new T.MeshStandardMaterial({color:0x2a2d2e,roughness:.56,metalness:.74});M.iron.name='wrought-iron';
+M.flame=new T.MeshBasicMaterial({color:0xffcb84});M.flame.name='candle-flame';
 const furnishings=createFurnishings({world,M,colliders}),rugs=createRugBuilder({world});
 scene.environment=ambientEnvironment();scene.environmentIntensity=.48;
 M.wetStone.name='wet-stone';
+
 const boxGeo=new T.BoxGeometry(1,1,1),sphereGeo=new T.SphereGeometry(1,32,24),cylGeo=new T.CylinderGeometry(1,1,1,24);
 function mesh(geo,material,pos,scale,parent=world,shadow=true){const m=new T.Mesh(geo,material);m.position.set(...pos);if(scale)m.scale.set(...scale);m.castShadow=shadow&&!material.transparent&&!material.isMeshBasicMaterial;m.receiveShadow=shadow;parent.add(m);return m;}
 function box(x,y,z,w,h,d,m=M.stone,parent=world,collision=false){const obj=mesh(tiledBox(boxGeo,m,w,h,d),m,[x,y,z],[w,h,d],parent);if(collision){colliders.push({x,z,w,d,minY:y-h/2,maxY:y+h/2});solidMeshes.push(obj);}return obj;}
@@ -119,7 +131,7 @@ const hemisphere=new T.HemisphereLight(0x8ba8bf,0x222019,1.1);scene.add(hemisphe
 const moon=sphere(-35,44,-55,3,3,3,new T.MeshBasicMaterial({color:0xc6d9db}));moon.castShadow=false;
 function point(x,y,z,color,intensity=2,dist=9){const l=new T.PointLight(color,intensity,dist,1.5);l.position.set(x,y,z);scene.add(l);lamps.push({light:l,base:intensity,phase:rand(0,7)});return l;}
 function candle(x,y,z,parent=world){cylinder(x,y+.14,z,.045,.28,M.white,parent);const f=sphere(x,y+.31,z,.028,.07,.028,new T.MeshBasicMaterial({color:0xffc77c}),parent);return f;}
-function sconce(x,y,z,rot=0){const g=new T.Group();g.position.set(x,y,z);g.rotation.y=rot;world.add(g);box(0,0,0,.16,.5,.1,M.gold,g);box(0,-.12,.17,.07,.07,.4,M.gold,g);candle(0,-.08,.32,g);point(x+Math.sin(rot)*.34,y+.26,z+Math.cos(rot)*.34,0xffb564,4.5,7);}
+function sconce(x,y,z,rot=0){const g=new T.Group();g.position.set(x,y,z);g.rotation.y=rot;world.add(g);box(0,0,0,.16,.5,.06,M.iron,g);box(0,-.12,.17,.05,.05,.36,M.iron,g);cylinder(0,-.11,.32,.07,.03,M.iron,g);candle(0,-.08,.32,g);point(x+Math.sin(rot)*.34,y+.26,z+Math.cos(rot)*.34,0xffb564,4.5,7);}
 // GROUNDS: grass lawns, clear stone paths, trees and bounded iron fencing.
 const earth=createGrassMaterial();
 alignGrassPatch(box(0,-.22,-26.5,112,.3,117,earth));
@@ -135,11 +147,11 @@ const estateTrees=[];for(let i=0;i<54;i++){const x=(i%2?1:-1)*rand(49,52),rawZ=r
 function lampPost(x,z){cylinder(x,1.8,z,.07,3.6);cylinder(x,.15,z,.25,.3);for(const y of [3.31,3.89])box(x,y,z,.55,.055,.55,M.dark);for(const dx of [-.255,.255])for(const dz of [-.255,.255])box(x+dx,3.6,z+dz,.035,.55,.035,M.dark);const bulb=box(x,3.6,z,.42,.43,.42,new T.MeshStandardMaterial({color:0xffc884,emissive:0xffbb66,emissiveIntensity:2}));bulb.castShadow=false;mesh(new T.ConeGeometry(.45,.3,4),M.dark,[x,4.03,z]);point(x,3.5,z,0xffbb77,9,11);}
 lampPost(-7,21);lampPost(7,21);lampPost(-47,-36);lampPost(47,18);
 // MANSION: accessible ground floor with open central circulation.
-box(0,.02,0,28,.15,24,M.floor);box(0,6.9,0,28,.25,24,M.wood);rugs.add(0,0,6,22);
+box(0,.02,0,28,.15,24,M.flagstone);box(0,6.9,0,28,.25,24,M.vault);rugs.add(0,0,6,22);
 function wall(x,z,w,d,h=6.8){return box(x,h/2,z,w,h,d,M.wall,world,true);}
 wall(-8.6,12,10.8,.55);wall(8.6,12,10.8,.55);box(0,5.4,12,6.4,2.8,.55,M.wall);for(const x of [-8.5,8.5])wall(x,-12,11,.55);box(0,5.5,-12,6,2.6,.55,M.wall);for(const x of [-14,14]){for(const z of [-7.5,7.5])wall(x,z,.55,9);}
-for(let x of [-5.6,5.6]){const start=x<0?-1.4:-3.6;wall(x,(-12+start)/2,.38,12+start,UPPER_SLAB_BOTTOM);wall(x,7.8,.38,8.4,UPPER_SLAB_BOTTOM);for(let z of [start,3.6]){box(x,2.2,z,.65,4.4,.28,M.wood);box(x,4.25,z,.68,.16,.7,M.gold);}}
-for(let z of [-12,12]){for(const side of [-1,1])box(side*(z===12?8.6:8.5),.2,z,z===12?10.8:11,.3,.65,M.wood);box(0,6.65,z,28,.24,.72,M.trim);}for(let x of [-14,14]){for(const z of [-7.5,7.5])box(x,.2,z,.65,.3,9,M.wood);box(x,6.65,0,.72,.24,24,M.trim);}
+for(let x of [-5.6,5.6]){const start=x<0?-1.4:-3.6;wall(x,(-12+start)/2,.38,12+start,UPPER_SLAB_BOTTOM);wall(x,7.8,.38,8.4,UPPER_SLAB_BOTTOM);for(let z of [start,3.6]){box(x,2.2,z,.65,4.4,.28,M.carved);box(x,4.25,z,.68,.16,.7,M.carved);box(x,.16,z,.74,.3,.28,M.carved);}}
+for(let z of [-12,12]){for(const side of [-1,1])box(side*(z===12?8.6:8.5),.2,z,z===12?10.8:11,.3,.65,M.carved);box(0,6.65,z,28,.24,.72,M.trim);}for(let x of [-14,14]){for(const z of [-7.5,7.5])box(x,.2,z,.65,.3,9,M.carved);box(x,6.65,0,.72,.24,24,M.trim);}
 // Exterior ornament and gothic windows.
 // Crossbars meet the vertical mullion at their ends, with no competing faces.
 for(let x of [-10,-7,7,10]){box(x,3.4,12.32,1.5,3.1,.08,M.dark);box(x,3.4,12.38,1.28,2.9,.04,M.glass);box(x,3.4,12.41,.05,3,.05,M.gold);for(const side of [-1,1])box(x+side*.3375,3.4,12.41,.625,.05,.05,M.gold);box(x,1.9,12.36,1.9,.15,.35,M.stone);}
@@ -153,21 +165,31 @@ for(const side of [-1,1]){const hinge=new T.Group();hinge.name='Fully open main 
 for(let x of [-4.5,4.5])for(let z of [-8,7]){if(x<0&&z<0)continue;cylinder(x,6.55,z,.43,.3,M.stone);}
 // Hang the hall portrait on a solid side wall below the upstairs slab.
 painting(5.31,2.55,5.25,2.5,1.8,-Math.PI/2);for(let x of [-3,3])sconce(x,3.6,-11.7);
-cylinder(0,(5.9+UPPER_CEILING)/2,1,.03,UPPER_CEILING-5.9,M.gold);const ring=mesh(new T.TorusGeometry(1.25,.045,8,32),M.gold,[0,5.85,1]);ring.rotation.x=Math.PI/2;for(let i=0;i<10;i++){let a=i/10*Math.PI*2;candle(Math.cos(a)*1.25,5.85,1+Math.sin(a)*1.25);sphere(Math.cos(a)*1.25,5.65,1+Math.sin(a)*1.25,.035,.13,.035,M.glass);}point(0,5.5,1,0xffc17b,22,19);
+{const before=world.children.length;cylinder(0,(5.9+UPPER_CEILING)/2,1,.03,UPPER_CEILING-5.9,M.iron);const ring=mesh(new T.TorusGeometry(1.25,.05,8,32),M.iron,[0,5.85,1]);ring.rotation.x=Math.PI/2;{const inner=mesh(new T.TorusGeometry(.62,.035,8,24),M.iron,[0,6.35,1]);inner.rotation.x=Math.PI/2;for(let i=0;i<6;i++){const a=i/6*Math.PI*2,arm=mesh(new T.CylinderGeometry(.018,.018,1.05,6),M.iron,[Math.cos(a)*.9,6.12,1+Math.sin(a)*.9]);arm.rotation.set(Math.sin(a)*.62,0,-Math.cos(a)*.62);}}for(let i=0;i<10;i++){let a=i/10*Math.PI*2;cylinder(Math.cos(a)*1.25,5.84,1+Math.sin(a)*1.25,.06,.025,M.iron);candle(Math.cos(a)*1.25,5.85,1+Math.sin(a)*1.25);sphere(Math.cos(a)*1.25,5.66,1+Math.sin(a)*1.25,.03,.1,.03,M.iron);}for(const o of world.children.slice(before))o.castShadow=false;}point(0,5.5,1,0xffc17b,22,19);
 for(let x of [-5.35,5.35])for(let z of [-7,7])sconce(x,3,z,x<0?Math.PI/2:-Math.PI/2);
 // Library: bookcases, furniture, scattered books.
 function bookcase(x,z,rot=0){return furnishings.bookcase(x,z,{rotation:rot});}
 for(let z of [-8.5,-4.8,4.8,8.5])bookcase(-13.25,z,Math.PI/2);bookcase(-9,-11.35);bookcase(-9,11.35,Math.PI);
 furnishings.table(-9.2,-4.65,{w:1.75,d:.82,desk:true});furnishings.chair(-9.2,-3.59);point(-9.4,1.5,-4.65,0xffb265,4,7);
 function sofa(x,z,rot=0){return furnishings.sofa(x,z,{rotation:rot});}
-sofa(-10,5.3);furnishings.table(-10,3.55,{w:1.5,d:.72,h:.42});candle(-10,.515,3.55);
+furnishings.settle(-10,5.3,{rotation:Math.PI});furnishings.table(-10,3.55,{w:1.5,d:.72,h:.42});candle(-10,.515,3.55);
 // Dining room and fireplace.
 furnishings.table(9.7,5,{w:4.45,d:1.20,h:.78});for(const x of [8.2,9.7,11.2])for(const side of [-1,1]){furnishings.chair(x,5+side*.98,{rotation:side<0?Math.PI:0});mesh(new T.CylinderGeometry(.14,.14,.015,20),M.white,[x,.883,5+side*.36]);}for(const x of [8.2,9.7,11.2])candle(x,.875,5);point(9.7,1.7,5,0xffb564,9,10);
-box(13.55,1.5,-7,1,3,3.5,M.stone,world,true);box(12.98,1,-7,.05,1.8,2.3,M.dark);box(12.92,.35,-7,.1,.16,2,M.wood);const fire=sphere(12.88,.65,-7,.14,.55,.7,new T.MeshBasicMaterial({color:0xff8f35}));point(12.1,1,-7,0xff8b38,13,10);box(13.25,3,-7,1.6,.25,4.0,M.stone);
+furnishings.fireplace(13.435,-7,{rotation:-Math.PI/2});const fire=sphere(13.3,.45,-7,.1,.3,.5,new T.MeshBasicMaterial({color:0xff8f35}));point(12.1,1,-7,0xff8b38,13,10);
 // The mantel has less than a meter of headroom; use the clear north wall.
-painting(9.5,2.45,-11.65,2,2.5);sofa(9.5,-8.5,Math.PI);
+painting(9.5,2.45,-11.65,2,2.5);furnishings.cabinet(9.5,-11.42,{w:2.2,h:.98});for(const x of [7.4,11.6])furnishings.candelabrum(x,-11.2);
 // Keep this frame above the chair rail and between the window curtains.
 painting(13.64,2.65,6.9,2.2*2/3,2.2,-Math.PI/2);
+// v187: a stone house inside as well as out. The library gets a hearth and a
+// pair of carved chairs; banners hang from the gallery edges over the hall,
+// and a suit of armour stands guard inside the front door.
+furnishings.fireplace(-12,-11.435);
+furnishings.armchair(-12.2,-8.6,{rotation:Math.PI-.35});furnishings.armchair(-10.6,-8.9,{rotation:Math.PI+.35});
+for(const z of [-6,-2,2,6])furnishings.banner(3.27,3.18,z,{rotation:-Math.PI/2,h:1.7,w:.8});
+for(const z of [1.5,5.5])furnishings.banner(-3.17,3.18,z,{rotation:Math.PI/2,h:1.7,w:.8});
+for(const x of [-2.2,2.2])furnishings.banner(x,3.18,9.05,{rotation:Math.PI,h:1.7,w:.8});
+furnishings.armour(4.85,10.95,{rotation:-Math.PI/2});
+furnishings.trophy(-13.55,3.25,-7,{rotation:Math.PI/2});furnishings.trophy(-13.55,3.25,7,{rotation:Math.PI/2});
 // Environmental storytelling: boards, debris, cloth rugs, broken plaster.
 for(let i=0;i<24;i++){let x=rand(-13,13),z=rand(-11,11);if(Math.abs(x)<3||groundDoors.some(d=>Math.abs(x-d.x)<(d.axis==='x'?d.width/2:3)+.4&&Math.abs(z-d.z)<(d.axis==='z'?d.width/2:3)+.4))continue;let debris=box(x,.16,z,rand(.08,.35),rand(.08,.3),rand(.1,.4),i%2?M.stone:M.wood);debris.rotation.set(rand(0,1),rand(0,3),rand(0,1));}
 for(let x of [-10,10])for(let k=0;k<2;k++){const board=box(x,3+k*.8,12.44,1.8,.14,.05,M.wood);board.rotation.z=k?.14:-.25;}
@@ -263,8 +285,8 @@ const skyMat=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,uniforms:{ti
 }`});const sky=new T.Mesh(new T.SphereGeometry(220,32,16),skyMat);sky.renderOrder=-5;scene.add(sky);
 const starGeo=new T.BufferGeometry(),starPos=[];for(let i=0;i<300;i++){const p=new T.Vector3(rand(-1,1),rand(.1,1),rand(-1,1)).normalize().multiplyScalar(90);starPos.push(p.x,p.y,p.z);}starGeo.setAttribute('position',new T.Float32BufferAttribute(starPos,3));scene.add(new T.Points(starGeo,new T.PointsMaterial({color:0xb4cedc,size:.09,transparent:true,opacity:.45,depthWrite:false})));
 // Carved wall panels, interior windows, cobwebs, and architectural trim.
-for(const side of [-1,1])for(let z=-10;z<=10;z+=2){if(Math.abs(z)<4)continue;box(side*13.63,.72,z,.09,1.3,1.8,M.wood);box(side*13.55,1.4,z,.12,.08,2,M.gold);for(const dz of [-.7,.7])box(side*13.54,.75,z+dz,.05,1.03,.055,M.gold);for(const y of [.24,1.22])box(side*13.54,y,z,.05,.055,1.45,M.gold);}
-for(const side of [-1,1])for(const z of [-4,4,10]){const g=new T.Group();g.position.set(side*13.66,3.5,z);g.rotation.y=side<0?Math.PI/2:-Math.PI/2;world.add(g);box(0,0,0,1.85,3.2,.1,M.wood,g);box(0,.0,.061,1.55,2.93,.025,M.glass,g);box(0,0,.09,.04,3,.05,M.gold,g);box(0,0,.09,1.6,.04,.05,M.gold,g);for(const dx of [-1.05,1.05]){box(dx,.05,0,.28,3.5,.15,M.red,g);}sphere(0,1.65,0,.93,.42,.06,M.wood,g);}
+for(const side of [-1,1])for(let z=-10;z<=10;z+=2){if(Math.abs(z)<4)continue;box(side*13.63,.72,z,.09,1.3,1.8,M.carved);box(side*13.55,1.4,z,.12,.08,2,M.carved);for(const dz of [-.7,.7])box(side*13.56,.75,z+dz,.04,1.03,.06,M.carved);for(const y of [.24,1.22])box(side*13.56,y,z,.04,.06,1.45,M.carved);}
+for(const side of [-1,1])for(const z of [-4,4,10]){const g=new T.Group();g.position.set(side*13.66,3.5,z);g.rotation.y=side<0?Math.PI/2:-Math.PI/2;world.add(g);box(0,0,0,1.85,3.2,.1,M.carved,g);box(0,.0,.061,1.55,2.93,.025,M.glass,g);box(0,0,.09,.04,3,.04,M.iron,g);for(const yy of [-.75,0,.75])box(0,yy,.09,1.6,.03,.04,M.iron,g);for(const dx of [-1.05,1.05]){box(dx,.05,0,.28,3.5,.15,M.red,g);}sphere(0,1.65,0,.93,.42,.06,M.carved,g);}
 box(0,9.7,-9.7,3.8,6,3.8,M.brick);const towerTop=mesh(new T.ConeGeometry(3.2,5,4),M.roof,[0,15,-9.7]);towerTop.rotation.y=Math.PI/4;box(0,11.8,-7.78,1.8,2.1,.06,M.glass);box(0,11.8,-7.73,.06,2.1,.06,M.gold);
 const webMat=new T.LineBasicMaterial({color:0xaeb7a4,transparent:true,opacity:.14});for(const corner of [[-5.3,6.6,11.6],[5.3,6.6,11.6],[-13.6,6.6,-11.6],[13.6,6.6,-11.6]]){const pp=[],sign=corner[0]<0?1:-1;for(let i=0;i<8;i++){const a=i/7*Math.PI/2;pp.push(0,0,0,Math.cos(a)*sign*1.5,-Math.sin(a)*1.5,0);}for(let r=.35;r<1.6;r+=.25)for(let i=0;i<7;i++){const a=i/7*Math.PI/2,b=(i+1)/7*Math.PI/2;pp.push(Math.cos(a)*sign*r,-Math.sin(a)*r,0,Math.cos(b)*sign*r,-Math.sin(b)*r,0);}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pp,3));const w=new T.LineSegments(geo,webMat);w.position.set(...corner);world.add(w);}
 const shed=buildShed({world,M,box,mesh,cylinder,label,colliders,solidMeshes,interactables,batchArticulated});
@@ -276,6 +298,7 @@ const rotundaBell=buildRotundaBell({world,solidMeshes,interactables,batchArticul
 const secondFloor=buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,colliders,solidMeshes,interactables,station,furnishings,rugs});
 // Olivia's attic (v131 Easter egg): built with the house, sealed until 25 bone chips.
 const attic=buildOliviaAttic({world,M,box,colliders,solidMeshes,interactables,upperFixtures:secondFloor.fixtures});
+for(const hearth of furnishings.hearths)estateDetail.addFlame(hearth);
 let boneChips=0,boneChipsFound=0,atticState={opening:false,time:0,open:false},oliviaCheer=0;
 const facade=buildFacade({world,M,secondFloor,colliders,solidMeshes});
 // The family crest now sits in the pediment's roundel.
