@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import * as T from '../public/game/three.module.js';
 import {UPPER_Y,UPPER_TILES,STAIR,hasUpperFloor} from '../public/game/vertical.mjs';
 import {UPPER_SLAB_BOTTOM} from '../public/game/upper-shell.mjs';
+import {UPPER_SOFFIT} from '../public/game/second-floor.mjs';
 
 export function verifyUpstairsSeams(qa){
   const {world,colliders}=qa.get();world.updateMatrixWorld(true);
@@ -11,8 +12,8 @@ export function verifyUpstairsSeams(qa){
   function wallSurface(origin,direction,axis,plane){
     ray.set(new T.Vector3(...origin),new T.Vector3(...direction).normalize());
     // The new exterior moldings project in front of the wall. Require the
-    // actual plaster face behind them, so trim cannot conceal a real slit.
-    const hits=ray.intersectObjects(opaque,false),wall=hits.find(hit=>Math.abs(hit.point[axis]-plane)<.003&&hit.object.material.map?.name==='plaster');
+    // actual wall face behind them (v187: dressed ashlar, formerly plaster), so trim cannot conceal a real slit.
+    const hits=ray.intersectObjects(opaque,false),wall=hits.find(hit=>Math.abs(hit.point[axis]-plane)<.003&&hit.object.material.map?.name==='ashlar');
     assert(wall,`Missing structural wall behind facade at ${origin}: ${hits[0]?.point.toArray()}`);
     assert(!hits.some(hit=>hit!==wall&&Math.abs(hit.distance-wall.distance)<.0001),'The underlying wall has no competing coplanar faces');return wall;
   }
@@ -94,10 +95,11 @@ export function verifyUpstairsCeiling(qa){
   let traces=0;
   for(const [x,z] of probes)for(const direction of [[0,1,0],[.85,1,.37],[-.85,1,-.37]]){
     const hits=trace(x,z,direction),first=hits[0];
-    assert(first&&Math.abs(first.point.y-UPPER_SLAB_BOTTOM)<.001,`Continuous downstairs ceiling under upstairs wall at ${x}, ${z}`);
-    assert.equal(first.object.material,floorMaterial,'The floor slab must cover the upstairs wall caps');
+    // v187: the visible ceiling is the plaster soffit just under the slab.
+    assert(first&&Math.abs(first.point.y-(UPPER_SLAB_BOTTOM-UPPER_SOFFIT))<.001,`Continuous downstairs ceiling under upstairs wall at ${x}, ${z}`);
+    assert.equal(first.object.material,floorMaterial,'The plaster soffit must cover the upstairs wall caps');
     const normal=first.face.normal.clone().transformDirection(first.object.matrixWorld);
-    assert(normal.y<-.99,'The visible ceiling must be the slab underside');
+    assert(normal.y<-.99,'The visible ceiling must be the soffit underside');
     assert(!hits.some(hit=>hit!==first&&Math.abs(hit.distance-first.distance)<.015),`Competing wall/ceiling faces at ${x}, ${z}, direction ${direction}`);traces++;
   }
   console.log(`PASS: ${traces} downstairs ceiling traces across both wings and upstairs room partitions, with clean slab faces at vertical and oblique angles.`);

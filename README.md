@@ -27,6 +27,26 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## A stone interior (version 187)
+
+The mansion's rooms now match its limestone exterior. Wood is kept for the furniture and the attic.
+
+**Surfaces**
+- **Walls:** coursed limestone ashlar, the same stone as the facade, in a slightly different tone for each wing.
+- **Floors:** honed limestone flags, laid in random courses with worn edges, small pits and fine cracks. A new seamless 3.2 m texture, `assets/flagstone-v1.jpg`, carries a matching roughness map, so the stone has a soft sheen where it is smoothest.
+- **Ceilings:** lime plaster. Rooms under the upper floor have a plaster soffit crossed by carved stone ribs.
+- **Trim:** carved stone for baseboards, door jambs and lintels, window surrounds, pilasters and the hall wainscot. The grand stair has stone treads with carved stringers.
+- **Metal:** wrought iron for the stair and balcony rails, window mullions, and candle-crown chandeliers and sconces, which replace the old bulb fittings.
+
+**Furniture**
+- **Removed:** lounge sofas (ballroom, library, dining room), park benches (conservatory, portrait gallery), the table that stood in for the chapel altar, and the old box hearth.
+- **Fireplaces:** four working stone fireplaces with open fireboxes, andirons, logs, embers and animated flames, in the dining room, library, ballroom and music salon.
+- **Hung on the walls:** woven tapestries (crest, tree and hunt designs), heraldic banners, a shield with crossed swords, and stained glass in the chapel.
+- **New pieces:** oak settles and carved armchairs, suits of armour, iron candelabra, iron-bound chests, refectory tables with benches in the servants' quarters, a stone altar and an oak lectern in the chapel, and stone benches and urns.
+- **Upstairs:** tapestries, banners, armour, chests, candelabra and armchairs, all clear of the walkways.
+
+**Cost:** measured in headless renders against version 186, draw calls rose by about 10–14% per room. Triangle counts range from 17% fewer to 9% more, because candle flames use low-poly shared geometry and thin decorations cast no shadows. Real browser frame rates have not been measured.
+
 ## A real throwing arm (version 186)
 
 **The arm** used to be a smooth tube with a mitten. It's now built like the rest of the kit:

@@ -1,6 +1,6 @@
 import {drawGraveyardMap} from './graveyard.mjs?v=165';
 import * as T from './three.module.js';
-import {drawStationMarker} from './station-models.mjs?v=179';
+import {drawStationMarker} from './station-models.mjs?v=187';
 import {ESTATE_ROOMS} from './estate-layout.mjs?v=28';
 import {CELLAR} from './cellar-layout.mjs?v=28';
 import {SHED,SHED_FRONT} from './shed-layout.mjs?v=76';
@@ -8,14 +8,33 @@ import {EXTERIOR_STAIRS} from './vertical.mjs?v=165';
 
 export function buildMansionExpansion({scene,world,M,box,mesh,cylinder,sphere,painting,sofa,bookcase,label,station,colliders,furnishings,rugs}){
   const fixtures=[],doors=[];
-  const plaster=new Map(ESTATE_ROOMS.map(r=>{const m=M.wall.clone();m.color.setHex(r.tint);return [r.id,m];}));
+  // v187: each wing is dressed limestone, in its own natural tone of the stone.
+  const STONE_TONES={ballroom:0xc3b9a6,original:0xb4ad9f,conservatory:0xb2b2a6,portraits:0xb9a996,rotunda:0xc2bba9,music:0xa9aaa5,archives:0xb6a88f,north:0xb0aea4,infirmary:0xbab7ad,chapel:0xa9a39a,observatory:0xa5a8a6,servants:0xb3a994};
+  const plaster=new Map(ESTATE_ROOMS.map(r=>{const m=M.wall.clone();m.color.setHex(STONE_TONES[r.id]??0xb4ad9f);return [r.id,m];}));
+  const carved=M.carved??M.trim,vault=M.vault??M.wood,iron=M.iron??M.dark,flagstone=M.flagstone??M.floor;
   const bronze=M.gold, windowMat=new T.MeshStandardMaterial({color:0x728fa3,roughness:.7,emissive:0x35495d,emissiveIntensity:.55});
-  const flameMat=new T.MeshBasicMaterial({color:0xffce8c});
+  const flameMat=M.flame??new T.MeshBasicMaterial({color:0xffce8c});
+  // v187: leaded stained glass for the chapel, glowing faintly from the night outside.
+  const stained=(()=>{const canvas=typeof document!=='undefined'?document.createElement('canvas'):null,c=canvas?.getContext?.('2d');
+    if(!c||typeof c.fillRect!=='function')return windowMat;canvas.width=128;canvas.height=256;
+    const glass=['#1d3f86','#8a1b1f','#c69a2c','#2f6b3a','#5b2a7a','#24508f'];let k=0;
+    for(let y=0;y<256;y+=21)for(let x=-(y/21%2)*11;x<128;x+=22){c.fillStyle=glass[(k++*7+y)%glass.length];c.beginPath();c.moveTo(x+11,y);c.lineTo(x+22,y+10.5);c.lineTo(x+11,y+21);c.lineTo(x,y+10.5);c.closePath();c.fill();}
+    c.fillStyle='#e7d39a';c.beginPath();c.ellipse(64,70,24,24,0,0,7);c.fill();c.fillStyle='#8a1b1f';c.fillRect(56,96,16,110);c.fillRect(36,120,56,14);
+    c.strokeStyle='#161616';c.lineWidth=3;for(let y=0;y<256;y+=21)for(let x=-(y/21%2)*11;x<128;x+=22){c.beginPath();c.moveTo(x+11,y);c.lineTo(x+22,y+10.5);c.lineTo(x+11,y+21);c.lineTo(x,y+10.5);c.closePath();c.stroke();}
+    c.lineWidth=5;c.strokeRect(2,2,124,252);c.beginPath();c.arc(64,64,62,Math.PI,0);c.stroke();
+    const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;
+    return new T.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:0xffffff,emissiveIntensity:.42,roughness:.55});})();
+  // Small, low-poly shared shapes for the chandeliers' candles, cups and flames.
+  const flameGeo=new T.SphereGeometry(1,6,4),candleGeo=new T.CylinderGeometry(1,1,1,8),crownGeo=new T.TorusGeometry(.42,.03,6,24),armGeo=new T.CylinderGeometry(.012,.012,.62,5);
   function fixture(x,z,cool=false,lower=false){
     const drop=lower?2.5:0;
-    cylinder(x,6.15-drop,z,.026,1.15,bronze);
-    box(x,5.55-drop,z,.7,.18,.7,bronze);
-    sphere(x,5.34-drop,z,.24,.28,.24,flameMat);
+    // A wrought-iron candle crown on a chain rod (v187).
+    // Its own lamp sits inside it, so it casts no shadow of itself on the ceiling.
+    const parts=[cylinder(x,6.15-drop,z,.022,1.15,iron)];
+    const crown=mesh(crownGeo,iron,[x,5.5-drop,z]);crown.rotation.x=Math.PI/2;parts.push(crown);
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2,cx=x+Math.cos(a)*.42,cz=z+Math.sin(a)*.42;parts.push(mesh(candleGeo,iron,[cx,5.52-drop,cz],[.045,.02,.045]),mesh(candleGeo,M.white,[cx,5.6-drop,cz],[.028,.16,.028]),mesh(flameGeo,flameMat,[cx,5.71-drop,cz],[.018,.045,.018]));}
+    for(let i=0;i<3;i++){const a=i/3*Math.PI*2,arm=mesh(armGeo,iron,[x+Math.cos(a)*.2,5.78-drop,z+Math.sin(a)*.2]);arm.rotation.set(Math.sin(a)*.72,0,-Math.cos(a)*.72);parts.push(arm);}
+    parts.push(mesh(flameGeo,flameMat,[x,5.34-drop,z],[.12,.14,.12]));for(const o of parts)o.castShadow=false;
     // The light sits in the globe, so its strength follows the real mounting
     // height: low lamps in the wing rooms no longer glare like ceiling lamps.
     fixtures.push({x,y:5.12-drop,z,floor:0,color:cool?0xa5c8de:0xffc38d});
@@ -33,14 +52,14 @@ export function buildMansionExpansion({scene,world,M,box,mesh,cylinder,sphere,pa
       const wing=(length-opening)/2;
       piece(-(opening+wing)/2,wing);piece((opening+wing)/2,wing);
       piece(0,opening,2.6,5.5);
-      for(const side of [-1,1])piece(side*3.08,.17,4.12,2.06,bronze,.62);
-      piece(0,6.32,.16,4.2,bronze,.62);
+      for(const side of [-1,1])piece(side*3.08,.17,4.12,2.06,carved,.62);
+      piece(0,6.32,.16,4.2,carved,.62);
     }else piece(0,length);
     // Door trim projects 7cm beyond both wall faces; jambs stop at the lintel.
     // Baseboards are split at doorways instead of crossing the opening.
     const spans=door?[[-(length+opening)/4,(length-opening)/2],[(length+opening)/4,(length-opening)/2]]:[[0,length]];
     for(const [offset,width] of spans){
-      for(const side of [-1,1])box(x+(horizontal?offset:side*.26),.28,z+(horizontal?side*.26:offset),horizontal?width-.10:.06,.35,horizontal?.06:width-.10,M.wood);
+      for(const side of [-1,1])box(x+(horizontal?offset:side*.26),.28,z+(horizontal?side*.26:offset),horizontal?width-.10:.06,.35,horizontal?.06:width-.10,carved);
     }
   }
   // Internal passages form loops through all twelve sections.
@@ -53,30 +72,31 @@ export function buildMansionExpansion({scene,world,M,box,mesh,cylinder,sphere,pa
   for(const r of ESTATE_ROOMS){
     if(r.id==='original')continue;
     const {x,z}=r, wallMat=plaster.get(r.id);
-    const floor=box(x,.02,z,28,.15,24,M.floor);floor.userData.floorSection=r.id;
+    const floor=box(x,.02,z,28,.15,24,flagstone);floor.userData.floorSection=r.id;
     if(r.id==='rotunda'||r.id==='observatory'){
       const outline=new T.Shape();outline.moveTo(-14,-12);outline.lineTo(14,-12);outline.lineTo(14,12);outline.lineTo(-14,12);outline.closePath();
       const opening=new T.Path();opening.absarc(0,0,6.2,0,Math.PI*2,true);outline.holes.push(opening);
-      const ceiling=mesh(new T.ExtrudeGeometry(outline,{depth:.34,bevelEnabled:false,curveSegments:48}),M.wood,[x,6.84,z]);ceiling.rotation.x=-Math.PI/2;
+      const ceiling=mesh(new T.ExtrudeGeometry(outline,{depth:.34,bevelEnabled:false,curveSegments:48}),vault,[x,6.84,z]);ceiling.rotation.x=-Math.PI/2;
       const domeMat=windowMat.clone();domeMat.side=T.DoubleSide;
       mesh(new T.SphereGeometry(6.5,32,16,0,Math.PI*2,0,Math.PI/2),domeMat,[x,6.86,z]);
     }else{
       // Recess ceiling end caps inside the walls. At the rear of the upper
       // wings, full-width caps otherwise share the exposed wall-end plane.
-      box(x,6.96,z,27.92,.24,23.92,M.wood);
+      box(x,6.96,z,27.92,.24,23.92,vault);
       box(x,7.22,z,27.92,.28,23.92,M.roof);
     }
     // Border panels and ceiling beams define each room without narrowing the routes.
     for(const side of [-1,1]){
       for(const offset of [-8.5,8.5]){
         box(x+offset,1.15,z+side*11.72,10.4,2.1,.08,wallMat);
-        box(x+offset,.2,z+side*11.64,10.4,.15,.08,bronze);
+        box(x+offset,.2,z+side*11.64,10.4,.15,.08,carved);
+        box(x+offset,2.22,z+side*11.66,10.4,.08,.1,carved);
         box(x+side*13.72,1.15,z+offset, .08,2.1,5.5,wallMat);
       }
-      box(x+side*12.7,6.56,z,.2,.32,23.4,bronze);
-      box(x,6.56,z+side*10.8,25.6,.32,.2,bronze);
+      box(x+side*12.7,6.56,z,.22,.32,23.4,carved);
+      box(x,6.56,z+side*10.8,25.6,.32,.22,carved);
     }
-    for(const xx of [-7,0,7])if(xx!==0||!['rotunda','observatory'].includes(r.id))box(x+xx,6.75,z,.19,.2,22,M.wood);
+    for(const xx of [-7,0,7])if(xx!==0||!['rotunda','observatory'].includes(r.id))box(x+xx,6.7,z,.26,.28,22,carved);
     // A physical plaque marks the room from both travel directions.
     const signWidth=3.6,signHeight=.62,sign=label(r.name,'#ddc798',1024,{width:signWidth,height:signHeight,kind:'room',maxLines:1});
     // The front wings have a 4.06m ground-floor ceiling. Mount their plaques
@@ -94,23 +114,28 @@ export function buildMansionExpansion({scene,world,M,box,mesh,cylinder,sphere,pa
     // Opaque inset windows avoid transparency sorting and layer interference.
     if(Math.abs(x)===28)for(const zz of [-8,-4,4,8]){
       const side=Math.sign(x),wx=x+side*13.7;
-      box(wx,3.65,z+zz,.1,3.1,1.95,M.wood);
-      box(wx-side*.065,3.65,z+zz,.025,2.8,1.68,windowMat);
-      for(const dz of [-.57,0,.57])box(wx-side*.09,3.65,z+zz+dz,.035,2.84,.045,bronze);
+      box(wx,3.65,z+zz,.1,3.1,1.95,carved);
+      box(wx-side*.065,3.65,z+zz,.025,2.8,1.68,r.id==='chapel'?stained:windowMat);
+      for(const dz of [-.57,0,.57])box(wx-side*.09,3.65,z+zz+dz,.035,2.84,.045,iron);
+      box(wx-side*.09,2.05,z+zz,.16,.1,2.05,carved);
     }
     if(z===0)for(const xx of [-9,-5,5,9]){
-      box(x+xx,3.65,12.29,1.9,3.2,.08,M.wood);
+      box(x+xx,3.65,12.29,1.9,3.2,.08,carved);
       box(x+xx,3.65,12.345,1.65,2.95,.025,windowMat);
-      box(x+xx,3.65,12.365,.06,2.97,.02,bronze);
+      box(x+xx,3.65,12.365,.06,2.97,.02,iron);
     }
     if(z===-72)for(const xx of [-9,-5,5,9]){
-      box(x+xx,3.65,-83.63,1.9,3.2,.08,M.wood);
-      box(x+xx,3.65,-83.57,1.65,2.95,.025,windowMat);
+      box(x+xx,3.65,-83.63,1.9,3.2,.08,carved);
+      box(x+xx,3.65,-83.57,1.65,2.95,.025,r.id==='chapel'?stained:windowMat);
     }
     switch(r.id){
       case 'ballroom':
         for(const xx of [-9,9])for(const zz of [-7,7]){cylinder(x+xx,3.4,z+zz,.32,6.8,M.stone);cylinder(x+xx,.28,z+zz,.48,.36,M.stone);colliders.push({x:x+xx,z:z+zz,w:1,d:1});}
-        for(const zz of [-8,8]){sofa(x-7,z+zz,zz<0?Math.PI:0);sofa(x+7,z+zz,zz<0?Math.PI:0);}
+        // v187: high-backed oak settles replace the lounge sofas; a great hearth on the back wall.
+        for(const zz of [-8,8]){furnishings.settle(x-7,z+zz,{rotation:zz<0?0:Math.PI});furnishings.settle(x+7,z+zz,{rotation:zz<0?0:Math.PI});}
+        furnishings.fireplace(x-10.5,z-11.47,{breast:3.5});
+        for(const xx of [-12.75,-8.25])furnishings.candelabrum(x+xx,z-10.6);
+        furnishings.tapestry(x+13.6,2.55,z+6,{rotation:-Math.PI/2,w:2.6,h:2.4,design:'hunt'});
         // Full frames fit below the 4.06m slab. The outer-wall portrait moves
         // onto solid wall, clear of the paired windows and the room plaque.
         painting(x+7.4,2.25,z-11.65,3.8,3.2);
@@ -118,7 +143,10 @@ export function buildMansionExpansion({scene,world,M,box,mesh,cylinder,sphere,pa
         break;
       case 'conservatory':
         for(const xx of [-12.6,12.6])for(const zz of [-7,-3.8,3.8,7])planter(x+xx,z+zz);
-        bench(x-6,z-8,Math.PI);bench(x+6,z+8);
+        // v187: carved stone benches, stone urns in the corners, more plants along the glass.
+        furnishings.stoneBench(x-6,z-8,{rotation:Math.PI});furnishings.stoneBench(x+6,z+8);
+        for(const xx of [-12.35,12.35])for(const zz of [-10.6,10.6])furnishings.urn(x+xx,z+zz);
+        for(const xx of [-7,7])for(const zz of [-11.1,11.1])planter(x+xx,z+zz);
         break;
       case 'portraits':
         for(const xx of [-9,-5,5,9]){
@@ -127,7 +155,9 @@ export function buildMansionExpansion({scene,world,M,box,mesh,cylinder,sphere,pa
           // proportionally, leaving room under the slab and beside its plaque.
           painting(x+xx,2.35,z+11.65,2.16,2.8,Math.PI);
         }
-        for(const xx of [-7,7]){bench(x+xx,z-5);bench(x+xx,z+5,Math.PI);}
+        for(const xx of [-7,7]){furnishings.stoneBench(x+xx,z-5);furnishings.stoneBench(x+xx,z+5,{rotation:Math.PI});}
+        // v187: armour stands sentry between the outer windows.
+        for(const zz of [-6,6])furnishings.armour(x-13.45,z+zz,{rotation:Math.PI/2});
         break;
       case 'rotunda':
         for(let i=0;i<8;i++){const a=(i+.5)*Math.PI/4,xx=x+Math.cos(a)*9,zz=z+Math.sin(a)*8;cylinder(xx,3.4,zz,.38,6.8,M.stone);cylinder(xx,.28,zz,.58,.4,M.stone);colliders.push({x:xx,z:zz,w:1.15,d:1.15});}
@@ -135,24 +165,40 @@ export function buildMansionExpansion({scene,world,M,box,mesh,cylinder,sphere,pa
       case 'music':
         furnishings.grandPiano(x-8,z-6);furnishings.bench(x-8,z-4.18,{w:1.15,back:false});
         for(const zz of [-7,-3,3,7])furnishings.musicStand(x+8,z+zz);
+        // v187: a hearth on the outer wall, candlelight by the piano and hangings on the north wall.
+        furnishings.fireplace(x+13.47,z,{rotation:-Math.PI/2,breast:3.6});
+        furnishings.candelabrum(x-11.6,z-9.6);furnishings.candelabrum(x-4.4,z-9.6);
+        for(const xx of [-7,7])furnishings.tapestry(x+xx,3.95,z-11.6,{w:2.2,h:2.8,design:xx<0?'tree':'hunt'});
         break;
       case 'archives':
         for(const xx of [-12.9,12.9])for(const zz of [-8.2,-4.8,4.8,8.2])bookcase(x+xx,z+zz,xx<0?Math.PI/2:-Math.PI/2);
-        furnishings.table(x-5,z-7,{w:1.9,d:.85,desk:true});furnishings.chair(x-5,z-5.92);furnishings.table(x+5,z+7,{w:1.9,d:.85,desk:true,rotation:Math.PI});furnishings.chair(x+5,z+5.92,{rotation:Math.PI});break;
+        furnishings.table(x-5,z-7,{w:1.9,d:.85,desk:true});furnishings.chair(x-5,z-5.92);furnishings.table(x+5,z+7,{w:1.9,d:.85,desk:true,rotation:Math.PI});furnishings.chair(x+5,z+5.92,{rotation:Math.PI});
+        // v187: iron-bound record chests and reading light.
+        for(const xx of [-6.5,6.5])furnishings.chest(x+xx,z-11.4);for(const xx of [-6.5,6.5])furnishings.chest(x+xx,z+11.4,{rotation:Math.PI});
+        furnishings.candelabrum(x-2.6,z-7);furnishings.candelabrum(x+2.6,z+7);break;
       case 'north':
         for(const xx of [-8,8])for(const zz of [-7,7])furnishings.bust(x+xx,z+zz,{rotation:Math.atan2(-xx,-zz)});
-        for(const xx of [-8,8])painting(x+xx,3.3,z-11.65,3.4,4);break;
+        for(const xx of [-8,8])painting(x+xx,3.3,z-11.65,3.4,4);
+        // v187: armour lines the side walls; banners flank the north doorway.
+        for(const side of [-1,1])for(const zz of [-5.5,5.5])furnishings.armour(x+side*13.45,z+zz,{rotation:-side*Math.PI/2});
+        for(const xx of [-4.1,4.1])furnishings.banner(x+xx,4.5,z-11.62,{h:2.6});break;
       case 'infirmary':
         for(const xx of [-9,-5,5,9])for(const zz of [-8.8,8.8]){bed(x+xx,z+zz,'hospital',zz<0?0:Math.PI);furnishings.cabinet(x+xx+1.10,z+zz,{w:.54,h:.74,d:.42});}
         break;
       case 'chapel':
         for(const xx of [-8,8])for(const zz of [-7,-3,3,7])bench(x+xx,z+zz,0,4.4);
-        table(x,z-9,3.5,1.1);box(x,3.5,z-11.55,.25,3.1,.16,bronze);box(x,4,z-11.55,1.8,.2,.16,bronze);break;
+        // v187: a stone altar dressed in linen, candlelight and a lectern.
+        furnishings.altar(x,z-10.15);box(x,3.5,z-11.55,.25,3.1,.16,bronze);box(x,4,z-11.55,1.8,.2,.16,bronze);
+        for(const xx of [-2.7,2.7])furnishings.candelabrum(x+xx,z-10.6);
+        furnishings.lectern(x+4.2,z-7.6,{rotation:-.6});
+        for(const xx of [-7,7])furnishings.banner(x+xx,4.4,z-11.62,{h:2.8});break;
       case 'observatory':
         for(const xx of [-8,8]){furnishings.telescope(x+xx,z-7);table(x+xx,z+8,1.75,.90);furnishings.globe(x+xx,z+8,{y:.875});}break;
       case 'servants':
         for(const xx of [-9,-5,5,9]){bed(x+xx,z-9.4);furnishings.cabinet(x+xx+1.1,z-9.8,{w:.52,h:.74,d:.40});}
-        for(const xx of [-8,8]){table(x+xx,z+7,2.5,.95);bench(x+xx,z+8.3,0,2.3);}
+        // v187: long refectory tables with plain benches; chests at the bed ends.
+        for(const xx of [-8,8]){furnishings.refectory(x+xx,z+7,{w:3.4});furnishings.bench(x+xx,z+7.85,{w:3.0,back:false});furnishings.bench(x+xx,z+6.15,{w:3.0,back:false});}
+        for(const xx of [-5,5])furnishings.chest(x+xx,z-7.85,{w:1.0});
         break;
     }
   }

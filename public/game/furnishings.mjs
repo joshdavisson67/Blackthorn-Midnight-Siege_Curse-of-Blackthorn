@@ -33,7 +33,7 @@ export function createFurnishings({world,M,colliders}){
       g.computeBoundingBox();g.computeBoundingSphere();return g;
     });
   }
-  function mesh(g,geo,mat,name,x=0,y=0,z=0){const p=new T.Mesh(geo,mat);p.name=name;p.position.set(x,y,z);p.castShadow=p.receiveShadow=true;g.add(p);return p;}
+  function mesh(g,geo,mat,name,x=0,y=0,z=0){const p=new T.Mesh(geo,mat);p.name=name;p.position.set(x,y,z);p.castShadow=!(mat.isMeshBasicMaterial||mat===M.white);p.receiveShadow=!mat.isMeshBasicMaterial;g.add(p);return p;}
   function b(g,x,y,z,w,h,d,mat=M.wood,name='Joinery',r=0){return mesh(g,boxGeometry(w,h,d,Math.min(r,w*.24,h*.24,d*.24),mat),mat,name,x,y,z);}
   function ell(g,x,y,z,sx,sy,sz,mat,name){const p=mesh(g,sphereGeo,mat,name,x,y,z);p.scale.set(sx,sy,sz);return p;}
   function cy(g,x,y,z,r,h,mat=M.gold,name='Turned support',bottom=r){
@@ -251,5 +251,190 @@ export function createFurnishings({world,M,colliders}){
     const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=8;
     globeMat=new T.MeshStandardMaterial({map:tex,roughness:.72,color:0xc9c4ad});return globeMat;
   }
-  return {records,geometries,sofa,bookcase,bed,table,chair,cabinet,bench,grandPiano,musicStand,planter,telescope,bust,globe};
+
+  // ---- Stone-house pieces (v187) ------------------------------------------------------------------
+  const stone=M.carved||M.stone,ironwork=M.iron||iron,ember=new T.MeshBasicMaterial({color:0xff7a2a}),glow=M.flame||new T.MeshBasicMaterial({color:0xffc77a});
+  // Few, shared finishes: soot and charred wood are one; candles are the house's candle wax.
+  const charred=finish(0x211a14,.97),soot=charred,wax=M.white||finish(0xe8dcc2,.7);
+  const velvet=finish(0x5b1d1f,.92),gilt=M.gold,linenWhite=finish(0xd9d2c0,.95),steel=finish(0x8e959a,.34,.85),pewter=finish(0x6f6a62,.4,.6);
+  // Thin decorative pieces (cloth, candles, flames, wall trophies) cast no shadows:
+  // each shadowed part is drawn again in every shadow-casting light's pass.
+  const unshadowed=g=>{g.traverse(o=>{if(o.isMesh)o.castShadow=false;});return g;};
+  // Woven hangings: drawn once per design, then shared.
+  const weaves=new Map(),hearths=[];
+  function weave(kind){
+    if(weaves.has(kind))return weaves.get(kind);
+    let mat=null;
+    const canvas=typeof document!=='undefined'?document.createElement('canvas'):null,c=canvas?.getContext?.('2d');
+    if(c&&typeof c.fillRect==='function'){
+      const W=kind==='banner'?256:512,H=kind==='banner'?768:640;canvas.width=W;canvas.height=H;
+      const R=n=>{let v=Math.sin(n*12.9898)*43758.5453;return v-Math.floor(v);};
+      if(kind==='banner'){
+        c.fillStyle='#5e1a1c';c.fillRect(0,0,W,H);c.fillStyle='#b4914e';c.fillRect(0,0,W,22);c.fillRect(0,0,14,H);c.fillRect(W-14,0,14,H);
+        // the Blackthorn crest: a thorned shield with a raven's B
+        c.save();c.translate(W/2,H*.38);c.fillStyle='#1d2420';c.beginPath();c.moveTo(-80,-95);c.lineTo(80,-95);c.lineTo(80,10);c.quadraticCurveTo(80,95,0,125);c.quadraticCurveTo(-80,95,-80,10);c.closePath();c.fill();
+        c.strokeStyle='#c9a560';c.lineWidth=7;c.stroke();c.fillStyle='#c9a560';c.font='bold 120px Georgia,serif';c.textAlign='center';c.textBaseline='middle';c.fillText('B',0,8);
+        for(let i=0;i<10;i++){const a=i/10*Math.PI*2;c.save();c.rotate(a);c.fillRect(-3,-150,6,22);c.restore();}c.restore();
+        c.fillStyle='#c9a560';c.font='bold 30px Georgia,serif';c.textAlign='center';c.fillText('MDCCCXCIII',W/2,H*.72);
+      }else{
+        const pal=kind==='hunt'?['#3b4a35','#6d3426','#b08d55','#2a2620','#7b6a48']:['#5a2422','#2f3b46','#b39a63','#1f1c19','#6b5a3c'];
+        c.fillStyle=pal[0];c.fillRect(0,0,W,H);
+        // millefleur field
+        for(let i=0;i<900;i++){c.fillStyle=pal[1+Math.floor(R(i)*4)]+'cc';const x=R(i+.3)*W,y=R(i+.7)*H,r=2+R(i+.9)*5;c.beginPath();c.arc(x,y,r,0,7);c.fill();}
+        // central roundel with a stag (hunt) or a tree of life
+        c.save();c.translate(W/2,H/2);c.fillStyle=pal[3];c.beginPath();c.ellipse(0,0,150,190,0,0,7);c.fill();c.strokeStyle=pal[2];c.lineWidth=10;c.stroke();
+        c.fillStyle=pal[2];
+        if(kind==='hunt'){c.beginPath();c.ellipse(0,30,70,34,0,0,7);c.fill();c.fillRect(-55,50,10,70);c.fillRect(-25,50,10,70);c.fillRect(25,50,10,70);c.fillRect(50,50,10,70);c.beginPath();c.moveTo(55,10);c.lineTo(95,-50);c.lineTo(115,-40);c.lineTo(80,20);c.fill();
+          c.lineWidth=6;c.strokeStyle=pal[2];for(const s of [-1,1]){c.beginPath();c.moveTo(100,-55);c.lineTo(100+s*25,-120);c.moveTo(100+s*12,-85);c.lineTo(100+s*45,-95);c.stroke();}}
+        else{c.fillRect(-12,-20,24,170);for(let i=0;i<7;i++){const a=-Math.PI/2+(i-3)*.42;c.beginPath();c.ellipse(Math.cos(a)*80,-40+Math.sin(a)*90,32,22,a,0,7);c.fill();}}
+        c.restore();
+        // border
+        c.strokeStyle=pal[2];c.lineWidth=26;c.strokeRect(13,13,W-26,H-26);c.strokeStyle=pal[1];c.lineWidth=8;c.strokeRect(34,34,W-68,H-68);
+        // age: fading and wear
+        for(let i=0;i<3000;i++){c.fillStyle=`rgba(${R(i)>.5?'230,215,180':'0,0,0'},${.03+R(i+.5)*.05})`;c.fillRect(R(i+.1)*W,R(i+.2)*H,2+R(i+.3)*6,1+R(i+.4)*3);}
+      }
+      const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=8;
+      mat=new T.MeshStandardMaterial({map:tex,roughness:1,side:T.DoubleSide});
+    }else mat=new T.MeshStandardMaterial({color:kind==='banner'?0x5e1a1c:0x5a2422,roughness:1,side:T.DoubleSide});
+    weaves.set(kind,mat);return mat;
+  }
+  // A hanging cloth with soft vertical folds (and a swallowtail for banners).
+  function clothGeometry(w,h,swallow){
+    return cached(['cloth',w,h,swallow].join('/'),()=>{
+      const g=new T.PlaneGeometry(w,h,24,16),p=g.attributes.position;
+      for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),t=(h/2-y)/h;p.setZ(i,Math.sin(x/w*Math.PI*6)*.022*(.4+t)+Math.sin(x/w*Math.PI*2.3+1)*.012);
+        if(swallow&&y<-h/2+w*.5){const notch=(1-Math.abs(x)/(w/2))*w*.5;if(y<-h/2+notch)p.setY(i,-h/2+notch);}}
+      g.computeVertexNormals();return g;
+    });
+  }
+  // Wall pieces are placed by their wall face: (x,z) on the face, facing `rotation`.
+  function wallPiece(g,type,x,y,z,rotation){g.name=type;g.position.set(x,y,z);g.rotation.y=rotation;world.add(g);g.updateMatrixWorld(true);records.push({type,x,z,y,rotation,group:g,bounds:new T.Box3().setFromObject(g),collider:null,wall:true});return g;}
+  function tapestry(x,y,z,{rotation=0,w=2.2,h=2.8,design='tree'}={}){
+    const g=new T.Group();mesh(g,clothGeometry(w,h,false),weave(design),'Woven tapestry',0,0,.06);
+    cy(g,0,h/2+.04,.08,.022,w+.3,ironwork,'Hanging rod').rotation.z=Math.PI/2;
+    for(const s of [-1,1]){ell(g,s*(w/2+.16),h/2+.04,.08,.04,.04,.04,ironwork,'Rod finial');b(g,s*(w/2+.02),h/2+.04,.03,.03,.06,.06,ironwork,'Rod bracket');}
+    return wallPiece(unshadowed(g),'Woven tapestry',x,y,z,rotation);
+  }
+  function banner(x,y,z,{rotation=0,w=.9,h=2.6}={}){
+    const g=new T.Group();mesh(g,clothGeometry(w,h,true),weave('banner'),'Heraldic banner',0,0,.04);
+    cy(g,0,h/2+.05,.05,.018,w+.24,ironwork,'Banner pole').rotation.z=Math.PI/2;
+    for(const s of [-1,1])ell(g,s*(w/2+.12),h/2+.05,.05,.035,.05,.035,gilt,'Pole finial');
+    for(let i=0;i<9;i++)cy(g,-w/2+.05+i*(w-.1)/8,-h/2-.06,.04,.006,.12,gilt,'Gold fringe');
+    return wallPiece(unshadowed(g),'Heraldic banner',x,y,z,rotation);
+  }
+  function trophy(x,y,z,{rotation=0}={}){
+    const g=new T.Group(),shield=new T.Shape();shield.moveTo(-.32,.38);shield.lineTo(.32,.38);shield.lineTo(.32,0);shield.quadraticCurveTo(.3,-.32,0,-.48);shield.quadraticCurveTo(-.3,-.32,-.32,0);shield.closePath();
+    const sg=cached('heater-shield',()=>new T.ExtrudeGeometry(shield,{depth:.04,bevelEnabled:true,bevelSize:.012,bevelThickness:.012,bevelSegments:1}));
+    for(const s of [-1,1]){const sword=new T.Group();sword.rotation.z=s*.72;sword.position.z=.02;g.add(sword);
+      b(sword,0,.25,0,.05,1.15,.012,steel,'Sword blade');b(sword,0,-.36,0,.3,.04,.04,ironwork,'Sword crossguard');cy(sword,0,-.48,0,.02,.2,charred,'Sword grip');ell(sword,0,-.6,0,.04,.04,.04,ironwork,'Sword pommel');}
+    mesh(g,sg,velvet,'Heater shield',0,0,.07);b(g,0,.05,.13,.08,.7,.02,gilt,'Shield pale');b(g,0,.12,.13,.6,.08,.02,gilt,'Shield fess');
+    return wallPiece(unshadowed(g),'Shield and crossed swords',x,y,z,rotation);
+  }
+  function fireplace(x,z,{rotation=0,w=2.8,h=2.3,depth=.72,breast=3.4,lit=true,...opts}={}){
+    const g=new T.Group(),open=w-1.0,openH=h-.75;
+    b(g,0,.05,depth/2+.18,w+.5,.1,.62,stone,'Hearth slab',.01);
+    for(const s of [-1,1]){b(g,s*(w/2-.25),openH/2+.05,depth/2-.02,.5,openH+.1,.32,stone,'Fireplace jamb',.02);b(g,s*(w/2-.25),openH+.12,depth/2+.04,.6,.12,.4,stone,'Jamb capital',.02);}
+    b(g,0,openH+.42,depth/2-.02,w,.5,.36,stone,'Carved lintel',.02);
+    b(g,0,openH+.75,depth/2+.06,w+.24,.12,.54,stone,'Mantel shelf',.02);
+    b(g,0,(openH+.81+breast)/2,0,w-.3,breast-openH-.81,depth-.16,stone,'Chimney breast',.02);
+    // An open recess: sooty back, cheeks, floor and soffit, so the fire sits inside it.
+    b(g,0,openH/2,-.24,open+.1,openH+.1,.06,soot,'Sooty firebox back');
+    for(const sd of [-1,1])b(g,sd*(open/2+.03),openH/2,.04,.06,openH,.56,soot,'Firebox cheek');
+    b(g,0,.11,.04,open,.03,.56,soot,'Firebox floor');b(g,0,openH-.02,.04,open,.05,.56,soot,'Firebox soffit');
+    if(lit){for(const s of [-1,1]){b(g,s*.38,.22,depth/2-.3,.04,.24,.04,ironwork,'Andiron post');ell(g,s*.38,.36,depth/2-.3,.045,.045,.045,ironwork,'Andiron finial');b(g,s*.38,.1,depth/2-.45,.03,.03,.38,ironwork,'Andiron bar');}
+      for(const [dz,ry,yy] of [[-.05,.2,.16],[.06,-.15,.16],[0,.05,.28]]){const log=cy(g,0,yy,depth/2-.42+dz,.07,1.0,charred,'Split log');log.rotation.set(0,ry,Math.PI/2);}
+      b(g,0,.08,depth/2-.42,1.05,.05,.4,ember,'Glowing embers');}
+    for(const s of [-1,1]){cy(g,s*(w/2-.15),openH+.89,depth/2+.08,.035,.06,gilt,'Candlestick foot');cy(g,s*(w/2-.15),openH+1.0,depth/2+.08,.022,.18,wax,'Mantel candle');}
+    const placed=place(g,'Stone fireplace',x,z,{...opts,rotation});
+    // Where the animated flame goes: inside the firebox, facing out of it.
+    if(lit){const at=placed.localToWorld(new T.Vector3(0,.5,depth/2-.36));hearths.push({x:at.x,y:at.y,z:at.z,rotation:placed.rotation.y,w:open*.72,h:.9});}
+    return placed;
+  }
+  function armour(x,z,opts={}){
+    const g=new T.Group();
+    b(g,0,.11,0,.62,.22,.62,stone,'Armour plinth',.02);const y=.22;
+    for(const s of [-1,1]){
+      b(g,s*.1,y+.04,.05,.11,.08,.26,steel,'Sabaton',.03);cy(g,s*.1,y+.34,0,.06,.5,steel,'Greave',.055);ell(g,s*.1,y+.62,.02,.075,.07,.075,steel,'Poleyn');
+      cy(g,s*.11,y+.86,0,.085,.42,steel,'Cuisse',.068);
+      ell(g,s*.25,y+1.42,0,.13,.1,.13,steel,'Pauldron');cy(g,s*.27,y+1.18,0,.05,.38,steel,'Rerebrace',.045);ell(g,s*.27,y+.98,.03,.06,.06,.06,steel,'Couter');
+      cy(g,s*.27,y+.8,.08,.045,.34,steel,'Vambrace',.04).rotation.x=-.5;ell(g,s*.27,y+.66,.18,.06,.05,.08,steel,'Gauntlet');
+    }
+    cy(g,0,y+1.1,0,.18,.22,steel,'Fauld',.21);ell(g,0,y+1.32,.02,.21,.25,.15,steel,'Breastplate');b(g,0,y+1.45,.13,.03,.18,.02,steel,'Breastplate ridge');
+    cy(g,0,y+1.56,0,.07,.08,steel,'Gorget',.1);ell(g,0,y+1.72,0,.12,.15,.13,steel,'Great helm');b(g,0,y+1.72,.125,.16,.018,.02,soot,'Visor slit');
+    cy(g,0,y+1.9,0,.012,.12,steel,'Helm spike');
+    // a halberd held upright in the right hand
+    cy(g,.27,y+1.0,.22,.016,2.2,charred,'Halberd haft',.016);b(g,.31,y+2.0,.22,.14,.22,.012,steel,'Halberd blade');
+    return place(g,'Suit of armour',x,z,opts);
+  }
+  function candelabrum(x,z,{arms=4,...opts}={}){
+    const g=new T.Group();
+    for(let i=0;i<3;i++){const a=i*Math.PI*2/3;link(g,[0,.28,0],[Math.cos(a)*.24,.02,Math.sin(a)*.24],.016,ironwork,'Tripod foot');}
+    cy(g,0,.95,0,.022,1.4,ironwork,'Candelabrum shaft',.026);for(const yy of [.4,.9,1.4])ell(g,0,yy,0,.045,.035,.045,ironwork,'Turned knop');
+    cy(g,0,1.66,0,.12,.025,ironwork,'Drip pan');cy(g,0,1.8,0,.03,.24,wax,'Candle');ell(g,0,1.96,0,.014,.04,.014,glow,'Candle flame');
+    for(let i=0;i<arms;i++){const a=i/arms*Math.PI*2+.4,ex=Math.cos(a)*.26,ez=Math.sin(a)*.26;link(g,[0,1.5,0],[ex,1.6,ez],.012,ironwork,'Candle arm');cy(g,ex,1.61,ez,.05,.02,ironwork,'Candle cup');cy(g,ex,1.71,ez,.026,.18,wax,'Candle');ell(g,ex,1.84,ez,.012,.035,.012,glow,'Candle flame');}
+    return place(unshadowed(g),'Iron candelabrum',x,z,opts);
+  }
+  function chest(x,z,{w=1.2,d=.6,h=.62,...opts}={}){
+    const g=new T.Group();b(g,0,h*.42,0,w,h*.72,d,M.wood,'Chest body',.015);
+    const lid=cached(['chest-lid',w,d].join('/'),()=>{const geo=new T.CylinderGeometry(d/2,d/2,w,16,1,false,0,Math.PI);geo.rotateZ(Math.PI/2);geo.rotateX(Math.PI/2);geo.scale(1,.55,1);return geo;});
+    mesh(g,lid,M.wood,'Domed chest lid',0,h*.78,0);
+    for(const xx of [-w*.36,0,w*.36]){b(g,xx,h*.42,d/2+.006,.06,h*.72,.012,ironwork,'Iron strap');b(g,xx,h*.42,-d/2-.006,.06,h*.72,.012,ironwork,'Iron strap');}
+    b(g,0,h*.62,d/2+.016,.14,.16,.016,ironwork,'Lock plate');for(const s of [-1,1])ring(g,s*(w/2+.02),h*.55,0,.05,.01,ironwork,'Carrying ring').rotation.y=Math.PI/2;
+    return place(g,'Iron-bound chest',x,z,opts);
+  }
+  function refectory(x,z,{w=3.6,d=.95,h=.8,...opts}={}){
+    const g=new T.Group();b(g,0,h-.05,0,w,.1,d,M.wood,'Plank tabletop',.012);
+    for(let i=1;i<4;i++)b(g,-w/2+i*w/4,h+.001,0,.006,.002,d,soot,'Board joint');
+    for(const s of [-1,1]){b(g,s*(w/2-.35),(h-.1)/2,0,.12,h-.1,d*.6,M.wood,'Trestle leg');b(g,s*(w/2-.35),.05,0,.2,.1,d*.85,M.wood,'Trestle foot',.02);b(g,s*(w/2-.35),h-.16,0,.16,.1,d*.8,M.wood,'Trestle cap');}
+    b(g,0,.3,0,w-.7,.1,.08,M.wood,'Trestle stretcher');
+    for(const xx of [-w*.3,0,w*.3]){cy(g,xx,h+.04,0,.13,.015,pewter,'Pewter plate');}
+    cy(g,w*.15,h+.09,.1,.05,.18,pewter,'Pewter tankard');
+    return place(g,'Refectory table',x,z,opts);
+  }
+  function altar(x,z,{w=2.6,...opts}={}){
+    const g=new T.Group();b(g,0,.08,0,w+.6,.16,1.5,stone,'Altar step',.01);
+    b(g,0,.6,0,w,.9,1.0,stone,'Stone altar',.02);b(g,0,1.08,0,w+.16,.08,1.12,stone,'Altar mensa',.02);
+    b(g,0,1.125,0,w+.1,.012,1.06,linenWhite,'Altar linen');b(g,0,.78,.52,w*.6,.62,.012,velvet,'Embroidered frontal');b(g,0,1.05,.525,w*.6,.04,.014,gilt,'Frontal fringe');
+    b(g,0,1.4,-.3,.05,.5,.05,gilt,'Altar cross');b(g,0,1.52,-.3,.28,.05,.05,gilt,'Altar cross arm');
+    for(const s of [-1,1]){cy(g,s*w*.36,1.2,-.25,.05,.14,gilt,'Altar candlestick');cy(g,s*w*.36,1.42,-.25,.03,.3,wax,'Altar candle');ell(g,s*w*.36,1.6,-.25,.014,.04,.014,glow,'Candle flame');}
+    b(g,.3,1.15,.15,.36,.05,.26,charred,'Open missal');b(g,.3,1.178,.15,.33,.008,.24,pages,'Missal pages');
+    return place(g,'Stone altar',x,z,opts);
+  }
+  function stoneBench(x,z,{w=2.2,...opts}={}){
+    const g=new T.Group();b(g,0,.43,0,w,.12,.5,stone,'Stone bench slab',.02);
+    for(const s of [-1,1]){b(g,s*(w/2-.3),.2,0,.28,.36,.42,stone,'Carved bench support',.03);ell(g,s*(w/2-.3),.24,.215,.1,.1,.02,stone,'Support boss');}
+    return place(g,'Stone bench',x,z,opts);
+  }
+  function urn(x,z,opts={}){
+    const g=new T.Group();b(g,0,.3,0,.6,.6,.6,stone,'Urn plinth',.02);b(g,0,.62,0,.7,.06,.7,stone,'Plinth cap',.02);
+    const profile=[[.0,0],[.16,.0],[.12,.08],[.2,.22],[.3,.42],[.27,.6],[.2,.68],[.24,.74],[.0,.74]].map(p=>new T.Vector2(...p));
+    mesh(g,cached('stone-urn',()=>new T.LatheGeometry(profile,24)),stone,'Carved stone urn',0,.65,0);
+    for(let i=0;i<7;i++){const a=i*2.4;const p=ell(g,Math.cos(a)*.12,1.45+(i%3)*.08,Math.sin(a)*.12,.16,.06,.07,leaf,'Trailing ivy');p.rotation.set(.4,a,.3);}
+    return place(g,'Stone urn',x,z,opts);
+  }
+  function settle(x,z,{w=2.3,...opts}={}){
+    const g=new T.Group(),d=.62;
+    b(g,0,.45,0,w,.08,d,M.wood,'Settle seat',.015);b(g,0,.24,d/2-.03,w,.38,.04,M.wood,'Settle front panel');
+    b(g,0,1.02,-d/2+.04,w,1.08,.07,M.wood,'High panelled back',.015);
+    for(let i=0;i<4;i++)b(g,-w/2+w*(i+.5)/4,1.02,-d/2+.08,w/4-.1,.82,.02,M.wood,'Linenfold panel',.008);
+    for(const s of [-1,1]){b(g,s*(w/2+.03),.52,0,.07,1.04,d,M.wood,'Settle arm end',.02);b(g,s*(w/2+.03),1.08,.04,.09,.08,d-.06,M.wood,'Arm rest',.02);}
+    b(g,0,.51,.0,w-.08,.07,d-.1,velvet,'Seat cushion',.03);b(g,0,1.6,-d/2+.04,w+.1,.1,.12,M.wood,'Carved cresting',.02);
+    return place(g,'Oak settle',x,z,opts);
+  }
+  function armchair(x,z,opts={}){
+    const g=new T.Group();
+    for(const sx of [-1,1])for(const sz of [-1,1])b(g,sx*.27,.24,sz*.25,.07,.48,.07,M.wood,'Carved chair leg',.012);
+    b(g,0,.47,0,.66,.08,.6,M.wood,'Chair seat rail',.015);b(g,0,.53,.02,.58,.08,.52,velvet,'Upholstered seat',.03);
+    b(g,0,1.03,-.27,.62,1.06,.08,M.wood,'Tall carved back',.015);b(g,0,1.02,-.225,.48,.78,.04,velvet,'Upholstered back',.02);
+    for(const s of [-1,1]){b(g,s*.3,.72,.0,.06,.06,.56,M.wood,'Armrest',.015);b(g,s*.3,.6,.26,.06,.22,.06,M.wood,'Arm support');ell(g,s*.3,1.6,-.27,.05,.07,.05,M.wood,'Back finial');}
+    return place(g,'Carved armchair',x,z,opts);
+  }
+  function lectern(x,z,opts={}){
+    const g=new T.Group();b(g,0,.06,0,.6,.12,.5,stone,'Lectern base',.015);cy(g,0,.6,0,.08,1.0,M.wood,'Lectern column',.1);
+    const top=b(g,0,1.15,0,.6,.06,.45,M.wood,'Sloped book rest',.01);top.rotation.x=.38;
+    const book=b(g,0,1.2,.02,.5,.05,.34,charred,'Great bible');book.rotation.x=.38;const pg=b(g,0,1.23,.03,.46,.01,.31,pages,'Open pages');pg.rotation.x=.38;
+    return place(g,'Oak lectern',x,z,opts);
+  }
+  return {records,geometries,hearths,sofa,bookcase,bed,table,chair,cabinet,bench,grandPiano,musicStand,planter,telescope,bust,globe,
+    fireplace,armour,candelabrum,chest,refectory,altar,stoneBench,urn,settle,armchair,lectern,tapestry,banner,trophy};
 }

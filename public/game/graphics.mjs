@@ -3,12 +3,15 @@ import {createOpticReticle} from './reticles.mjs?v=167';
 import {weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=153';
 export const VISUAL_BRIGHTNESS=1.15;
 export function stabilizeTexture(t){t.minFilter=T.LinearMipmapLinearFilter;t.magFilter=T.LinearFilter;t.generateMipmaps=true;t.anisotropy=16;return t;}
-export const TILE_METERS={wood:1.6,floor:1.6,stone:1.8,plaster:2.4,brick:1.8,cloth:.65,skin:.6,metal:.8,roof:1.8};
+// v187: interior ashlar is the exterior limestone at a grander block size; the
+// flagstone floor is its own seamless 3.2 m layout of honed limestone flags.
+export const TILE_METERS={wood:1.6,floor:1.6,stone:1.8,plaster:2.4,brick:1.8,cloth:.65,skin:.6,metal:.8,roof:1.8,ashlar:2.7,flagstone:3.2,lime:3};
 export async function loadEstateTextures(maps){for(const [name,t] of Object.entries(maps)){t.name=name;t.userData.tileMeters=TILE_METERS[name];stabilizeTexture(t);}
 if(typeof window.Image!=='function')return;
-const loader=new T.TextureLoader();const results=await Promise.allSettled([loader.loadAsync('./assets/limestone-v1.png'),loader.loadAsync('./assets/oak-v1.png')]);
+const loader=new T.TextureLoader();const results=await Promise.allSettled([loader.loadAsync('./assets/limestone-v1.png'),loader.loadAsync('./assets/oak-v1.png'),loader.loadAsync('./assets/flagstone-v1.jpg')]);
 function setup(t,name){t.name=name;t.wrapS=t.wrapT=T.MirroredRepeatWrapping;t.repeat.set(1,1);t.colorSpace=T.SRGBColorSpace;t.anisotropy=16;t.userData.tileMeters=TILE_METERS[name];return stabilizeTexture(t);}
-if(results[0].status==='fulfilled'){maps.stone=setup(results[0].value,'stone');maps.brick=setup(results[0].value.clone(),'brick');}
+if(results[0].status==='fulfilled'){maps.stone=setup(results[0].value,'stone');maps.brick=setup(results[0].value.clone(),'brick');maps.ashlar=setup(results[0].value.clone(),'ashlar');}
+if(results[2].status==='fulfilled'){maps.flagstone=setup(results[2].value,'flagstone');maps.flagstone.wrapS=maps.flagstone.wrapT=T.RepeatWrapping;}
 if(results[1].status==='fulfilled'){maps.floor=setup(results[1].value,'floor');maps.wood=setup(results[1].value.clone(),'wood');}
 }
 // Surface finish maps (v125), derived once from a loaded photo texture so the
@@ -69,6 +72,9 @@ export function flashlightBeamTexture(size=256){
 // Old oak under lamplight: a soft sheen, not a mirror at grazing angles (v129).
 export const OAK_FINISH=(dark,wear)=>{const r=.76+.16*dark+.06*wear;return [r,r];};
 // Rain on limestone: water stands in joints and pits; faces stay mostly dry.
+// Honed limestone flags (v187): a soft satin on the faces, matt joints and pits,
+// polished a little smoother where feet have worn it.
+export const FLAGSTONE_FINISH=(dark,wear)=>{const r=Math.min(1,.6+.34*Math.pow(dark,1.4)-.08*wear);return [r,r];};
 export const WET_STONE_FINISH=(dark,wear)=>{const wet=.12+.88*Math.pow(dark,1.6)*(.75+.25*wear);return [wet,1-.45*wet];};
 
 export function tiledBox(base,material,w,h,d){const map=material.map,tile=map?.userData.tileMeters;if(!tile)return base;const geo=base.clone(),uv=geo.attributes.uv;const faces=[[d,h],[d,h],[w,d],[w,d],[w,h],[w,h]];for(let face=0;face<6;face++)for(let k=0;k<4;k++){const i=face*4+k;uv.setXY(i,uv.getX(i)*faces[face][0]/tile/map.repeat.x,uv.getY(i)*faces[face][1]/tile/map.repeat.y);}return geo;}
