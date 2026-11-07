@@ -69,8 +69,8 @@ export function verifyGrenadeBlastDamage(qa,elements){
       qa.explode(origin);assert.equal(10000-target.hp,expected,`${type} at ${distance}m takes the correct damage`);
       assert(!target.dead);assert.equal(qa.get().kills,0);
       const blast=qa.get().effects.find(e=>e.type==='blast');
-      assert.equal(blast.life,.35);assert.equal(blast.mesh.material.opacity,.75);
-      assert.equal(blast.mesh.geometry.parameters.radius,1);assert.deepEqual(blast.mesh.scale.toArray(),[.3,.3,.3]);
+      // v185: the blast effect anchors the light flash; the visuals are pooled (explosion-fx.mjs).
+      assert.equal(blast.life,.35);assert(!blast.mesh.material&&blast.burst?.active,'The blast anchors a pooled explosion');
     }
   }
   for(const distance of [4,10.5]){

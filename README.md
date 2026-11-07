@@ -27,6 +27,34 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## A real grenade and a real explosion (version 185)
+
+**The grenade** is now a WWII-style Mk 2 "pineapple", in your hand and in flight:
+- **Body:** sculpted with 8 columns and 5 rows of raised segments cut by grooves.
+- **Paint:** olive drab with grime and a little rust in the grooves, segment edges chipped to bare steel, and faces rubbed lighter where hands grip.
+- **Fuse and pin:**
+  - a threaded neck and a shouldered striker housing
+  - a cupped spoon lever that follows the body's curve
+  - a split pin with a pull ring
+- **Markings:** a yellow high-explosive band and a threaded base plug.
+
+**The explosion** used to be one flat orange dome. It is now layered:
+
+| Layer | What happens |
+|---|---|
+| Flash | A white-hot blink |
+| Fireball | Noisy fire puffs burst out and cool from white through orange to deep red |
+| Soot | Black soot boils up through the fireball |
+| Smoke | Grey smoke rolls upward and lingers for about three seconds |
+| Sparks and debris | Thrown out on gravity, bouncing off the floor |
+| Dust | A shockwave ring and a skirt along the ground |
+| Scorch | A ragged mark on the floor that fades after about 16 seconds |
+
+- **Scorch placement:** the scorch sits on the visible surface (paving, porch boards, floors), found from a small index of floor meshes built at load.
+- **Mid-air bursts** leave no scorch or ring.
+- **Bella:** her cart shells use the same explosion.
+- **Cost:** all of it is pooled and built at load, so an explosion creates nothing new. Six can run at once; a seventh reuses the oldest.
+
 ## Bella's ranks (version 184)
 
 Bella now costs **1,500 essence** to free (rank I) and has three more ranks. You buy them at her kennel with the **bone chips** her kills drop: walk over a chip to collect it, then go back to the kennel and press E.

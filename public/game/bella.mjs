@@ -123,8 +123,8 @@ function createBellaShots(world){
   const tracers=Array.from({length:8},()=>beam(0xffd27a)),lasers=Array.from({length:8},()=>beam(0x7ff8ff));
   const shellMat=new T.MeshStandardMaterial({color:0x3e4a2c,roughness:.5,metalness:.3});
   const shells=Array.from({length:6},()=>{const m=new T.Mesh(ball,shellMat);m.scale.set(.05,.05,.07);m.visible=false;m.raycast=()=>{};m.userData.dynamic=true;world.add(m);return {mesh:m,from:new T.Vector3(),to:new T.Vector3(),t:-1,flight:.55,arc:1};});
-  const flashes=Array.from({length:6},()=>{const m=new T.Mesh(ball,new T.MeshBasicMaterial({color:0xffb45b,transparent:true,opacity:0,depthWrite:false}));m.visible=false;m.raycast=()=>{};m.userData.dynamic=true;world.add(m);return {mesh:m,life:0,max:.35};});
-  let nt=0,nl=0,ns=0,nf=0;
+  // v185: the burst itself is the game's explosion effect (explosion-fx.mjs).
+  let nt=0,nl=0,ns=0;
   return {
     fire(kind,from,to){const pool=kind==='laser'?lasers:tracers,b=pool[(kind==='laser'?nl++:nt++)%pool.length];b.max=kind==='laser'?.09:.05;b.life=b.max;
       d.copy(to).sub(from);const len=d.length();b.mesh.position.copy(from).addScaledVector(d,.5);b.mesh.quaternion.setFromUnitVectors(up,d.normalize());const r=kind==='laser'?.022:.008;b.mesh.scale.set(r,len,r);b.mesh.visible=true;b.mesh.material.opacity=1;},
@@ -132,10 +132,9 @@ function createBellaShots(world){
     update(dt,onLand){
       for(const pool of [tracers,lasers])for(const b of pool){if(b.life<=0)continue;b.life-=dt;b.mesh.material.opacity=Math.max(0,b.life/b.max);if(b.life<=0)b.mesh.visible=false;}
       for(const s of shells){if(s.t<0)continue;s.t+=dt;const f=Math.min(1,s.t/s.flight);s.mesh.position.lerpVectors(s.from,s.to,f);s.mesh.position.y+=4*s.arc*f*(1-f);s.mesh.rotation.x+=dt*14;
-        if(f>=1){s.t=-1;s.mesh.visible=false;const fl=flashes[nf++%flashes.length];fl.life=fl.max;fl.mesh.position.copy(s.to);fl.mesh.visible=true;onLand?.(s.to.clone());}}
-      for(const f of flashes){if(f.life<=0)continue;f.life-=dt;const k=1-Math.max(0,f.life)/f.max;f.mesh.scale.setScalar(.3+k*3.2);f.mesh.material.opacity=.8*(1-k);if(f.life<=0)f.mesh.visible=false;}
+        if(f>=1){s.t=-1;s.mesh.visible=false;onLand?.(s.to.clone());}}
     },
-    clear(){for(const b of [...tracers,...lasers,...flashes]){b.life=0;b.mesh.visible=false;}for(const s of shells){s.t=-1;s.mesh.visible=false;}},
+    clear(){for(const b of [...tracers,...lasers]){b.life=0;b.mesh.visible=false;}for(const s of shells){s.t=-1;s.mesh.visible=false;}},
     get active(){return [...tracers,...lasers].filter(b=>b.life>0).length;},
     get inFlight(){return shells.filter(s=>s.t>=0).length;},
   };
