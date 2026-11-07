@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=185';
-import {createChangelog} from './changelog.mjs?v=185';
+import {createLeaderboard} from './leaderboard.mjs?v=186';
+import {createChangelog} from './changelog.mjs?v=186';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -31,7 +31,7 @@ import {drawMinimap} from './minimap.mjs?v=179';
 import {dropOpacity,fadeMaterials} from './drop-fade.mjs?v=169';
 import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual,rankAuto,rankRecoil} from './weapon-ranks.mjs?v=165';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
-import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=185';
+import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
 import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=179';
 import {createEnemyAssets} from './enemy-assets.mjs?v=183';
 import {createCombatLights} from './combat-lights.mjs?v=179';
@@ -587,6 +587,8 @@ function grenade(){
   if(!unlimited)grenades--;flashTime=0;updateHud();tone(650,.08,.035,'square');return true;
 }
 const grenadeLaunchRay=new T.Raycaster();
+// v186: the pin's click as the left hand yanks it.
+function grenadeCue(cue){if(cue==='pin'){tone(1900,.035,.022,'square',1200);tone(3100,.03,.012,'triangle',2400);}}
 function releaseGrenade(position,rotation,firstStep){
   // Sweep from the eye to the releasing hand so nearby walls cannot be bypassed.
   const offset=position.clone().sub(camera.position),distance=offset.length();grenadeLaunchRay.set(camera.position,offset.normalize());grenadeLaunchRay.near=0;grenadeLaunchRay.far=distance+.10;
@@ -599,6 +601,12 @@ function releaseGrenade(position,rotation,firstStep){
   const g=grenadeAssets.create();g.userData.lightingTransient=true;g.position.copy(position);g.quaternion.copy(rotation);world.add(g);
   const velocity=new T.Vector3(0,.23,-1).applyQuaternion(camera.quaternion).normalize().multiplyScalar(11);
   effects.push({mesh:g,vel:velocity,life:1.65,max:1.65,type:'grenade',firstStep});noise(.09,.035,1800);
+  // v186: the pin was pulled in the hand; the spoon flips off as it leaves.
+  g.getObjectByName('Pin and ring').visible=false;const lever=g.getObjectByName('Spoon');g.updateMatrixWorld(true);
+  const spoon=grenadeAssets.createSpoon();lever.matrixWorld.decompose(spoon.position,spoon.quaternion,spoon.scale);lever.visible=false;spoon.userData.lightingTransient=true;world.add(spoon);
+  const side=new T.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+  effects.push({mesh:spoon,vel:velocity.clone().multiplyScalar(.35).addScaledVector(side,1.6).add(new T.Vector3(0,2.6,0)),life:2.4,max:2.4,type:'spoon',spin:new T.Vector3(17,9,4),rest:.004});
+  tone(2600,.05,.012,'triangle',3400);
 }
 function blastLine(from,to){const delta=to.clone().sub(from),len=delta.length();return new T.Raycaster(from,delta.normalize(),.05,Math.max(.05,len-.15)).intersectObjects(solidMeshes,true).length===0;}
 const GRENADE_BLAST_RADIUS=12,GRENADE_DAMAGE=450;
@@ -1393,7 +1401,7 @@ e.groan-=dt;if(e.groan<=0){if(dist<12)tone(e.lurker?38:e.feral?210:e.rareDog?155
 function bellaBite(enemy,damage,direction){if(!enemy.boss&&!enemy.elite)enemy.bellaAggro=true;damageEnemy(enemy,damage,false,{direction:direction.clone(),part:enemy.dog?'head':'leg',force:.45,source:'Bella'});tone(460,.08,.018,'triangle',620);}
 const bellaLook=new T.Vector3();
 const effectNext=new T.Vector3();
-function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+.12;if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;}e.mesh.rotation.x+=step*4;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else world.remove(e.mesh);effects.splice(i,1);}}}
+function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'||e.type==='spoon'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+(e.rest??.12);if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;if(e.spin)e.spin.multiplyScalar(.5);}if(e.spin){e.mesh.rotation.x+=step*e.spin.x;e.mesh.rotation.y+=step*e.spin.y;e.mesh.rotation.z+=step*e.spin.z;}else e.mesh.rotation.x+=step*4;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else world.remove(e.mesh);effects.splice(i,1);}}}
 function grantPowerup(type){if(type==='ammo'){refillAmmo();notify('MAX AMMO · RESERVES RESTOCKED');}else if(type==='double'){doubleTime=POWERUPS.double.duration;notify('×2 · DOUBLE DAMAGE FOR 20s');}else if(type==='grenades'){grenadeTime=POWERUPS.grenades.duration;notify('INFINITE GRENADES · 12s · PRESS G');}}
 function updatePickups(dt){for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;
 // v169: the last five seconds fade out and in, faster for the final two.
@@ -1409,7 +1417,7 @@ function tick(now){requestAnimationFrame(tick);gamepad.poll(Math.min(Math.max(0,
 if(mode==='curse')runTime+=dt;
 if(mode==='playing'){weaponRecoil.update(dt);cellar.update(dt);graveyard.update(dt);shed.update(dt);runTime+=dt;shotTimer=Math.max(0,shotTimer-dt);grenadeCooldown=Math.max(0,grenadeCooldown-dt);if(mouseDown&&holdToFire())shoot();if(reloadLeft>0){reloadLeft-=dt;if(reloadLeft<=0){reloadLeft=0;finishReload();}}
 const stick=touchControls?.active?touchControls.move:padPlay()&&gamepad.connected?gamepad.move:null,moving=keys.has('KeyW')||keys.has('KeyS')||keys.has('KeyA')||keys.has('KeyD')||!!(stick&&(stick.x||stick.z));const aimingWeapon=aiming&&!grenadeThrow.active&&reloadLeft===0;const sprint=(keys.has('ShiftLeft')||keys.has('ShiftRight')||!!touchControls?.sprint||(padPlay()&&gamepad.sprint))&&!aimingWeapon&&!mouseDown;let x=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),z=(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0);if(stick&&!x&&!z){x=stick.x;z=stick.z;}const len=Math.hypot(x,z);if(len){const norm=sprint?len:Math.max(1,len);x/=norm;z/=norm;const speed=(sprint?5.6:aimingWeapon?2.1:3.6)*(perkOwned.has('stride')?1.3:1);moveWithCollision(player,(x*Math.cos(lookYaw)+z*Math.sin(lookYaw))*speed*dt,(-x*Math.sin(lookYaw)+z*Math.cos(lookYaw))*speed*dt,.32);walkPhase+=dt*(sprint?13:9);footstepTime+=dt;if(footstepTime>(sprint?.27:.43)&&feetY===0){tone(70,.065,.032,'sine',45);noise(.035,.015,350);footstepTime=0;}}
-const vertical=updateActorHeight(player,jumpV,dt,grounded,1.8,PLAYER_RADIUS,colliders);jumpV=vertical.velocity;grounded=vertical.grounded;feetY=grounded?0:Math.max(0,player.y-supportBelow(player.x,player.z,player.y));camera.position.set(player.x,1.68+player.y+(moving&&grounded?Math.sin(walkPhase)*.025:0),player.z);camera.rotation.set(clamp(lookPitch+weaponRecoil.pitch,-1.3,1.3),lookYaw+weaponRecoil.yaw,0);camera.fov=T.MathUtils.lerp(camera.fov,aimingWeapon?aimFovOf(weapon):sprint?81:75,dt*9);camera.updateProjectionMatrix();weaponViewFov=zoomOf(weapon)?T.MathUtils.lerp(weaponViewFov,aimingWeapon?(gunGroups[weapon].userData.optic.viewFov??16):sprint?81:75,dt*9):camera.fov;navTimer-=dt;if(navTimer<=0){nav.rebuild(player.x,player.z,player.y);navTimer=.6;}worldEvents.update(dt);eventVisuals.update(worldEvents);if(atticState.opening)updateAtticOpening(dt);oliviaCheer=Math.max(0,oliviaCheer-dt);attic.update(dt,{player,celebrate:oliviaCheer>0});if(boss.stage==='waking')updateWaking(dt);updateEnemies(dt);bossFx.update(dt,{hit:lanceHit,blocked:lanceBlocked});updateBossHud();if(mode==='playing'){bella.update(dt,{player,yaw:lookYaw,enemies:zombies,onBite:bellaBite,onBreath:bellaBreath,onShot:bellaShot,onBlast:bellaBlast,canSee:blastLine,climb:(pos,goal)=>atticRoute(pos.x,pos.z,pos.y,goal.y>OLIVIA_ATTIC.y-.3&&inAttic(goal.x,goal.z)),visualFloor:enemyFloorHeight});grenadeThrow.update(dt,releaseGrenade);}updateEffects(dt);explosionFx.update(dt);updatePickups(dt);
+const vertical=updateActorHeight(player,jumpV,dt,grounded,1.8,PLAYER_RADIUS,colliders);jumpV=vertical.velocity;grounded=vertical.grounded;feetY=grounded?0:Math.max(0,player.y-supportBelow(player.x,player.z,player.y));camera.position.set(player.x,1.68+player.y+(moving&&grounded?Math.sin(walkPhase)*.025:0),player.z);camera.rotation.set(clamp(lookPitch+weaponRecoil.pitch+grenadeThrow.sway.pitch,-1.3,1.3),lookYaw+weaponRecoil.yaw+grenadeThrow.sway.yaw,grenadeThrow.sway.roll);camera.fov=T.MathUtils.lerp(camera.fov,aimingWeapon?aimFovOf(weapon):sprint?81:75,dt*9);camera.updateProjectionMatrix();weaponViewFov=zoomOf(weapon)?T.MathUtils.lerp(weaponViewFov,aimingWeapon?(gunGroups[weapon].userData.optic.viewFov??16):sprint?81:75,dt*9):camera.fov;navTimer-=dt;if(navTimer<=0){nav.rebuild(player.x,player.z,player.y);navTimer=.6;}worldEvents.update(dt);eventVisuals.update(worldEvents);if(atticState.opening)updateAtticOpening(dt);oliviaCheer=Math.max(0,oliviaCheer-dt);attic.update(dt,{player,celebrate:oliviaCheer>0});if(boss.stage==='waking')updateWaking(dt);updateEnemies(dt);bossFx.update(dt,{hit:lanceHit,blocked:lanceBlocked});updateBossHud();if(mode==='playing'){bella.update(dt,{player,yaw:lookYaw,enemies:zombies,onBite:bellaBite,onBreath:bellaBreath,onShot:bellaShot,onBlast:bellaBlast,canSee:blastLine,climb:(pos,goal)=>atticRoute(pos.x,pos.z,pos.y,goal.y>OLIVIA_ATTIC.y-.3&&inAttic(goal.x,goal.z)),visualFloor:enemyFloorHeight});grenadeThrow.update(dt,releaseGrenade,grenadeCue);}updateEffects(dt);explosionFx.update(dt);updatePickups(dt);
 if(mode==='playing'&&armorTier>=2&&armor<armorMax){const rank=armorRank(armorTier),regenSeconds=rank.regenDelay===0?dt:Math.min(dt,Math.max(0,runTime-lastHurt-rank.regenDelay));armor=Math.min(armorMax,armor+regenSeconds*rank.regenRate);}
 if(runTime-lastHurt>6&&health<maxHealth)health=Math.min(maxHealth,health+dt*11);doubleTime=Math.max(0,doubleTime-dt);grenadeTime=Math.max(0,grenadeTime-dt);
 if(mode==='playing'){campWatch.update(dt,player);if(waveDelay>0){waveDelay-=dt;if(waveDelay<=1e-9)startWave();}else{spawnTimer-=dt;if(toSpawn>0&&spawnTimer<=0&&!blackthornHoldsSpawns()&&zombies.filter(e=>!e.dead).length<CURSE_RULES.aliveLimit){spawnEnemy();spawnTimer=waveConfig(wave).interval*(frenzyWave===wave?.4:1);}if(toSpawn===0&&worldEvents.pendingSpawns===0&&boss.stage!=='waking'&&!zombies.some(e=>!e.dead)){if(wave===5&&!waveFiveFinale){beginWaveFiveFinale();}else if(wave===LURKER.finale.wave&&!waveFiveFinale){beginStenchFinale();}else{completeWave();}}}}
