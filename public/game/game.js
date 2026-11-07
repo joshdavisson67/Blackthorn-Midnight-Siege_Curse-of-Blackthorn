@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=187';
-import {createChangelog} from './changelog.mjs?v=187';
+import {createLeaderboard} from './leaderboard.mjs?v=188';
+import {createChangelog} from './changelog.mjs?v=188';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -51,11 +51,11 @@ import {createReticleHud} from './reticles.mjs?v=167';
 import {createFurnishings} from './furnishings.mjs?v=187';
 import {createRugBuilder} from './rugs.mjs?v=59';
 import {createSignage} from './signage.mjs?v=94';
-import {FORGE,forgeBonuses,configureForgeStation} from './soul-forge.mjs?v=118';
+import {FORGE,forgeBonuses} from './soul-forge.mjs?v=118';
 import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=187';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
 import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=187';
-import {buildRotundaBell} from './rotunda-bell.mjs?v=130';
+import {buildRotundaBell,ROTUNDA_BELL} from './rotunda-bell.mjs?v=188';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=170';
 import {createBlackout} from './blackout.mjs?v=135';
@@ -194,13 +194,14 @@ furnishings.trophy(-13.55,3.25,-7,{rotation:Math.PI/2});furnishings.trophy(-13.5
 for(let i=0;i<24;i++){let x=rand(-13,13),z=rand(-11,11);if(Math.abs(x)<3||groundDoors.some(d=>Math.abs(x-d.x)<(d.axis==='x'?d.width/2:3)+.4&&Math.abs(z-d.z)<(d.axis==='z'?d.width/2:3)+.4))continue;let debris=box(x,.16,z,rand(.08,.35),rand(.08,.3),rand(.1,.4),i%2?M.stone:M.wood);debris.rotation.set(rand(0,1),rand(0,3),rand(0,1));}
 for(let x of [-10,10])for(let k=0;k<2;k++){const board=box(x,3+k*.8,12.44,1.8,.14,.05,M.wood);board.rotation.z=k?.14:-.25;}
 // Interactive machines.
-// Center downstairs Ironheart between the column base (z=7.4) and entrance trim (z=11.675).
-// Deadeye is centered on the dining room's front wall, between the partition and outer wall trim.
-const perkDefs=[{id:'iron',name:'IRONHEART',icon:'♥',price:2500,color:0xd54337,hex:'#ef7969',desc:'Double maximum health',x:-4.94,z:(7.4+11.675)/2},{id:'quick',name:'QUICKHANDS',icon:'ϟ',price:1500,color:0x46bea1,hex:'#66dcb7',desc:'Reload twice as fast',x:-6.265,z:8.3},{id:'eye',name:'DEADEYE',icon:'◎',price:2000,color:0xc79435,hex:'#e6bf61',desc:'Increase weapon damage 50%',x:(5.79+13.675)/2,z:11.2},{id:'stride',name:'NIGHTSTRIDE',icon:'»',price:1500,color:0x4d88c7,hex:'#7aaff0',desc:'Move and sprint 30% faster',x:20,z:-12.86}];
+// v188: the ground-floor perks are spread through the wings, each backed onto a wall
+// (0.62 m out from the wall face, like the music-salon spot Quickhands now takes):
+// Ironheart on the infirmary's west wall, Quickhands in the music salon, Nightstride
+// on the ballroom's north wall and Deadeye on the observatory's west wall.
+const perkDefs=[{id:'iron',name:'IRONHEART',icon:'♥',price:2500,color:0xd54337,hex:'#ef7969',desc:'Double maximum health',x:14.86,z:-42,rotation:Math.PI/2},{id:'quick',name:'QUICKHANDS',icon:'ϟ',price:1500,color:0x46bea1,hex:'#66dcb7',desc:'Reload twice as fast',x:20,z:-12.86,rotation:Math.PI},{id:'eye',name:'DEADEYE',icon:'◎',price:2000,color:0xc79435,hex:'#e6bf61',desc:'Increase weapon damage 50%',x:-13.14,z:-77,rotation:Math.PI/2},{id:'stride',name:'NIGHTSTRIDE',icon:'»',price:1500,color:0x4d88c7,hex:'#7aaff0',desc:'Move and sprint 30% faster',x:-16.4,z:-11.14,rotation:0}];
 const stationBuilder=createStationBuilder({world,colliders,solidMeshes,interactables,label});
 function perkStation(def,x=def.x,z=def.z,y=0){return stationBuilder.add({...def,x,z,y,type:'perk',modelCaption:def.desc});}
-// Quickhands backs onto the library partition; the previously aligned perks retain their facing.
-for(const def of perkDefs)perkStation({...def,rotation:def.id==='quick'?-Math.PI/2:def.id==='iron'?Math.PI/2:(def.id==='eye'||def.id==='stride')?Math.PI:0});
+for(const def of perkDefs)perkStation(def);
 function station(x,z,name,type,price,y=0,rotation=0){return stationBuilder.add({x,z,y,rotation,name,type,price,hex:type==='smg'?'#7aaff0':type==='ammo'?'#67efbb':type==='glock'?'#ef7969':'#e6bf61',modelCaption:type==='ammo'?'RESTOCK · ALL WEAPONS':type==='glock'?'.45 SIDEARM · FOUR UPGRADE RANKS · THEN PISTOL AMMO':type==='shotgun'?'M12 · CLOSE-RANGE STOPPING POWER':type==='bushmaster'?'15 ROUNDS · SEMI-AUTO · 10× SCOPE':'RAVEN · RAPID FIRE · UPGRADE RANKS ONCE OWNED'});}
 function powerStation(x,z,power,y=0,rotation=0){const def=POWERUPS[power];return stationBuilder.add({x,z,y,rotation,type:'powerup',power,name:def.name,price:power==='double'?800:900,hex:def.hex,modelCaption:power==='double'?'THE TWOFOLD RELIC · 20 SECONDS':'THE ENDLESS ARSENAL · 12 SECONDS'});}
 station(-7,13.2,'AMMUNITION','ammo',350);
@@ -208,10 +209,9 @@ station(-7,13.2,'AMMUNITION','ammo',350);
 const pistolBench=station(7,13.2,'GLOCK 21 PISTOL','glock',250).station;
 station(-6.315,-8,'M12 SHOTGUN','shotgun',1200,0,-Math.PI/2);
 station(6.31,-5.3,'RAVEN SMG','smg',1500,0,Math.PI/2);
-// v172: flush against the back wall; the old gap behind it was a hiding spot.
-const groundForge=stationBuilder.add({x:4.15,z:-11.42,name:'THE SOUL FORGE',type:'upgrade',pedestal:false,price:FORGE.prices[0],hex:'#c1a1ff',modelCaption:'2× BASE DAMAGE · +25% AMMO · 25% FASTER RELOAD'});point(4.15,2,-11.42,0xa474ff,8,8);
-const groundForgePlaque=mesh(new T.PlaneGeometry(1.85,.72),M.stone,[4.15,2.43,-11.69]);
-configureForgeStation(groundForge.station,{plates:[groundForgePlaque],label});
+// v188: the ground-floor forge stands on its charred oak block in the middle of
+// the Great Rotunda, under the bell, facing the grand hall.
+stationBuilder.add({x:ROTUNDA_BELL.x,z:ROTUNDA_BELL.z,name:'THE SOUL FORGE',type:'upgrade',price:FORGE.prices[0],hex:'#c1a1ff',modelCaption:'2× BASE DAMAGE · +25% AMMO · 25% FASTER RELOAD'});point(ROTUNDA_BELL.x,2.6,ROTUNDA_BELL.z,0xa474ff,8,8);
 // The ballroom shrine sits in the clear outer-wall bay between its windows.
 powerStation(-41.21,0,'double',0,Math.PI/2);powerStation(41.24,0,'grenades',0,-Math.PI/2);
 // Rain and low courtyard mist.
