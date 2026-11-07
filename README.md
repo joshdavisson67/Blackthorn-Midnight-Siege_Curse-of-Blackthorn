@@ -27,6 +27,27 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## A real throwing arm (version 186)
+
+**The arm** used to be a smooth tube with a mitten. It's now built like the rest of the kit:
+- **Sleeve:** a field-jacket sleeve with wandering folds that bunch at the elbow, a seam, and a cuff with a buttoned tab.
+- **Glove:** a tactical glove with a gauntlet and velcro wrist strap, a leather palm, a hard knuckle guard and back plate, and padded fingers.
+- **Hand:** four fingers of natural lengths with three joints each, plus a three-jointed thumb. Together they wrap the grenade with the spoon held against the palm.
+
+**The throw**, still 0.84 s long with release at 0.42 s:
+
+| Time | What happens |
+|---|---|
+| 0–0.15 s | The grenade comes up into view |
+| 0.09–0.32 s | The **left hand** reaches in, pinches the ring and yanks the pin out (with a click), then drops away holding it |
+| 0.21–0.37 s | Overhand windup: the hand draws back beside your head, elbow high, and your view leans back slightly |
+| 0.37–0.42 s | The whip: elbow leads, forearm follows, the wrist flicks. Your fingers peel open index-first at release |
+| 0.42–0.84 s | Follow-through: the arm sweeps down across your body as your view dips, then the hand relaxes and drops away |
+
+- **Aim:** the view sway is exactly level from 0.37 to 0.465 s, so the throw goes precisely where you aim.
+- **In flight:** the grenade has no pin, and its **spoon flips off**, tumbling away and clattering to the floor.
+- **Build:** the arms are built once and only posed per frame. The two-bone arm solver now orients each bone fully, so sleeves never spin. Hands are keyed by where the fingers point and where the back of the hand faces.
+
 ## A real grenade and a real explosion (version 185)
 
 **The grenade** is now a WWII-style Mk 2 "pineapple", in your hand and in flight:

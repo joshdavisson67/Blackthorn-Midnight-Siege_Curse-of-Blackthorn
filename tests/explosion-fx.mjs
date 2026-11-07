@@ -7,7 +7,7 @@ import {GRENADE_MODEL,createGrenadeAssets} from '../public/game/grenade-throw.mj
 export function verifyExplosionFx(qa,frames){
   // ---- The grenade model -------------------------------------------------------------------------
   {
-    const {template}=createGrenadeAssets(),named=n=>template.children.find(o=>o.name===n);
+    const {template}=createGrenadeAssets(),named=n=>template.getObjectByName(n);
     for(const n of ['Pineapple grenade body','Threaded fuse neck','Fuse striker housing','Safety lever','Safety pin','Pull ring','HE band','Base filler plug'])assert(named(n),`The grenade has a ${n.toLowerCase()}`);
     const body=named('Pineapple grenade body').geometry,p=body.attributes.position,c=body.attributes.color;
     assert(c&&named('Pineapple grenade body').material.vertexColors,'The body is painted in vertex colours');

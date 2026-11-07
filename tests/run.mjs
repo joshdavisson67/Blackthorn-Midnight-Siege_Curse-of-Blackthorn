@@ -102,6 +102,8 @@ verifyGrenadeThrows(qa,frames,listeners,elements);
 verifyGrenadeBlastDamage(qa,elements);
 const {verifyExplosionFx}=await import('./explosion-fx.mjs');
 verifyExplosionFx(qa,frames);
+const {verifyThrowArm}=await import('./throw-arm.mjs');
+verifyThrowArm(qa,frames);
 
 const layout=await import('../public/game/estate-layout.mjs');
 const core=await import('../public/game/core.mjs');
