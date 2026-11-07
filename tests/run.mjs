@@ -100,6 +100,8 @@ verifyBushmaster(qa,frames,listeners,gameCanvas,elements);
 const {verifyGrenadeThrows,verifyGrenadeBlastDamage}=await import('./grenade-throw.mjs');
 verifyGrenadeThrows(qa,frames,listeners,elements);
 verifyGrenadeBlastDamage(qa,elements);
+const {verifyExplosionFx}=await import('./explosion-fx.mjs');
+verifyExplosionFx(qa,frames);
 
 const layout=await import('../public/game/estate-layout.mjs');
 const core=await import('../public/game/core.mjs');
