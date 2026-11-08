@@ -27,6 +27,30 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Choose your nightmare: the mode picker (version 193)
+
+This is the first step toward **Dead Tide**, Blackthorn's second mode: endless survival on an island. Each mode will load on its own page, so neither mode ever loads the other's world.
+
+- **The picker:** `modes.html` is a split-screen title page.
+  - **Midnight Siege** (on the left) shows the estate on a rainy night: lit windows, the dead at the fence, and a flicker of lightning.
+  - **Dead Tide** (on the right) shows the island: a radio tower blinking red over the surf, and the dead wading in.
+  - **The seam:** the side you point at widens along a slanted, blood-lit seam.
+  - **Controls:** choose with the mouse, the arrow keys or A/D, or a gamepad's stick, d-pad and A button.
+  - **On phones,** the halves stack.
+  - **With reduced motion on,** the scenes are still and redraw only when something changes.
+  - **Dead Tide** is marked *In development* until it's playable.
+- **No 3D engine:** the picker draws its scenes on a plain 2D canvas and loads only the game's three fonts and its two logo images (about 97 KB in all). It never loads three.js, `boot.js` or any game module.
+- **The mansion is unchanged:** `index.html` still opens Midnight Siege directly, so existing links and the leaderboard work as before. `siege.html` forwards to it. The only addition is a **◂ ALL MODES** link on the title screen, which appears only for players who came from the picker.
+- **Measuring before and after:** `scripts/perf-measure.mjs` records:
+  - transferred bytes;
+  - time to playable;
+  - shader programs;
+  - memory;
+  - draw calls and triangles at fixed camera views;
+  - frame times, both in those views and in a 32-zombie fight.
+
+  The v192 baseline is in `perf/`. Each Dead Tide step will be compared against it, and any regression in the mansion gets fixed before release.
+
 ## An open upper floor (version 192)
 
 The upstairs walls between the grand hall's balcony and the rooms beside it (the reading room on the west, the private salon on the east) are gone. So are the blocks that hung from the ceiling on both sides: the bottoms of the two chimney stacks and the clock tower, which reached half a metre below the upstairs ceiling and now start above it. You can now see the whole upper floor from one end to the other: down the east corridor, across the open hall, and down the west corridor.

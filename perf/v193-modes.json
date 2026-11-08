@@ -1,0 +1,30 @@
+{
+  "label": "v193",
+  "page": "modes.html",
+  "date": "2026-11-08T21:13:45.959Z",
+  "note": "Headless Chromium; frame times are relative to this machine only.",
+  "load": {
+    "timeToInteractiveMs": 89,
+    "total": {
+      "requests": 6,
+      "kb": 97
+    },
+    "heapMB": 1.5,
+    "files": [
+      "/modes.html",
+      "/assets/blackthorn-wounds.svg",
+      "/assets/blackthorn-claw-mask.svg",
+      "/body.woff2",
+      "/title.woff2",
+      "/condensed.woff2"
+    ]
+  },
+  "webglContexts": 0,
+  "loadsGameCode": false,
+  "animation": {
+    "avgMs": 109.44,
+    "p95Ms": 130.2,
+    "maxMs": 469.4
+  },
+  "errors": []
+}

@@ -27,7 +27,9 @@ byId('start').addEventListener('click',()=>{
   }catch(error){report(error);}
 });
 byId('retry').addEventListener('click',()=>location.reload());
+// v193: arriving from the mode picker (modes.html) shows a way back to it.
+try{if(sessionStorage.getItem('blackthorn-from')==='modes'){const back=byId('modesLink');back.classList.remove('hidden');back.hidden=false;back.addEventListener('click',()=>{location.href='modes.html';});}}catch{}
 window.addEventListener('error',event=>{if(event.error)report(event.error);});
 window.addEventListener('unhandledrejection',event=>report(event.reason));
 const timeout=setTimeout(()=>{if(!ready&&!failed){byId('loading').classList.add('hidden');byId('error').classList.remove('hidden');byId('errorDetails').textContent='The estate is taking too long to load. Try reloading the game.';}},45000);
-import('./game.js?v=192').then(()=>clearTimeout(timeout)).catch(report);
+import('./game.js?v=193').then(()=>clearTimeout(timeout)).catch(report);
