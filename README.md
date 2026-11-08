@@ -27,6 +27,10 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## No bell rope (version 189)
+
+The Great Rotunda bell's pull rope, hand loop and knot are gone. The bell now just hangs on its chain inside the dome, with nothing dangling down beside the Soul Forge. The bell still tolls when Sir Blackthorn falls.
+
 ## Stations on the move (version 188)
 
 The ground floor's perks and Soul Forge now draw you out into the wings:
@@ -40,7 +44,7 @@ The ground floor's perks and Soul Forge now draw you out into the wings:
 | Soul Forge | Grand hall, back wall | Centre of the Great Rotunda, under the bell, facing the hall |
 
 - **The forge** now stands on its charred oak block with brass rank plates, under its violet light. There's room to walk past it on either side.
-- **The bell** hangs higher, inside the glass dome on a shorter chain (its lip is now 9.2 m up, above the 6.84 m ceiling ring). From the grand hall it's out of sight unless you're within about 6 m of the rotunda doorway. From the rotunda floor you look straight up at it, and its rope still hangs to hand height beside the forge.
+- **The bell** hangs higher, inside the glass dome on a shorter chain (its lip is now 9.2 m up, above the 6.84 m ceiling ring). From the grand hall it's out of sight unless you're within about 6 m of the rotunda doorway. From the rotunda floor you look straight up at it.
 - **Upstairs:** the upstairs perks, forge and other stations haven't moved.
 
 ## A stone interior (version 187)

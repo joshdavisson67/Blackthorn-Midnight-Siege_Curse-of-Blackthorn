@@ -5,17 +5,16 @@ const rotunda=ESTATE_ROOMS.find(room=>room.id==='rotunda');
 // v188: the bell hangs up inside the glass dome (lip 9.2 m, above the 6.84 m ceiling
 // ring), so it is out of sight from the grand hall until you reach the rotunda
 // doorway, and the Soul Forge stands beneath it.
-export const ROTUNDA_BELL=Object.freeze({x:rotunda.x,z:rotunda.z,lipY:9.2,anchorY:13.32,pullX:1.65,pullZ:-.95,handleY:1.30});
+export const ROTUNDA_BELL=Object.freeze({x:rotunda.x,z:rotunda.z,lipY:9.2,anchorY:13.32});
 export const BELL_BUDGET=Object.freeze({meshes:3,triangles:9000});
 
-// A hollow cast bell, real clapper and reachable rope. Everything is built and
+// A hollow cast bell and real clapper on its chain (v189: no pull rope). Everything is built and
 // batched once; no additional textures, lights or frame updates are needed.
 export function buildRotundaBell({world,solidMeshes,interactables,batchArticulated}){
   const group=new T.Group();group.name='Great Rotunda hanging bell';group.position.set(ROTUNDA_BELL.x,0,ROTUNDA_BELL.z);world.add(group);
   const bronze=new T.MeshStandardMaterial({color:0xbda16f,roughness:.56,metalness:.74,vertexColors:true});
   const iron=new T.MeshStandardMaterial({color:0x343d40,roughness:.68,metalness:.66});
-  const rope=new T.MeshStandardMaterial({color:0x9f8a67,roughness:.95});
-  const materials=[bronze,iron,rope],parts=[],solids=[];
+  const materials=[bronze,iron],parts=[],solids=[];
   const add=(geometry,material,name,x=0,y=0,z=0,solid=false)=>{
     const mesh=new T.Mesh(geometry,material);mesh.name=name;mesh.position.set(x,y,z);mesh.castShadow=mesh.receiveShadow=true;group.add(mesh);parts.push(mesh);if(solid)solids.push(mesh);return mesh;
   };
@@ -58,24 +57,16 @@ export function buildRotundaBell({world,solidMeshes,interactables,batchArticulat
   }
   // The plate embeds into the apex of the existing 6.5m-radius dome.
   const plate=cylinder(0,ROTUNDA_BELL.anchorY,0,.32,.14,iron,'Dome anchor plate');
-  const pullCurve=new T.CatmullRomCurve3([
-    new T.Vector3(.41,yokeY+.015,0),new T.Vector3(1.0,ROTUNDA_BELL.lipY+1.7,ROTUNDA_BELL.pullZ*.5),
-    new T.Vector3(ROTUNDA_BELL.pullX,ROTUNDA_BELL.lipY+.7,ROTUNDA_BELL.pullZ),
-    new T.Vector3(ROTUNDA_BELL.pullX,ROTUNDA_BELL.handleY+.14,ROTUNDA_BELL.pullZ)
-  ]);
-  add(new T.TubeGeometry(pullCurve,48,.031,6,false),rope,'Bell pull rope');
-  const handle=ring(ROTUNDA_BELL.pullX,ROTUNDA_BELL.handleY,ROTUNDA_BELL.pullZ,.11,.027,rope,'Reachable rope loop',20);handle.scale.set(.82,1.12,1);
-  cylinder(ROTUNDA_BELL.pullX,ROTUNDA_BELL.handleY+.16,ROTUNDA_BELL.pullZ,.04,.10,rope,'Bound rope knot');
   group.updateWorldMatrix(true,true);
-  const bounds=new T.Box3().setFromObject(group),bodyBounds=new T.Box3().setFromObject(body),handleBounds=new T.Box3().setFromObject(handle);
+  const bounds=new T.Box3().setFromObject(group),bodyBounds=new T.Box3().setFromObject(body);
   const triangles=parts.reduce((sum,part)=>sum+(part.geometry.index?.count??part.geometry.attributes.position.count)/3,0);
   batchArticulated(group);group.updateWorldMatrix(true,true);
-  // Big metal pieces stop bullets. The slender pull rope remains passable.
+  // Big metal pieces stop bullets.
   // The bell is far above players, jumps and brutes; the forge below it is the
   // only obstacle in the middle of the rotunda.
   solidMeshes.push(...solids);
   // The bell no longer takes curse choices (v130); ranks are chosen on the title
   // screen. It stays as the rotunda's landmark and tolls when Sir Blackthorn falls.
-  const station={type:'bell',name:'GREAT ROTUNDA BELL',x:ROTUNDA_BELL.x+ROTUNDA_BELL.pullX,z:ROTUNDA_BELL.z+ROTUNDA_BELL.pullZ,y:0,price:0,hex:'#cfb37a',used:false};
-  return {group,station,bounds,bodyBounds,handleBounds,triangles,materials,solids,plate};
+  const station={type:'bell',name:'GREAT ROTUNDA BELL',x:ROTUNDA_BELL.x,z:ROTUNDA_BELL.z,y:0,price:0,hex:'#cfb37a',used:false};
+  return {group,station,bounds,bodyBounds,triangles,materials,solids,plate};
 }
