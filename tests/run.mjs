@@ -355,3 +355,6 @@ verifyModePicker();
 
 const {verifyEnemyAI}=await import('./enemy-ai.mjs');
 await verifyEnemyAI(qa);
+
+const {verifyEnemySpawn}=await import('./enemy-spawn.mjs');
+await verifyEnemySpawn(qa);
