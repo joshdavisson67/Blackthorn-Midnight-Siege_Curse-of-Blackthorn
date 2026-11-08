@@ -12,6 +12,34 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `baseline-v192-siege.json` | v192 (main before Dead Tide) | The mansion baseline |
 | `v193-siege.json` | v193 (step 0) | The mansion after adding the mode picker |
 | `v193-modes.json` | v193 (step 0) | The mode picker page itself |
+| `v193-siege-rerun.json` | v193 (main) | The mansion re-measured beside v194, on the same machine and in the same session |
+| `v194-siege.json` | v194 (step 1: shared enemy AI) | The mansion after moving enemy AI into `enemy-ai.mjs` |
+
+## Step 1 (v194) against main
+
+Main (v193) was measured again straight after v194, so the timings below come from the same machine and session.
+
+| Mansion | v193 (main) | v194 |
+|---|---:|---:|
+| Files loaded before playable | 91 | 92 (`enemy-ai.mjs`) |
+| Bytes loaded before playable | 8,934 KB | 8,936 KB |
+| Time to playable, mean of 3 alternating runs | 47.3 s | 47.5 s |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load, mean of 3 runs | 237.1 MB | 237.0 MB |
+| JS heap after the fight | 243.8 MB | 243.8 MB |
+| Draw calls and triangles in the six views | as in step 0 | identical |
+| 32-zombie fight: draw calls / triangles | 2,942 / 2.73 M | identical |
+| 32-zombie fight: mean frame time (software rendering) | 3,130 ms | 3,146 ms |
+| 32-zombie fight: renderer CPU time per frame | 32.2 ms | 27.0 ms |
+
+**Verdict:** no regression in rendering, shaders or memory. Every rendering count is identical, and the timing differences fall within run-to-run noise. Single runs of time to playable ranged from 46.3 to 48.7 s for both builds.
+
+**The one measurable change** is one more file and 2 KB more source, about 0.02% of the load. That 2 KB is the module's import lines and the mansion's wiring, net of the code that left `game.js`. The new file loads alongside `game.js`'s other imports, and everything it imports is already loaded by `game.js`, so it adds no step to the loading chain.
+
+The full v194 run in `v194-siege.json` was taken before a 1.3 KB comment was trimmed from the module, so it reads 8,937 KB. The released build reads 8,936 KB, as in the three load-only runs above.
+
+**Gameplay:** `scripts/golden-trace.mjs` produces byte-identical traces on main and v194.
 
 ## Step 0 (v193) against the baseline
 
@@ -40,4 +68,5 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 node scripts/perf-measure.mjs --label vNNN --out perf/vNNN-siege.json
 node scripts/perf-measure.mjs --page modes.html --out perf/vNNN-modes.json
 node scripts/perf-measure.mjs --game <other checkout>/public/game --load-only
+node scripts/golden-trace.mjs > after.json   # then cmp it against a trace taken on main
 ```

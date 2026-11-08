@@ -69,6 +69,10 @@ This is Dead Tide step 1, the first slice of moving the game's mode-neutral core
   - **The result:** main and this version produce byte-identical traces (227 KB).
   - **How sensitive it is:** changing one turning constant by 0.002% changes the trace.
 - **A test with no mansion at all:** `tests/enemy-ai.mjs` drives the module on a flat test yard with no stairs, routes, Bella, attic or boss. Walkers cross it, strike for the yard's damage, respect its walls and ramps, and follow a decoy.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Within noise:** time to playable and frame times.
+  - **The only measurable change:** one more file and 2 KB more source, about 0.02% of the load.
 
 ## Choose your nightmare: the mode picker (version 193)
 
