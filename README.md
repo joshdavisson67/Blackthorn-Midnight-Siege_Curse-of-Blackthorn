@@ -27,6 +27,53 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Shared enemy AI (version 194)
+
+This is Dead Tide step 1, the first slice of moving the game's mode-neutral core out of `game.js` so the island can reuse it. Nothing plays differently.
+
+- **What moved:** how enemies hunt, route, crowd, walk, turn, climb and strike now lives in `public/game/enemy-ai.mjs`. That covers the line-of-approach check, shouldering past a blocked neighbour, corpse settling and the per-frame enemy update. The code is unchanged, and every calculation runs in the same order.
+- **How a mode drives it:** `createEnemyAI({level,run,rules})` returns `{updateEnemies,hasClearPath}`. Live values are passed as getters.
+
+  | Part | Field | What the mode supplies |
+  |---|---|---|
+  | `level` (the map) | `colliders`, `isBlocked(x,z,r,colliders,bounds,y,height)` | Solid boxes and the blocking test. The test applies the map's own bounds. |
+  | | `supportBelow(x,z,y,step)` | The highest walkable surface at or just below `y` |
+  | | `floorHeight(x,z)` | Ground height for an enemy standing at y≈0 |
+  | | `rampHeight(x,z)` | Height of a stair or ramp here, or `null` |
+  | | `move(pos,dx,dz,r,enemy)` | Slide a body against colliders and the crowd |
+  | | `crouchAt(x,z,y)` | Whether a brute must duck here |
+  | | `nav` | Routes: `nav.direction(x,z,y,state)`, and `nav.brutes` for big bodies |
+  | | `crowd` | The crowd planner from `crowd.mjs` |
+  | `run` (the session) | `player`, `camera`, `zombies`, `scene` | The player position, camera, enemy list and the scene enemies live in |
+  | | `rand`, `tone`, `noise` | The game's random numbers and sounds |
+  | | `elapsed`, `health` | The run clock and the player's health |
+  | | `hurtPlayer(amount,from)`, `gameOver()`, `killZombie(e,head,hit)`, `disposeEnemy(e)` | What a blow, a death or a lost run does |
+  | | `lurkerBursts`, `lurkerBurst(burst)` | Queued lurker explosions, set off at the start of each update |
+  | `rules` (the mode's own) | `decoy(e)`, `decoyStruck(e)` | Something other than the player that this enemy hunts (or `null`), and what a blow at it does |
+  | | `detour(e,pos)` | A waypoint that overrides the route, or `null` |
+  | | `baseDamage()` | A walker's blow at the current difficulty |
+  | | `surge(e)` | The round's pace multiplier |
+  | | `speedScale(e)`, `attackRate(e)` | World-event multipliers |
+  | | `boss` (optional) | `{rules,warden,update,pose,endWarCry}`, for modes with a boss |
+- **The mansion's rules:**
+  - Bella is its decoy.
+  - The attic ladder is its detour.
+  - Frenzy waves set the pace.
+  - Its world events scale speed and attack rate.
+  - Sir Blackthorn and his Gravewarden are its boss.
+
+  Dead Tide will pass its island and leave Bella, the attic and the boss out.
+- **Isolation:** `enemy-ai.mjs` imports only shared enemy modules. Nothing it loads builds or holds the mansion. The one leftover is `core.mjs`, which still carries the estate's bounds as two small constant tables (about 3 KB, no setup); a later step moves those out.
+- **Proof that nothing changed:** `scripts/golden-trace.mjs` plays nine seeded scenarios through the game and records every enemy's position, height, health, heading, attack timer and crouch, plus the player's state.
+  - **The scenarios:** a mixed brawl with a lurker, a stair climb, natural waves, six stacked waves, Bella's bitten zombies, the attic ladder, a frenzy wave, a surge event and a Sir Blackthorn fight with his war cry.
+  - **The result:** main and this version produce byte-identical traces (227 KB).
+  - **How sensitive it is:** changing one turning constant by 0.002% changes the trace.
+- **A test with no mansion at all:** `tests/enemy-ai.mjs` drives the module on a flat test yard with no stairs, routes, Bella, attic or boss. Walkers cross it, strike for the yard's damage, respect its walls and ramps, and follow a decoy.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Within noise:** time to playable and frame times.
+  - **The only measurable change:** one more file and 2 KB more source, about 0.02% of the load.
+
 ## Choose your nightmare: the mode picker (version 193)
 
 This is the first step toward **Dead Tide**, Blackthorn's second mode: endless survival on an island. Each mode will load on its own page, so neither mode ever loads the other's world.
