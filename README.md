@@ -57,6 +57,10 @@ This is Dead Tide step 1, slice 2. Making enemies and choosing where they appear
   - It makes all six kinds from the yard's stats.
   - It checks every placement rule against the yard's own rules.
   - Then, with the shared AI, the yard's own spawns close in and attack.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Within noise:** time to playable (seven alternating pairs) and frame times.
+  - **The only measurable change:** one more file and 3 KB more source.
 
 ## Shared enemy AI (version 194)
 
