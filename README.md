@@ -27,6 +27,33 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## M4 and Warden LMG ranks (version 191)
+
+The M4 and the Warden LMG now have their own four-rank ladders, like the pistol, Raven, M12 and Bushmaster. Ranks cost 2,000 / 4,000 / 8,000 / 16,000 essence, are bought in order and last for the run.
+
+**M4: sold at the tool-shed rack once you own it**
+
+| Rank | Name | Effect | Flavor |
+|---|---|---|---|
+| I | Iron Psalm | APC rounds · 25% more damage | *Armor-piercing, and soul-piercing.* |
+| II | Night Watch | 40-round magazine | *Forty rounds to keep the watch till dawn.* |
+| III | Long Wake | 50-round magazine | *Fifty rounds. The wake runs all night.* |
+| IV | Hellfire Litany | Detonating rounds: 5 m blasts at 33% of a grenade | *Every round a funeral pyre.* |
+
+**Warden LMG: sold at its cellar exhibit once you own it**
+
+| Rank | Name | Effect | Flavor |
+|---|---|---|---|
+| I | Steady Vigil | 40% more stability (less recoil) | *The Warden plants its feet and does not flinch.* |
+| II | Iron Procession | 150-round belt | *A hundred and fifty mourners, marching in step.* |
+| III | Endless Cortège | 200-round belt | *Two hundred rounds. The procession never ends.* |
+| IV | Wrath of the Warden | 33% faster fire · +2 health per kill | *It feeds on the fallen, and grows only hungrier.* |
+
+- **Detonating rounds** burst wherever a round strikes a zombie or a wall. Each blast does 148.5 damage (33% of a grenade's 450) to zombies within 3.75 m, and half that out to 5 m. Blasts need the same clear line as a grenade and never hurt you. They use their own small pooled flash, fireball and smoke, so rapid fire never takes over a grenade's explosion.
+- **Magazine ranks** come loaded, and your reserve grows to keep six magazines (M4: 240 / 300; LMG: 750 / 1,000). The Soul Forge's +25% stacks on top.
+- **The LMG's heal** applies only to kills made with the LMG, and never takes you above full health.
+- **Rank buying at the cellar** works between waves too. Only the first LMG purchase still waits for a wave.
+
 ## A harder Sir Blackthorn, woken at his grave (version 190)
 
 **Summoning:** The Last Dawn nuke is gone from the mausoleum. Instead, once the tomb opens on clearing wave 20, step up beside the sarcophagus and press E to speak to **Sir Blackthorn's grave**. It's free and works once per run. The lid slides off and he rises as before. The nuke's model is kept in `mausoleum-nuke.mjs` for later, but the game no longer builds it.

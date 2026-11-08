@@ -2,7 +2,8 @@
 // order; ranks last for the run. The Glock's ladder is sold at the courtyard
 // pistol bench; the Raven SMG's (v161) at either SMG rack once it is owned;
 // the M12 shotgun's (v164) at any of its three racks once it is owned; the
-// .450 Bushmaster's (v165) at its east-study rack once it is owned.
+// .450 Bushmaster's (v165) at its east-study rack once it is owned; the M4's
+// (v191) at the tool-shed rack and the Warden LMG's (v191) at its cellar exhibit.
 export const WEAPON_RANKS=Object.freeze({
   glock:Object.freeze([
     Object.freeze({rank:1,numeral:'I',name:'Bloodsight',price:2000,effect:'Slide-mounted red dot',flavor:'A crimson eye that never blinks.',dot:true}),
@@ -36,6 +37,23 @@ export const WEAPON_RANKS=Object.freeze({
     Object.freeze({rank:2,numeral:'II',name:'Bone Orchard',price:4000,effect:'16-round magazine',flavor:'Sixteen rounds to plant a bone orchard.',mag:16}),
     Object.freeze({rank:3,numeral:'III',name:'Ossuary',price:8000,effect:'24-round magazine',flavor:'Twenty-four rounds. The ossuary is never full.',mag:24}),
     Object.freeze({rank:4,numeral:'IV',name:'Executioner’s Calm',price:16000,effect:'Almost no recoil · 2× damage',flavor:'The hand is still. The verdict is final.',capstone:true,recoil:.05,damage:2})
+  ]),
+  // v191: the M4's ladder, sold at the tool-shed rack once it is owned. The
+  // capstone's rounds burst where they strike: a 5 m blast for a third of a
+  // grenade (33% of 450), which never hurts you.
+  rifle:Object.freeze([
+    Object.freeze({rank:1,numeral:'I',name:'Iron Psalm',price:2000,effect:'APC rounds · 25% more damage',flavor:'Armor-piercing, and soul-piercing.',damage:1.25}),
+    Object.freeze({rank:2,numeral:'II',name:'Night Watch',price:4000,effect:'40-round magazine',flavor:'Forty rounds to keep the watch till dawn.',mag:40}),
+    Object.freeze({rank:3,numeral:'III',name:'Long Wake',price:8000,effect:'50-round magazine',flavor:'Fifty rounds. The wake runs all night.',mag:50}),
+    Object.freeze({rank:4,numeral:'IV',name:'Hellfire Litany',price:16000,effect:'Detonating rounds · 5 m blasts at 33% of a grenade',flavor:'Every round a funeral pyre.',capstone:true,detonate:Object.freeze({radius:5,fraction:.33})})
+  ]),
+  // v191: the Warden LMG's ladder, sold at its cellar exhibit once it is owned.
+  // The capstone fires a third faster and mends 2 health for every kill it makes.
+  lmg:Object.freeze([
+    Object.freeze({rank:1,numeral:'I',name:'Steady Vigil',price:2000,effect:'40% more stability · less recoil',flavor:'The Warden plants its feet and does not flinch.',recoil:.6}),
+    Object.freeze({rank:2,numeral:'II',name:'Iron Procession',price:4000,effect:'150-round belt',flavor:'A hundred and fifty mourners, marching in step.',mag:150}),
+    Object.freeze({rank:3,numeral:'III',name:'Endless Cortège',price:8000,effect:'200-round belt',flavor:'Two hundred rounds. The procession never ends.',mag:200}),
+    Object.freeze({rank:4,numeral:'IV',name:'Wrath of the Warden',price:16000,effect:'33% faster fire · +2 health per kill',flavor:'It feeds on the fallen, and grows only hungrier.',capstone:true,rate:1.33,heal:2})
   ])
 });
 
@@ -63,3 +81,7 @@ export function rankDual(type,rank){return earned(type,rank).some(r=>r.dual);}
 export function rankAuto(type,rank){return earned(type,rank).some(r=>r.auto);}
 // Recoil multiplier (v165, Bushmaster capstone: .05, effectively none).
 export function rankRecoil(type,rank){let k=1;for(const r of earned(type,rank))if(r.recoil!==undefined)k*=r.recoil;return k;}
+// Detonating rounds (v191, M4 capstone): {radius, fraction of a grenade} or null.
+export function rankDetonate(type,rank){return earned(type,rank).find(r=>r.detonate)?.detonate||null;}
+// Health restored per kill made with the weapon (v191, LMG capstone: 2).
+export function rankKillHeal(type,rank){let h=0;for(const r of earned(type,rank))if(r.heal)h+=r.heal;return h;}

@@ -104,7 +104,7 @@ export function verifyShedM4(qa,frames,listeners,elements){
   qa.setPoints(4500);const score=qa.get().totalScore;pressE();assert.equal(qa.get().points,0);assert.equal(qa.get().totalScore,score,'Buying changes essence, not earned leaderboard score');
   assert(weapon.purchased&&qa.get().inventory.rifle.owned);assert.equal(qa.get().weapon,'rifle');assert.equal(qa.get().inventory.rifle.ammo,30);assert.equal(qa.get().inventory.rifle.reserve,180);
   assert.equal(qa.get().inventory.smg.ammo,13);assert.equal(qa.get().inventory.smg.reserve,42,'M4 purchase does not refill other guns');
-  frames(1);assert.match(elements.get('interaction').textContent,/OWNED/);
+  frames(1);assert.match(elements.get('interaction').textContent,/M4.*2,000 ESSENCE/,'v191: the owned M4 rack offers Rank I');
   // Aim at the torso: the rifle's spread can graze past an eye-level skull.
   qa.setPlayer(SHED.x,SHED.z-1);qa.setAim(Math.PI,-.3);frames(1);const enemy=qa.makeZombie(SHED.x,SHED.z+.9),hp=enemy.hp;
   qa.get().scene.updateMatrixWorld(true);qa.shoot();assert(enemy.hp<hp,'Purchased M4 fires real bullets from the equipped model');assert.equal(qa.get().inventory.rifle.ammo,29);
