@@ -10,6 +10,9 @@ export const EXPLOSION_FX=Object.freeze({
   slots:6,fire:14,soot:7,smoke:11,dust:6,sparks:44,debris:22,scorches:10,
   fireLife:[.45,.8],smokeLife:[2.4,3.6],flash:.12,ring:.6,
   scorchHold:12,scorchFade:4,groundReach:.9,
+  // v191: small pooled bursts for the M4's detonating rounds, separate from the
+  // six grenade slots so rapid fire never steals a grenade's fireball.
+  pops:12,popFire:4,popSmoke:2,
 });
 
 function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
@@ -70,6 +73,11 @@ export function createExplosionFx(parent){
     debris:points(F.debris,.07,T.NormalBlending,9),debrisState:Array.from({length:F.debris},()=>({pos:new T.Vector3(),vel:new T.Vector3(),life:1,rest:false})),
   }));
   const scorches=Array.from({length:F.scorches},()=>({mesh:flat(scorch,T.NormalBlending,1,1),age:-1}));
+  // v191: detonating-round pops: a flash, a small fireball and a wisp of smoke.
+  const pops=Array.from({length:F.pops},()=>({active:false,age:0,flash:sprite(soft,T.AdditiveBlending,13),
+    fire:Array.from({length:F.popFire},(_,i)=>particle(sprite(fireMaps[i%4],T.AdditiveBlending,12))),
+    smoke:Array.from({length:F.popSmoke},(_,i)=>particle(sprite(smokeMaps[(i+1)%4],T.NormalBlending,10)))}));
+  let nextPop=0,popCount=0;
   let next=0,nextScorch=0,count=0;
   const random=rng(0xb0071);
   const R=(a,b)=>a+(b-a)*random();
@@ -116,6 +124,13 @@ export function createExplosionFx(parent){
     return slot;
   }
 
+  function pop(pos){
+    const p=pops.find(o=>!o.active)||pops[nextPop];nextPop=(pops.indexOf(p)+1)%pops.length;p.active=true;p.age=0;popCount++;
+    p.flash.position.copy(pos);p.flash.visible=true;
+    for(const f of p.fire){const th=R(0,Math.PI*2),y=R(-.3,1),h=Math.sqrt(1-y*y);f.vel.set(Math.cos(th)*h,y*.8+.3,Math.sin(th)*h).multiplyScalar(R(1.6,3.4));f.pos.copy(pos);f.age=0;f.delay=R(0,.03);f.life=R(.22,.36);f.size0=R(.25,.4);f.size1=R(.9,1.4);f.heat=R(.8,1.05);f.mesh.material.rotation=R(0,Math.PI*2);f.mesh.visible=false;}
+    for(const m of p.smoke){m.vel.set(R(-.4,.4),R(.8,1.4),R(-.4,.4));m.pos.copy(pos);m.age=0;m.delay=R(.05,.12);m.life=R(.8,1.2);m.size0=R(.35,.5);m.size1=R(1.2,1.7);m.mesh.material.rotation=R(0,Math.PI*2);m.mesh.visible=false;}
+    return p;
+  }
   const fireColor=new T.Color(),smokeColor=new T.Color();
   const FIRE=[[0,2.6,2.2,1.5],[.1,2.3,1.2,.32],[.3,1.5,.48,.09],[.6,.7,.15,.035],[1,.1,.02,.01]];
   function ramp(table,k,out){for(let i=1;i<table.length;i++)if(k<=table[i][0]){const a=table[i-1],b=table[i],f=(k-a[0])/(b[0]-a[0]);return out.setRGB(a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f,a[3]+(b[3]-a[3])*f);}const l=table.at(-1);return out.setRGB(l[1],l[2],l[3]);}
@@ -170,10 +185,21 @@ export function createExplosionFx(parent){
       }
       if(!alive){slot.active=false;slot.flash.visible=slot.ring.visible=slot.sparks.visible=slot.debris.visible=false;for(const p of [...slot.fire,...slot.soot,...slot.smoke,...slot.dust])p.mesh.visible=false;}
     }
+    for(const p of pops){
+      if(!p.active)continue;p.age+=dt;let alive=false;
+      {const k=p.age/.08;p.flash.visible=k<1;if(k<1){alive=true;const sz=.3+Math.sqrt(k)*1.6;p.flash.scale.set(sz,sz,1);p.flash.material.opacity=Math.pow(1-k,1.6);p.flash.material.color.setRGB(3,2.5,1.8);}}
+      for(const f of p.fire){f.age+=dt;const a=f.age-f.delay;if(a<0||a>f.life){f.mesh.visible=false;if(a<0)alive=true;continue;}alive=true;
+        const k=a/f.life;step(f,dt,6,1.5);f.mesh.visible=true;f.mesh.position.copy(f.pos);const sz=f.size0+(f.size1-f.size0)*(1-Math.pow(1-k,2.4));f.mesh.scale.set(sz,sz,1);
+        ramp(FIRE,Math.min(1,k/f.heat),f.mesh.material.color);f.mesh.material.opacity=Math.min(1,a*40)*Math.pow(1-k,.8)*.85;}
+      for(const m of p.smoke){m.age+=dt;const a=m.age-m.delay;if(a<0||a>m.life){m.mesh.visible=false;if(a<0)alive=true;continue;}alive=true;
+        const k=a/m.life;step(m,dt,1.6,.4);m.mesh.visible=true;m.mesh.position.copy(m.pos);const sz=m.size0+(m.size1-m.size0)*(1-Math.pow(1-k,2));m.mesh.scale.set(sz,sz,1);
+        m.mesh.material.color.setRGB(.2,.19,.18);m.mesh.material.opacity=Math.min(1,a/.08)*Math.pow(1-k,1.3)*.55;}
+      if(!alive){p.active=false;p.flash.visible=false;for(const o of [...p.fire,...p.smoke])o.mesh.visible=false;}
+    }
     for(const sc of scorches){if(sc.age<0)continue;sc.age+=dt;const fade=sc.age-F.scorchHold;if(fade>F.scorchFade){sc.age=-1;sc.mesh.visible=false;continue;}sc.mesh.material.opacity=.85*(fade>0?1-fade/F.scorchFade:1);}
   }
-  function clear(){for(const slot of slots){slot.active=false;slot.age=0;slot.flash.visible=slot.ring.visible=slot.sparks.visible=slot.debris.visible=false;for(const p of [...slot.fire,...slot.soot,...slot.smoke,...slot.dust])p.mesh.visible=false;}for(const sc of scorches){sc.age=-1;sc.mesh.visible=false;}}
+  function clear(){for(const p of pops){p.active=false;p.flash.visible=false;for(const o of [...p.fire,...p.smoke])o.mesh.visible=false;}for(const slot of slots){slot.active=false;slot.age=0;slot.flash.visible=slot.ring.visible=slot.sparks.visible=slot.debris.visible=false;for(const p of [...slot.fire,...slot.soot,...slot.smoke,...slot.dust])p.mesh.visible=false;}for(const sc of scorches){sc.age=-1;sc.mesh.visible=false;}}
   // Show one of everything, for shader warm-up at load.
   function warmGroup(){const g=new T.Group();const s=slots[0];for(const o of [s.flash,s.fire[0].mesh,s.soot[0].mesh,s.smoke[0].mesh,s.ring,s.sparks,s.debris,scorches[0].mesh]){const c=o.clone();c.visible=true;if(c.material)c.material=o.material;g.add(c);}return g;}
-  return {root,burst,update,clear,warmGroup,slots,scorches,get active(){return slots.filter(s=>s.active).length;},get bursts(){return count;}};
+  return {root,burst,pop,update,clear,warmGroup,slots,scorches,pops,get active(){return slots.filter(s=>s.active).length;},get bursts(){return count;},get popping(){return pops.filter(p=>p.active).length;},get popped(){return popCount;}};
 }

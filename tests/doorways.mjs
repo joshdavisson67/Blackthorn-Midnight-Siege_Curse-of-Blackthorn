@@ -16,7 +16,8 @@ export function verifyDoorways(qa,frames){
     {x:MAUSOLEUM.x,z:MAUSOLEUM.frontZ,axis:'x',width:MAUSOLEUM.doorWidth,y:0,approach:3},
     {x:GRAVEYARD.entryX,z:GRAVEYARD.entryZ,axis:'z',width:GRAVEYARD.entryWidth-.85,y:0,approach:3}
   ];
-  assert.equal(doors.length,42,'Audit every mansion doorway, including both exterior wing exits, plus cellar, mausoleum and cemetery entrances');
+  // v192: the four upstairs doors in the walls between the salon/reading room and the hall balcony are gone with those walls.
+  assert.equal(doors.length,38,'Audit every mansion doorway, including both exterior wing exits, plus cellar, mausoleum and cemetery entrances');
   s.world.updateMatrixWorld(true);const opaque=[];
   s.world.traverse(o=>{
     if(!o.isMesh||o.isInstancedMesh||o.material.transparent||o.material.alphaTest>0)return;

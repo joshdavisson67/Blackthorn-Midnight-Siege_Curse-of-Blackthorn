@@ -302,6 +302,8 @@ verifyShotgunRanks(qa,frames,listeners,elements,gameCanvas);
 
 const {verifyBushmasterRanks}=await import('./bushmaster-ranks.mjs');
 verifyBushmasterRanks(qa,frames,listeners,elements,gameCanvas);
+const {verifyRifleLmgRanks}=await import('./rifle-lmg-ranks.mjs');
+verifyRifleLmgRanks(qa,frames,listeners,elements,gameCanvas);
 
 const {verifyDropFade}=await import('./drop-fade.mjs');
 verifyDropFade(qa,frames);
