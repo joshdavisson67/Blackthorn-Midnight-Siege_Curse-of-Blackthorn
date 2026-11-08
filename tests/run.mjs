@@ -352,3 +352,6 @@ verifyMinimap(qa,frames);
 
 const {verifyModePicker}=await import('./mode-picker.mjs');
 verifyModePicker();
+
+const {verifyEnemyAI}=await import('./enemy-ai.mjs');
+await verifyEnemyAI(qa);

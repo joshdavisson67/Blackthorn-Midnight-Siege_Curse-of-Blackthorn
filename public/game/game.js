@@ -3,12 +3,12 @@ import {FERAL} from './feral.mjs?v=165';
 import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curseWaveConfig,curseReward,chooseCurseEnemyKind} from './curse.mjs?v=165';
 import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
-import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
-import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=193';
-import {createChangelog} from './changelog.mjs?v=193';
+import {enrageNearby} from './enrage.mjs?v=130';
+import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
+import {createLeaderboard} from './leaderboard.mjs?v=194';
+import {createChangelog} from './changelog.mjs?v=194';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
-import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
+import {COMBAT,createWeaponRecoil,staggerLimits,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
 import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnMap} from './grounds.mjs?v=165';
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
@@ -38,13 +38,13 @@ import {createCombatLights} from './combat-lights.mjs?v=190';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
-import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';
+import {DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=187';
 import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=192';
 import {BELLA,BELLA_PAW,createBellaCompanion,nextBellaRank} from './bella.mjs?v=185';
 import {createExplosionFx,EXPLOSION_FX} from './explosion-fx.mjs?v=191';
-import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=183';
+import {tagZombie,reactToHit,beginZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=183';
 import {addEstateDetail} from './estate-detail.mjs?v=187';
 import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=187';
 import {createReticleHud} from './reticles.mjs?v=167';
@@ -60,10 +60,11 @@ import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=170';
 import {createBlackout} from './blackout.mjs?v=135';
 import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-spawns.mjs?v=174';
-import {createLife,updateLife,settleLife} from './zombie-life.mjs?v=176';
+import {createLife} from './zombie-life.mjs?v=176';
+import {createEnemyAI} from './enemy-ai.mjs?v=194';
 import {BUILD,rollBuild,applyBuild,resetBuild} from './zombie-build.mjs?v=177';
 import {INJURY,rollInjury,applyInjury} from './zombie-injuries.mjs?v=178';
-import {LURKER,lurkerPlayerDamage,lurkerEnemyDamage,setupLurkerGlow,updateLurkerGlow,disposeLurkerGlow} from './lurker.mjs?v=179';
+import {LURKER,lurkerPlayerDamage,lurkerEnemyDamage,setupLurkerGlow,disposeLurkerGlow} from './lurker.mjs?v=179';
 import {rollFace,applyFace,resetFaceGeometry,clearFace,disposeFace} from './zombie-faces.mjs?v=183';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
@@ -1307,7 +1308,6 @@ function closeEstateMap(restorePlay=true){if($('estateMap').classList.contains('
 function openEstateMap(){if(!['playing','paused'].includes(mode))return;mapWasPlaying=mode==='playing';if(mapWasPlaying)pauseGame();(player.y<-.3?drawCellarMap:player.y>2.15?drawUpperMap:drawEstateMap)($('estateMapCanvas'),player,interactables,lookYaw);$('estateMap').classList.remove('hidden');$('closeEstateMap').focus();}
 $('closeEstateMap').onclick=()=>closeEstateMap();$('mapPause').onclick=openEstateMap;
 function moveWithCollision(pos,dx,dz,r,enemy=null){return moveActor(pos,dx,dz,colliders,{radius:r,height:enemy?.bodyHeight||1.8,grounded:pos===player?grounded:true,allowFall:pos===player,canOccupy:enemy?enemy.canOccupy:pos===player?playerCanOccupy:null});}
-function hasClearPath(x,z,tx,tz,y=0,ty=y,radius=.35,height=1.8){if(Math.abs(ty-y)>.55)return false;const dist=Math.hypot(tx-x,tz-z);for(let t=.25;t<dist;t+=.25){const f=t/dist,xx=x+(tx-x)*f,zz=z+(tz-z)*f;const ramp=cellarStairHeight(xx,zz)??stairHeight(xx,zz);if((ramp!==null&&ramp>y+.30&&y+height>ramp-.20)||isBlocked(xx,zz,radius,colliders,undefined,y,height)||Math.abs(supportBelow(xx,zz,y,.3)-y)>.31)return false;}return true;}
 function enemyFloorHeight(x,z){
   if(Math.abs(x)<4&&z>=12&&z<=14.5)return .155;
   if(Math.abs(x)<3&&Math.abs(z)<11)return .135;
@@ -1316,119 +1316,26 @@ function enemyFloorHeight(x,z){
   for(const path of ESTATE_PATHS)if(Math.abs(x-path.x)<=path.w/2&&Math.abs(z-path.z)<=path.d/2)return path.y+.05;
   return -.07;
 }
-function corpseBlocked(x,z,r,y){return isBlocked(x,z,r,colliders,undefined,y-r,2*r);}
-function corpseFloor(x,z,y){const h=supportBelow(x,z,y+.2);return Math.abs(h)>.1?h+.008:enemyFloorHeight(x,z)+.008;}
-// A blocked enemy shoulders the neighbour in its way a little to the side.
-// Only on flat floors, never mid-attack, and only into genuinely free space.
-function shoulderNeighbour(e,dx,dz,dt){
-  const p=e.walkPos;if(stairHeight(p.x,p.z)!==null||cellarStairHeight(p.x,p.z)!==null)return;
-  let blocker=null,best=Infinity;
-  for(const o of zombies){
-    if(o===e||o.dead||o.emergeLeft>0||Math.abs(o.walkPos.y-p.y)>.5)continue;
-    const ox=o.walkPos.x-p.x,oz=o.walkPos.z-p.z,d=Math.hypot(ox,oz);
-    if(d>e.radius+o.radius+.14||(ox*dx+oz*dz)/Math.max(d,1e-6)<.5||d>=best)continue;best=d;blocker=o;
+// v194 (Dead Tide step 1): enemy AI lives in enemy-ai.mjs. The mansion hands it its
+// floors, stairs and routes, and its own rules: Bella, the attic ladder, frenzy
+// waves, world events and Sir Blackthorn.
+const {updateEnemies,hasClearPath}=createEnemyAI({
+  level:{colliders,isBlocked,supportBelow,floorHeight:enemyFloorHeight,rampHeight:(x,z)=>cellarStairHeight(x,z)??stairHeight(x,z),move:moveWithCollision,crouchAt:bruteCrouchAt,get nav(){return nav;},crowd},
+  run:{player,camera,zombies,scene:world,rand,tone,noise,get elapsed(){return elapsed;},get health(){return health;},hurtPlayer,gameOver,killZombie,disposeEnemy,lurkerBursts,lurkerBurst},
+  rules:{
+    // Bella cannot be hurt: blows aimed at her only land with a dull thud.
+    decoy(e){if(e.lurker)e.bellaAggro=false;return e.bellaAggro&&bella.unlocked?bella.pos:null;},
+    decoyStruck(e){e.bellaSwings=(e.bellaSwings||0)+1;tone(150,.06,.02,'triangle',110);},
+    detour:(e,p)=>!e.brute&&isAtticOpen()?atticRoute(p.x,p.z,p.y,playerInAttic()):null,
+    baseDamage:()=>waveConfig(wave).damage,
+    surge:e=>frenzyWave===wave&&wave&&!e.lurker?1.4:1,
+    speedScale:e=>worldEvents.speedMultiplier(e),attackRate:e=>worldEvents.attackRate(e),
+    boss:{rules:BOSS,warden:WARDEN,update:updateBlackthorn,pose:poseBlackthorn,endWarCry}
   }
-  if(!blocker||blocker.attackTime>=0)return;
-  const q=blocker.walkPos;if(stairHeight(q.x,q.z)!==null||cellarStairHeight(q.x,q.z)!==null)return;
-  const side=Math.sign((q.x-p.x)*(-dz)+(q.z-p.z)*dx)||e.routeSide||1,force=SPREAD.shove*dt*(e.brute?1.4:1)/(blocker.brute?3:1);
-  moveWithCollision(q,-dz*side*force,dx*side*force,blocker.radius,blocker);
-}
-function updateEnemies(dt){crowd.plan(player.y);while(lurkerBursts.length)lurkerBurst(lurkerBursts.shift());for(let i=zombies.length-1;i>=0;i--){const e=zombies[i];
-if(e.dead){if(updateZombieDeath(e,dt,corpseBlocked,corpseFloor)){world.remove(e.group);disposeEnemy(e);zombies.splice(i,1);}continue;}
-if(e.waking){animateZombie(e,dt,99,0);continue;}
-if(e.warCry>0){e.warCry-=dt;if(e.warCry<=0)endWarCry(e);}
-if(e.emergeLeft>0){
-  e.emergeLeft=Math.max(0,e.emergeLeft-dt);
-  const floor=(Math.abs(e.floorY)>.1?e.floorY:enemyFloorHeight(e.walkPos.x,e.walkPos.z))-.02;e.group.position.y=floor-(e.emergeDepth||1.65)*(e.emergeLeft/(e.emergeTime||1.05))**2;
-  animateZombie(e,dt,99,0);continue;
-}
-if(e.lurker)e.bellaAggro=false;
-advanceStagger(e,dt);
-const onBella=!!(e.bellaAggro&&bella.unlocked),hunt=onBella?bella.pos:player;
-const routes=e.brute?nav.brutes:nav,p=e.walkPos,dist=Math.hypot(hunt.x-p.x,hunt.z-p.z),oldX=p.x,oldZ=p.z,sameFloor=Math.abs(hunt.y-p.y)<.55;
-if(e.brute){
-  // Duck ahead of the upper landing and mausoleum, before their lower headers.
-  const crouch=bruteCrouchAt(p.x,p.z,p.y)?1:0;e.crouch=T.MathUtils.damp(e.crouch||0,crouch,12,dt);if(e.boss)e.crouch=Math.min(e.crouch,.3);/* Sir Blackthorn only stoops; his walker rig clears the tomb door. */
-  e.bodyHeight=crouch||e.crouch>.02?BRUTE.crouchHeight:BRUTE.height;
-}
-e.pathTimer-=dt;
-if(e.pathTimer<=0){
-  e.clearPath=sameFloor&&dist<12&&hasClearPath(p.x,p.z,hunt.x,hunt.z,p.y,hunt.y,e.brute?e.radius:.35,e.brute?e.bodyHeight:1.8);
-  e.flankClear=false;
-  if(!onBella&&e.clearPath&&dist>2.5){const flank=e.flank*Math.min(1,(dist-2.5)/4);e.flankClear=hasClearPath(p.x,p.z,player.x-(player.z-p.z)/dist*flank,player.z+(player.x-p.x)/dist*flank,p.y,player.y,e.brute?e.radius:.35,e.brute?e.bodyHeight:1.8);}
-  e.waypoint=routes.direction(p.x,p.z,p.y,e.navigation);
-  // Keep a shared-out slot only if it is open floor with a clear walk to it.
-  e.slotScale=0;
-  if(!onBella&&e.clearPath&&e.engaged)for(const scale of [1,.5]){
-    const t=crowd.slotTarget(e,scale),r=e.brute?e.radius:.35;
-    if(!isBlocked(t.x,t.z,r,colliders,undefined,p.y,e.bodyHeight)&&hasClearPath(p.x,p.z,t.x,t.z,p.y,p.y,r,e.brute?e.bodyHeight:1.8)){e.slotScale=scale;break;}
-  }
-  e.pathTimer=.22+(e.phase%1)*.10;
-}
-const casting=e.boss&&updateBlackthorn(e,dt,dist,sameFloor);
-if(e.lurker){
-  // v179: never swings; charges from 12 yards and bursts on reaching you.
-  e.attack=1e9;updateLurkerGlow(e,dt);
-  if(!e.lurkerCharging&&sameFloor&&dist<=LURKER.chargeRange&&(e.clearPath||dist<4)){e.lurkerCharging=true;tone(66,.55,.09,'sawtooth',150);noise(.3,.08,900);}
-  if(e.lurkerFuse>0){
-    e.lurkerFuse-=dt;e.group.scale.setScalar(e.lurkerScale*(1+.18*Math.min(1,1-e.lurkerFuse/LURKER.fuse)));
-    if(e.lurkerFuse<=0){killZombie(e,false,{source:'lurkerSelf',part:'torso',direction:new T.Vector3(0,1,0),force:.4});continue;}
-  }else if(sameFloor&&dist<LURKER.trigger&&Math.abs(player.y-p.y)<.7&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y)){e.lurkerFuse=LURKER.fuse;e.lurkerScale=e.group.scale.x;tone(150,.32,.07,'sine',520);}
-}
-// Out of sight of Bella, follow the usual route toward the player, where she fights.
-let tx=hunt.x,tz=hunt.z;const climbTo=!onBella&&!e.brute&&isAtticOpen()?atticRoute(p.x,p.z,p.y,playerInAttic()):null;
-if((dist>1.3||!sameFloor)&&(!sameFloor||!e.clearPath)){
-  if(!e.waypoint||Math.hypot(e.waypoint.x-p.x,e.waypoint.z-p.z)<.18)e.waypoint=routes.direction(p.x,p.z,p.y,e.navigation);
-  if(e.waypoint){tx=e.waypoint.x;tz=e.waypoint.z;}
-}else if(!onBella&&e.engaged&&e.slotScale>0){
-  const t=crowd.slotTarget(e,e.slotScale);tx=t.x;tz=t.z;
-}else if(!onBella&&dist>2.5&&e.flankClear){
-  const flank=e.flank*Math.min(1,(dist-2.5)/4);
-  const fx=tx-(player.z-p.z)/dist*flank,fz=tz+(player.x-p.x)/dist*flank;
-  tx=fx;tz=fz;
-}
-if(climbTo){tx=climbTo.x;tz=climbTo.z;}
-let dx=tx-p.x,dz=tz-p.z,len=Math.hypot(dx,dz),heading=Math.atan2(hunt.x-p.x,hunt.z-p.z);
-if(len>.1&&(dist>1.03||!sameFloor)&&!casting){
-  dx/=len;dz/=len;crowd.steer(e,dx,dz,elapsed);dx=e.steerX;dz=e.steerZ;
-  // v175: each walker's own rhythm, surges, weave, stumbles and lunges.
-  const life=e.life&&!e.elite&&!e.crawling&&!casting?updateLife(e,dt,{dist,sameFloor,clear:e.clearPath,stairs:!!stairAt(p.x,p.z)||cellarStairHeight(p.x,p.z)!==null||!!climbTo,attackReady:e.attack<=.3&&e.attackTime<0,moved:e.lastMoved||0,hobble:e.hobble||0}):(settleLife(e,dt),null);
-  if(e.lurker){e.lurkerLean=(e.lurkerLean||0)+((e.lurkerCharging?.85:0)-(e.lurkerLean||0))*(1-Math.exp(-dt*6));e.lungeW=Math.max(e.lungeW||0,e.lurkerLean);}
-  if(life?.weave){const c=Math.cos(life.weave),sn=Math.sin(life.weave),wx=dx*c+dz*sn,wz=dz*c-dx*sn;dx=wx;dz=wz;}
-  // v139: ease the walking direction (~0.14s) so grid-cell routes curve
-  // instead of zig-zagging the body from cell to cell. Sharp turns (over ~70°)
-  // are taken at once so nobody grinds into a wall turning round.
-  {const k=(e.walkDirX??dx)*dx+(e.walkDirZ??dz)*dz<.3?1:1-Math.exp(-dt*7);let sx=(e.walkDirX??dx)+(dx-(e.walkDirX??dx))*k,sz=(e.walkDirZ??dz)+(dz-(e.walkDirZ??dz))*k;const n=Math.hypot(sx,sz);if(n>.2){sx/=n;sz/=n;}else{sx=dx;sz=dz;}e.walkDirX=sx;e.walkDirZ=sz;dx=sx;dz=sz;}
-  const pace=(e.staggerLeft>0?0:1)*(e.crawling?(e.crawlDrop>0?0:CRAWL.speed):1)*(frenzyWave===wave&&wave&&!e.lurker?1.4:1)*(e.lurkerCharging?LURKER.charge:1)*(e.attackTime>=0?(e.dog?.65:.4):1)*(e.legHit>0?.55:1)*(e.crawling||e.elite?1:1-LIMP.slow*(e.hobble||0)*(e.brute?LIMP.bruteSlow:1))*(e.warCry>0?BOSS.cry.speed:1)*(life?life.pace:1),step=e.speed*worldEvents.speedMultiplier(e)*dt*pace;
-  moveWithCollision(p,dx*step,dz*step,e.radius,e);
-  const moved=Math.hypot(p.x-oldX,p.z-oldZ);e.lastMoved=moved;
-  e.stuck=moved<step*.15?e.stuck+dt:0;
-  if(e.stuck>.35&&dist>1.8){
-    // Slide around a neighbour when there is room; solid walls and bodies still
-    // decide whether that step is possible. Never push or teleport the crowd.
-    const side=e.routeSide*(Math.floor(e.stuck/1.2)%2?-1:1),remaining=Math.max(0,step-moved);
-    moveWithCollision(p,-dz*side*remaining,dx*side*remaining,e.radius,e);
-  }
-  if(e.stuck>.12)shoulderNeighbour(e,dx,dz,dt);
-  // v139: face a smoothed walking direction (~0.35s), not each frame's raw
-  // step, so crowd steering and wall slides do not swing the body side to side.
-  {const k=1-Math.exp(-dt*2.4),vx=(p.x-oldX)/Math.max(dt,1e-4),vz=(p.z-oldZ)/Math.max(dt,1e-4);e.faceX=(e.faceX??vx)+(vx-(e.faceX??vx))*k;e.faceZ=(e.faceZ??vz)+(vz-(e.faceZ??vz))*k;
-   if(Math.hypot(e.faceX,e.faceZ)>.25)heading=Math.atan2(e.faceX,e.faceZ);}
-}else{settleLife(e,dt);e.lastMoved=0;}
-
-// Turn at a limited, eased rate (v136): bodies swing round with weight rather
-// than snapping to every steering wobble; the head leads, tracking the player.
-const turn=Math.atan2(Math.sin(heading-e.group.rotation.y),Math.cos(heading-e.group.rotation.y)),maxTurn=(e.dog?6:e.feral?5:e.brute?2.4:3.2)*dt,yawStep=clamp(turn*(1-Math.exp(-dt*6)),-maxTurn,maxTurn);e.group.rotation.y+=yawStep;e.turnRate=T.MathUtils.lerp(e.turnRate||0,yawStep/Math.max(dt,1e-4),1-Math.exp(-dt*10));
-e.floorY=p.y;e.group.position.set(p.x,Math.abs(p.y)>.1?p.y-.02:enemyFloorHeight(p.x,p.z)-.02,p.z);e.attack-=dt*worldEvents.attackRate(e);const contact=(e.dog?animateZombieDog:animateZombie)(e,dt,sameFloor?dist:99,Math.hypot(p.x-oldX,p.z-oldZ),onBella?bellaLook.set(hunt.x,hunt.y+.45,hunt.z):camera.position);if(casting)poseBlackthorn(e);
-// Bella cannot be hurt: blows aimed at her only land with a dull thud.
-if(onBella){if(contact&&!(e.staggerLeft>0)&&dist<1.7&&sameFloor){e.bellaSwings=(e.bellaSwings||0)+1;tone(150,.06,.02,'triangle',110);}}
-else if(contact&&!casting&&!(e.staggerLeft>0)&&dist<1.7&&Math.abs(player.y-p.y)<.7&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y)){
-hurtPlayer(waveConfig(wave).damage*(e.boss?BOSS.meleeMultiplier:e.warden?1.4*WARDEN.damageMultiplier:e.feral?FERAL.damageMultiplier:e.dog?.85:e.brute?1.4:1)*(e.enraged&&!e.elite?ENRAGE.damageMultiplier:1)*(e.warCry>0?BOSS.cry.damage:1)*(e.armless?INJURY.oneArmDamage:1),p);noise(.15,.08,600);tone(70,.14,.06,'sine');if(health<=0)gameOver();}
-e.groan-=dt;if(e.groan<=0){if(dist<12)tone(e.lurker?38:e.feral?210:e.rareDog?155:e.dog?105:e.brute?45:rand(60,100),e.dog?.22:.6,.035*(1-dist/14),'sawtooth',35);e.groan=rand(6,15);}}}
+});
 // v158: a zombie Bella bites turns on her and fights her until it dies.
 // Bosses and elite guardians ignore her and keep hunting the player.
 function bellaBite(enemy,damage,direction){if(!enemy.boss&&!enemy.elite)enemy.bellaAggro=true;damageEnemy(enemy,damage,false,{direction:direction.clone(),part:enemy.dog?'head':'leg',force:.45,source:'Bella'});tone(460,.08,.018,'triangle',620);}
-const bellaLook=new T.Vector3();
 const effectNext=new T.Vector3();
 function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'||e.type==='spoon'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+(e.rest??.12);if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;if(e.spin)e.spin.multiplyScalar(.5);}if(e.spin){e.mesh.rotation.x+=step*e.spin.x;e.mesh.rotation.y+=step*e.spin.y;e.mesh.rotation.z+=step*e.spin.z;}else e.mesh.rotation.x+=step*4;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else world.remove(e.mesh);effects.splice(i,1);}}}
 function grantPowerup(type){if(type==='ammo'){refillAmmo();notify('MAX AMMO · RESERVES RESTOCKED');}else if(type==='double'){doubleTime=POWERUPS.double.duration;notify('×2 · DOUBLE DAMAGE FOR 20s');}else if(type==='grenades'){grenadeTime=POWERUPS.grenades.duration;notify('INFINITE GRENADES · 12s · PRESS G');}}
