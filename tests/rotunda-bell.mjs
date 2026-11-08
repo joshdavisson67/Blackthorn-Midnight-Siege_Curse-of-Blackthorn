@@ -33,12 +33,29 @@ export function verifyRotundaBell(qa,frames,listeners,elements){
   const snapshot=()=>{const s=qa.get();return {points:s.points,totalScore:s.totalScore,health:s.health,wave:s.wave,toSpawn:s.toSpawn,mode:s.mode,rank:s.curse.rank};};
   const before=snapshot();qa.interact();listeners.keydown({code:'KeyE',repeat:false});listeners.keyup({code:'KeyE'});
   assert.deepEqual(snapshot(),before,'E at the rope does nothing');
-  // Standing movement, a real jump and tall enemies all keep the central lane.
-  for(const height of [1.8,BRUTE.height])for(let z=ROTUNDA_BELL.z-4;z<=ROTUNDA_BELL.z+4;z+=.25)assert(!isBlocked(ROTUNDA_BELL.x,z,.58,state.colliders,undefined,0,height));
-  qa.setPlayer(ROTUNDA_BELL.x,ROTUNDA_BELL.z+3);qa.setAim(0,0);qa.setKeys(['KeyW']);frames(105);qa.setKeys([]);
-  assert(qa.get().player.z<ROTUNDA_BELL.z-3,'The real keyboard loop crosses beneath the bell');
-  qa.setPlayer(ROTUNDA_BELL.x,ROTUNDA_BELL.z);listeners.keydown({code:'Space',preventDefault(){}});let peak=0;
+  // v188: the Soul Forge stands in the middle of the rotunda, right under the bell,
+  // facing the grand hall. Lanes either side of it stay open for players and brutes.
+  const forge=state.interactables.find(s=>s.type==='upgrade'&&s.y===0&&roomAt(s.x,s.z)?.id==='rotunda');
+  assert(forge&&forge.x===ROTUNDA_BELL.x&&forge.z===ROTUNDA_BELL.z&&!(forge.rotation||0),'The ground-floor Soul Forge stands under the bell, facing the hall');
+  assert(!state.interactables.some(s=>s.type==='upgrade'&&s.y===0&&roomAt(s.x,s.z)?.id==='original'),'and has left the grand hall');
+  assert(bell.bodyBounds.min.y>6.84,'The bell hangs up inside the dome, above the ceiling ring');
+  assert(bell.bounds.max.y-bell.bodyBounds.max.y>1.2,'and still hangs on a visible length of chain');
+  for(const height of [1.8,BRUTE.height])for(const lane of [-2.4,2.4])for(let z=ROTUNDA_BELL.z-4;z<=ROTUNDA_BELL.z+4;z+=.25)assert(!isBlocked(ROTUNDA_BELL.x+lane,z,.58,state.colliders,undefined,0,height));
+  // Out of sight from the grand hall: no line from a standing or jumping eye in the
+  // hall (more than 6 m back from the rotunda doorway) reaches the bell.
+  {
+    const skip=new Set();bell.group.traverse(o=>skip.add(o));const blockers=[];
+    state.world.traverse(o=>{if(!o.isMesh||skip.has(o)||o.isInstancedMesh||!o.visible||o.userData.dynamic||Array.isArray(o.material))return;if(o.material.transparent&&o.material.opacity<.99)return;blockers.push(o);});
+    const targets=[];for(let i=0;i<8;i++){const a=i/8*Math.PI*2;targets.push(new T.Vector3(ROTUNDA_BELL.x+Math.sin(a)*1.3,ROTUNDA_BELL.lipY+.05,ROTUNDA_BELL.z+Math.cos(a)*1.3));}
+    targets.push(new T.Vector3(ROTUNDA_BELL.x,ROTUNDA_BELL.lipY+1.9,ROTUNDA_BELL.z));
+    const sees=eye=>targets.some(p=>{const d=p.clone().sub(eye),len=d.length();const r=new T.Raycaster(eye,d.normalize(),0,len-.05);return !r.intersectObjects(blockers,false).length;});
+    for(const x of [-4,-1.5,0,1.5,4])for(const z of [-6,-4.5,-3,1,5,9])for(const y of [1.7,2.7])assert(!sees(new T.Vector3(x,y,z)),`The bell is hidden from the hall at ${x},${y},${z}`);
+    assert(sees(new T.Vector3(ROTUNDA_BELL.x+4,1.7,ROTUNDA_BELL.z+3)),'but is in view from the rotunda floor');
+  }
+  qa.setPlayer(ROTUNDA_BELL.x+2.4,ROTUNDA_BELL.z+3);qa.setAim(0,0);qa.setKeys(['KeyW']);frames(105);qa.setKeys([]);
+  assert(qa.get().player.z<ROTUNDA_BELL.z-3,'The real keyboard loop walks past the forge beneath the bell');
+  qa.setPlayer(ROTUNDA_BELL.x+2.4,ROTUNDA_BELL.z);listeners.keydown({code:'Space',preventDefault(){}});let peak=0;
   for(let i=0;i<70;i++){frames(1);peak=Math.max(peak,qa.get().player.y+1.8);}
   listeners.keyup({code:'Space'});assert(peak<bell.bodyBounds.min.y);assert.equal(qa.get().player.y,0);assert(qa.get().grounded);
-  console.log(`PASS: rotunda bell landmark with no interaction, hollow outward-facing shell, dome attachment, clear ground/jump/brute routes, and restart; ${meshes} static meshes / ${triangles} triangles / no new textures or lights.`);qa.start();
+  console.log(`PASS: rotunda bell landmark with no interaction, hollow outward-facing shell, hung on its chain inside the dome out of sight from the grand hall, the Soul Forge beneath it, clear lanes past the forge for players, jumps and brutes, and restart; ${meshes} static meshes / ${triangles} triangles / no new textures or lights.`);qa.start();
 }

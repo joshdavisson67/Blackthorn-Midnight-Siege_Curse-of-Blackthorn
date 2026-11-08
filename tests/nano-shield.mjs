@@ -87,7 +87,7 @@ export function verifyNanoShield(qa,frames,elements){
     prepare();qa.interact();qa.setPlayer(0,24);qa.hurtPlayer(50);frames(fps*6,1000/fps);
     near(qa.get().armor,55,`Recharge rate is stable at ${fps} FPS`);
   }
-  prepare();qa.interact();qa.setPlayer(-3.34,9.5375);qa.setPoints(2500);qa.hurtPlayer(40);qa.interact();
+  prepare();qa.interact();qa.setPlayer(...(p=>[p.x+Math.sin(p.rotation)*1.6,p.z+Math.cos(p.rotation)*1.6])(qa.get().interactables.find(s=>s.type==='perk'&&s.id==='iron'&&s.y===0)));qa.setPoints(2500);qa.hurtPlayer(40);qa.interact();
   assert.equal(qa.get().armorMax,200);near(qa.get().armor,120,'Ironheart scales current Nano Shield protection');assert.equal(qa.get().armorTier,2);
   qa.setPlayer(0,24);frames(120,50);near(qa.get().armor,125,'Ironheart does not change the five-per-second rate');frames(400,50);near(qa.get().armor,200,'Nano Shield fills the Ironheart capacity');
   qa.hurtPlayer(10000);assert.equal(qa.get().mode,'dead');const deadArmor=qa.get().armor;frames(200,50);near(qa.get().armor,deadArmor,'Dead runs never regenerate');
@@ -107,7 +107,7 @@ export function verifyNanoShield(qa,frames,elements){
   for(const fps of [30,60,120]){prepareRank2();qa.hurtPlayer(50);frames(fps*4,1000/fps);near(qa.get().armor,60,`Rank 2 rate is stable at ${fps} FPS`);}
   prepareRank2();qa.hurtPlayer(50);frames(59,50);frames(1,30);frames(1,50);near(qa.get().armor,50.3,'Only the part of a frame after the three-second boundary regenerates');
   prepare();qa.interact();qa.setPlayer(0,24);qa.hurtPlayer(50);frames(80,50);at(upper);qa.setPoints(7500);qa.interact();near(qa.get().armor,50,'Buying Rank 2 after four seconds adds no instant refill');qa.setPlayer(0,24);frames(1,50);near(qa.get().armor,50.5,'Rank 2 uses elapsed time since the last hit without starting a new purchase delay');
-  prepareRank2();qa.hurtPlayer(40);qa.setPlayer(-3.34,9.5375);qa.setPoints(2500);qa.interact();assert.equal(qa.get().armorMax,200);near(qa.get().armor,120,'Ironheart scales Rank 2 remaining shield');assert.equal(qa.get().armorTier,3);
+  prepareRank2();qa.hurtPlayer(40);qa.setPlayer(...(p=>[p.x+Math.sin(p.rotation)*1.6,p.z+Math.cos(p.rotation)*1.6])(qa.get().interactables.find(s=>s.type==='perk'&&s.id==='iron'&&s.y===0)));qa.setPoints(2500);qa.interact();assert.equal(qa.get().armorMax,200);near(qa.get().armor,120,'Ironheart scales Rank 2 remaining shield');assert.equal(qa.get().armorTier,3);
   qa.setPlayer(0,24);frames(80,50);near(qa.get().armor,130,'Ironheart preserves Rank 2 rate');frames(300,50);near(qa.get().armor,200,'Rank 2 fills the larger capacity');
   qa.hurtPlayer(10000);assert.equal(qa.get().mode,'dead');frames(200,50);near(qa.get().armor,0,'Dead Rank 2 runs cannot recharge');
   qa.start();qa.startWave();qa.holdSpawns();qa.setPoints(15000);at(upper);qa.interact();qa.interact();at(cellar);qa.interact();assert.equal(qa.get().armorTier,2);assert.equal(qa.get().points,7500,'The cellar wave gate also protects Rank 2');at(upper);qa.interact();assert.equal(qa.get().armorTier,3);assert.equal(qa.get().points,0,'The upper station sells Rank 2 before the cellar unlocks');
@@ -126,7 +126,7 @@ export function verifyNanoShield(qa,frames,elements){
   near(qa.get().armor,Math.max(0,50-waveConfig(qa.get().wave).damage)+.75,'Rank 3 regenerates even in the same frame as a zombie hit');
   for(const fps of [30,60,120]){prepareRank3();qa.hurtPlayer(50);frames(fps,1000/fps);near(qa.get().armor,65,`Rank 3 rate is stable at ${fps} FPS`);}
   prepareRank3();qa.hurtPlayer(50);frames(1,30);near(qa.get().armor,50.45,'Rank 3 credits the actual fractional frame');
-  qa.setPlayer(-3.34,9.5375);qa.setPoints(2500);qa.interact();assert.equal(qa.get().armorMax,200);near(qa.get().armor,100.9,'Ironheart scales Rank 3 remaining shield');qa.setPlayer(0,24);frames(20,50);near(qa.get().armor,115.9,'Ironheart keeps the fifteen-per-second rate');frames(200,50);near(qa.get().armor,200,'Rank 3 fills the larger capacity');
+  qa.setPlayer(...(p=>[p.x+Math.sin(p.rotation)*1.6,p.z+Math.cos(p.rotation)*1.6])(qa.get().interactables.find(s=>s.type==='perk'&&s.id==='iron'&&s.y===0)));qa.setPoints(2500);qa.interact();assert.equal(qa.get().armorMax,200);near(qa.get().armor,100.9,'Ironheart scales Rank 3 remaining shield');qa.setPlayer(0,24);frames(20,50);near(qa.get().armor,115.9,'Ironheart keeps the fifteen-per-second rate');frames(200,50);near(qa.get().armor,200,'Rank 3 fills the larger capacity');
   qa.hurtPlayer(10000);assert.equal(qa.get().mode,'dead');frames(200,50);near(qa.get().armor,0,'Rank 3 cannot resurrect shield after death');
   qa.start();qa.startWave();qa.holdSpawns();qa.setPoints(35000);at(upper);qa.interact();qa.interact();qa.interact();at(cellar);qa.interact();assert.equal(qa.get().armorTier,3);assert.equal(qa.get().points,20000,'Rank 3 respects the locked cellar gate');at(upper);frames(1,50);assert(elements.get('interaction').innerHTML.includes('20,000 ESSENCE'));assert(elements.get('interaction').innerHTML.includes('15 shield/s continuously'));qa.interact();assert.equal(qa.get().armorTier,4);assert.equal(qa.get().points,0,'Upstairs sells Rank 3 before the cellar unlocks');
 

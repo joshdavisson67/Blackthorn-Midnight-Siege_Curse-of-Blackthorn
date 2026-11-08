@@ -2,7 +2,10 @@ import * as T from './three.module.js';
 import {ESTATE_ROOMS} from './estate-layout.mjs?v=28';
 
 const rotunda=ESTATE_ROOMS.find(room=>room.id==='rotunda');
-export const ROTUNDA_BELL=Object.freeze({x:rotunda.x,z:rotunda.z,lipY:3,anchorY:13.32,pullX:1.65,pullZ:.75,handleY:1.30});
+// v188: the bell hangs up inside the glass dome (lip 9.2 m, above the 6.84 m ceiling
+// ring), so it is out of sight from the grand hall until you reach the rotunda
+// doorway, and the Soul Forge stands beneath it.
+export const ROTUNDA_BELL=Object.freeze({x:rotunda.x,z:rotunda.z,lipY:9.2,anchorY:13.32,pullX:1.65,pullZ:-.95,handleY:1.30});
 export const BELL_BUDGET=Object.freeze({meshes:3,triangles:9000});
 
 // A hollow cast bell, real clapper and reachable rope. Everything is built and
@@ -49,18 +52,18 @@ export function buildRotundaBell({world,solidMeshes,interactables,batchArticulat
   box(0,yokeY,0,.86,.14,.22,iron,'Bell suspension yoke');
   for(const x of [-.30,.30])cylinder(x,yokeY+.03,0,.045,.20,iron,'Yoke locking bolt');
   const hangerLow=yokeY+.15,hangerHigh=ROTUNDA_BELL.anchorY-.14;
-  const linkGeometry=new T.TorusGeometry(.105,.023,4,16),links=28;
+  const linkGeometry=new T.TorusGeometry(.105,.023,4,16),links=Math.max(4,Math.round((hangerHigh-hangerLow)/.29));
   for(let i=0;i<links;i++){
     const link=add(linkGeometry,iron,'Interlocking suspension chain',0,hangerLow+(hangerHigh-hangerLow)*i/(links-1),0);link.scale.y=1.65;if(i%2)link.rotation.y=Math.PI/2;
   }
   // The plate embeds into the apex of the existing 6.5m-radius dome.
   const plate=cylinder(0,ROTUNDA_BELL.anchorY,0,.32,.14,iron,'Dome anchor plate');
   const pullCurve=new T.CatmullRomCurve3([
-    new T.Vector3(.41,yokeY+.015,0),new T.Vector3(1.0,4.7,.38),
-    new T.Vector3(ROTUNDA_BELL.pullX,3.7,ROTUNDA_BELL.pullZ),
+    new T.Vector3(.41,yokeY+.015,0),new T.Vector3(1.0,ROTUNDA_BELL.lipY+1.7,ROTUNDA_BELL.pullZ*.5),
+    new T.Vector3(ROTUNDA_BELL.pullX,ROTUNDA_BELL.lipY+.7,ROTUNDA_BELL.pullZ),
     new T.Vector3(ROTUNDA_BELL.pullX,ROTUNDA_BELL.handleY+.14,ROTUNDA_BELL.pullZ)
   ]);
-  add(new T.TubeGeometry(pullCurve,36,.031,6,false),rope,'Bell pull rope');
+  add(new T.TubeGeometry(pullCurve,48,.031,6,false),rope,'Bell pull rope');
   const handle=ring(ROTUNDA_BELL.pullX,ROTUNDA_BELL.handleY,ROTUNDA_BELL.pullZ,.11,.027,rope,'Reachable rope loop',20);handle.scale.set(.82,1.12,1);
   cylinder(ROTUNDA_BELL.pullX,ROTUNDA_BELL.handleY+.16,ROTUNDA_BELL.pullZ,.04,.10,rope,'Bound rope knot');
   group.updateWorldMatrix(true,true);
@@ -68,8 +71,8 @@ export function buildRotundaBell({world,solidMeshes,interactables,batchArticulat
   const triangles=parts.reduce((sum,part)=>sum+(part.geometry.index?.count??part.geometry.attributes.position.count)/3,0);
   batchArticulated(group);group.updateWorldMatrix(true,true);
   // Big metal pieces stop bullets. The slender pull rope remains passable.
-  // With the lip/clapper above 2.88m, players (including jumps) and brutes
-  // retain the central ground route without a new floor collision obstacle.
+  // The bell is far above players, jumps and brutes; the forge below it is the
+  // only obstacle in the middle of the rotunda.
   solidMeshes.push(...solids);
   // The bell no longer takes curse choices (v130); ranks are chosen on the title
   // screen. It stays as the rotunda's landmark and tolls when Sir Blackthorn falls.

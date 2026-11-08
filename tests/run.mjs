@@ -117,7 +117,8 @@ for(let z=-83;z<12;z++)for(let x=-41;x<42;x++){
 }
 assert(usableFloor>=10*layout.ORIGINAL_FLOOR_AREA,'At least ten old footprints must be reachable floor space');
 for(const room of layout.ESTATE_ROOMS){
-  let x=room.x,z=room.z,steps=0;
+  // v188: the Soul Forge stands at the rotunda's centre, so walk out from beside it.
+  let x=room.x+(room.id==='rotunda'?2.4:0),z=room.z,steps=0;
   assert(!core.isBlocked(x,z,.34,state.colliders),room.name+' center must be playable');
   while(state.nav.distance[state.nav.index(x,z)]>0&&steps++<300){
     const next=state.nav.direction(x,z);assert(next?.reachable,room.name+' must connect to entrance');

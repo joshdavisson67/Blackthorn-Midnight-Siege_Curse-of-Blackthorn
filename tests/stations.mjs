@@ -50,7 +50,7 @@ export function verifyStations(qa,frames,elements){
   assert.equal(qa.get().points,0,'A used vest cannot charge again');
   qa.hurtPlayer(100);assert.equal(qa.get().armor,0);assert.equal(qa.get().health,60,'Damage exceeding the shield reaches health');
   qa.start();assert(!armor.used);assert(armor.model.visible);assert.equal(qa.get().armor,0,'Fresh runs restore the vest without granting armor immediately');
-  qa.setPoints(10000);qa.setPlayer(-3.34,9.5375);qa.interact();assert.equal(qa.get().points,7500);at(armor);qa.interact();assert.equal(qa.get().points,5000);
+  qa.setPoints(10000);{const iron=qa.get().interactables.find(s=>s.type==='perk'&&s.id==='iron'&&s.y===0);qa.setPlayer(iron.x+Math.sin(iron.rotation||0)*1.6,iron.z+Math.cos(iron.rotation||0)*1.6);}qa.interact();assert.equal(qa.get().points,7500);at(armor);qa.interact();assert.equal(qa.get().points,5000);
   assert.equal(qa.get().armor,200,'Upstairs armor supports Ironheart');qa.hurtPlayer(40);
   const cellarArmor=qa.get().cellar.armor;assert(!cellarArmor.used&&cellarArmor.nanoModel.visible,'First armor purchase unlocks Nano Shield in the cellar');
   for(let i=0;i<10;i++)qa.startWave();qa.holdSpawns();qa.setPlayer(cellarArmor.x,cellarArmor.z-1.4,cellarArmor.y);qa.interact();
