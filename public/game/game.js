@@ -2,19 +2,19 @@ import {BRUTE} from './brute.mjs?v=30';
 import {FERAL} from './feral.mjs?v=165';
 import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curseWaveConfig,curseReward,chooseCurseEnemyKind} from './curse.mjs?v=165';
 import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
-import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=130';
+import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=189';
-import {createChangelog} from './changelog.mjs?v=189';
+import {createLeaderboard} from './leaderboard.mjs?v=190';
+import {createChangelog} from './changelog.mjs?v=190';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
 import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnMap} from './grounds.mjs?v=165';
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
-import {buildGraveyard} from './graveyard.mjs?v=165';
+import {buildGraveyard} from './graveyard.mjs?v=190';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
-import {buildCellar,drawCellarMap} from './cellar.mjs?v=187';
+import {buildCellar,drawCellarMap} from './cellar.mjs?v=190';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
 import {buildShed} from './shed.mjs?v=187';
 import * as T from './three.module.js';
@@ -25,23 +25,23 @@ import {suppressedShot} from './gun-audio.mjs?v=150';
 import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
-import {createStationBuilder} from './station-models.mjs?v=187';
+import {createStationBuilder} from './station-models.mjs?v=190';
 import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=187';
 import {drawMinimap} from './minimap.mjs?v=179';
 import {dropOpacity,fadeMaterials} from './drop-fade.mjs?v=169';
 import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual,rankAuto,rankRecoil} from './weapon-ranks.mjs?v=165';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=187';
+import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=190';
 import {createEnemyAssets} from './enemy-assets.mjs?v=183';
-import {createCombatLights} from './combat-lights.mjs?v=187';
+import {createCombatLights} from './combat-lights.mjs?v=190';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=187';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=187';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=190';
 import {BELLA,BELLA_PAW,createBellaCompanion,nextBellaRank} from './bella.mjs?v=185';
 import {createExplosionFx,EXPLOSION_FX} from './explosion-fx.mjs?v=185';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=183';
@@ -54,7 +54,7 @@ import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses} from './soul-forge.mjs?v=118';
 import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=187';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=187';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=190';
 import {buildRotundaBell,ROTUNDA_BELL} from './rotunda-bell.mjs?v=189';
 import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=170';
@@ -654,25 +654,17 @@ function explode(pos,{source='grenade',safe=false}={}){
 }
 function hurtPlayer(amount,source){padRumble(Math.min(1,.35+amount/60),.5,amount>=30?260:170);const absorbed=Math.min(armor,amount);armor-=absorbed;health-=amount-absorbed;lastHurt=runTime;damageFlash=absorbed===amount?.28:.75;combatHud.hurt(player,source,lookYaw+weaponRecoil.yaw,absorbed===amount);if(health<=0)gameOver();}
 function unlockMausoleum(){if(!graveyard.unlock())return false;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('EAST CEMETERY · THE MAUSOLEUM IS UNSEALED');tone(160,1,.09,'sine',70);return true;}
-function activateMausoleumNuke(){
-  const device=graveyard.nuke,s=device.station;
+// v190: speak to the grave in the sarcophagus to wake Sir Blackthorn. It costs
+// nothing and works once per run, after the tomb opens upon clearing wave 20.
+function speakToGrave(){
+  const s=graveyard.grave;
   if(mode!=='playing'||!graveyard.open||s.locked||s.used||!inMausoleum(player.x,player.z)||Math.abs(player.y-s.y)>=1.2||Math.hypot(player.x-s.x,player.z-s.z)>=2.3)return false;
-  if(points<s.price){notify(`NEED ${s.price-points} MORE ESSENCE`);tone(110,.2,.03,'square');return false;}
-  const victims=zombies.filter(e=>!e.dead);
-  // Detonating always wakes Sir Blackthorn, even on an empty estate (v130).
-  if(!device.spend())return false;
-  points-=s.price;const scoreBefore=totalScore,origin=new T.Vector3(s.x,1,s.z);
-  // Use the same body-kill path on every floor. No synthetic bullet hit, blast
-  // distance limit, or wall ray can change the bounty or leave an enemy alive.
-  for(const e of victims)killZombie(e,false,{source:'nuke',part:'torso',force:1.5,direction:e.group.position.clone().sub(origin)});
-  const reward=totalScore-scoreBefore;nukeFlashTime=.75;
-  noise(.7,.18,180);tone(45,1.1,.15,'sawtooth',26);
-  announce('ATOMIC PURGE',`${victims.length} UNDEAD DESTROYED · +${reward.toLocaleString()} ESSENCE`);
-  notify(`THE LAST DAWN · +${reward.toLocaleString()} ESSENCE · DEVICE SPENT`);wakeBlackthorn();updateHud();return true;
+  if(!wakeBlackthorn())return false;
+  s.used=true;notify('YOU SPEAK HIS NAME · THE GRAVE ANSWERS');updateHud();return true;
 }
 
 // ---- Sir Blackthorn -----------------------------------------------------------------
-// The Last Dawn wakes him. The lid slides off, he rises out of the tomb and
+// Speaking to his grave wakes him (v190). The lid slides off, he rises out of the tomb and
 // steps down; regular spawns hold until he falls, then the run carries on.
 function blackthornHoldsSpawns(){return boss.stage==='waking'||boss.stage==='active';}
 function resetBlackthorn(){boss={stage:'dormant',enemy:null,clock:0,summons:0,lance:0,cry:0,cast:null,victories:0};bossFx.clear();graveyard.openLid(0);$('bossHud').classList.add('hidden');}
@@ -934,20 +926,20 @@ function completeWave(){
   updateHud();
 }
 function triggerFrenzy(){if(waveDelay>0||waveFiveFinale?.wave===wave)return;frenzyWave=wave;waveDelay=0;toSpawn+=Math.max(12,Math.ceil(curseWaveConfig(wave,curse.rank).count*.5));spawnTimer=.1;announce('THE WARDEN HAS AWAKENED','FRENZY · FASTER UNDEAD + REINFORCEMENTS UNTIL THIS WAVE ENDS');tone(65,1.5,.16,'sawtooth',160);}
-function closestStation(){let nearest=null,min=2.3;for(const s of interactables){if((s.used&&s.type!=='armor'&&!(s.type==='kennel'&&bella.unlocked&&bella.rank<BELLA.maxRank))||s.locked||(s.shedWeapon&&!inShed(player.x,player.z))||(s.type==='nuke'&&!inMausoleum(player.x,player.z))||(s.y<0&&!isCellarOpen()))continue;const d=Math.hypot(s.x-player.x,s.z-player.z);if(Math.abs((s.y||0)-player.y)<1.2&&d<min){nearest=s;min=d;}}return nearest;}
+function closestStation(){let nearest=null,min=2.3;for(const s of interactables){if((s.used&&s.type!=='armor'&&!(s.type==='kennel'&&bella.unlocked&&bella.rank<BELLA.maxRank))||s.locked||(s.shedWeapon&&!inShed(player.x,player.z))||(s.type==='sarcophagus'&&!inMausoleum(player.x,player.z))||(s.y<0&&!isCellarOpen()))continue;const d=Math.hypot(s.x-player.x,s.z-player.z);if(Math.abs((s.y||0)-player.y)<1.2&&d<min){nearest=s;min=d;}}return nearest;}
 function armorStationDescription(){
   if(armorTier===0)return `Absorbs ${maxHealth} damage before health · Unlocks Nano Shield Rank 1 at both stations`;
   const maximum=ARMOR.nanoRanks.length+1,rank=armorRank(Math.min(armorTier+1,maximum));
   const recharge=rank.regenDelay?`Regenerates ${rank.regenRate} shield/s after ${rank.regenDelay}s without a hit`:`Regenerates ${rank.regenRate} shield/s continuously · No hit delay`;
   return `${armorTier===maximum?'ACTIVE':'UPGRADE'} · ${recharge}${armorTier<maximum?' · Keeps current shield':''}`;
 }
-function stationDescription(s){if(s.type==='olivia')return bella.dragon?'Bella is a rat dragon now · Olivia is very proud':bella.unlocked?'Olivia adores Bella · Spend bone chips from Bella’s kills at her kennel to rank her up':'Free Bella from her kennel first';if(s.type==='kennel'){const next=bella.unlocked&&nextBellaRank(bella.rank);return next?`RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.chips} bone chips from Bella’s kills`:'BELLA · White Maltipoo · Immortal companion · Follows you and bites undead within 15 yards of you · Bitten undead turn and fight her · Rank her up here with bone chips';}if(s.shedWeapon)return s.purchased?'M4 PURCHASED · PRESS 6 TO EQUIP':'30-ROUND FULL-AUTO · Includes full magazine and reserve · Keeps Soul Forge ranks';if(s.type==='shedDoor')return shed.open?'OPEN · Explore the groundskeeper’s workshop':'SEALED · Opens automatically at wave 7';if(s.type==='nuke')return s.used?'DEVICE SPENT':'ONE USE · Destroys all active undead across the estate · Wakes Sir Blackthorn';if(s.type==='mausoleumDoor')return graveyard.open?'OPEN · Enter the Blackthorn family tomb':'SEALED · Clear wave 20 to unlock';if(s.type==='cellarDoor')return isCellarOpen()?'OPEN · Descend to the underground armory':'LOCKED · Opens automatically at wave 10';if(s.type==='bushmaster'&&!ranksAtRack(s))return '8-round semi-auto · 2× M4 damage · 10× precision scope';if(s.type==='lmg')return '100-round belt · 3× combat scope · Taking it triggers frenzy for the rest of this wave';if(s.type==='armor')return armorStationDescription();if(s.type==='powerup')return s.power==='double'?'Double bullet damage for 20 seconds':'Unlimited throws for 12 seconds · 0.5s recovery after each throw';if(s.type==='perk')return perkOwned.has(s.id)?'PERK ACTIVE':s.desc;if(s.type==='ammo')return 'Restock every owned weapon · Reload to fill magazines · +1 grenade';if(ranksAtRack(s)){const next=nextRank(s.type,inventory[s.type].weaponRank);return next?`RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.flavor}`:`ALL RANKS EARNED · WEAPON OWNED · PRESS ${RANK_RACKS[s.type]} TO EQUIP`;}
+function stationDescription(s){if(s.type==='sarcophagus')return 'Speak to the grave to wake Sir Blackthorn · Once per run';if(s.type==='olivia')return bella.dragon?'Bella is a rat dragon now · Olivia is very proud':bella.unlocked?'Olivia adores Bella · Spend bone chips from Bella’s kills at her kennel to rank her up':'Free Bella from her kennel first';if(s.type==='kennel'){const next=bella.unlocked&&nextBellaRank(bella.rank);return next?`RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.chips} bone chips from Bella’s kills`:'BELLA · White Maltipoo · Immortal companion · Follows you and bites undead within 15 yards of you · Bitten undead turn and fight her · Rank her up here with bone chips';}if(s.shedWeapon)return s.purchased?'M4 PURCHASED · PRESS 6 TO EQUIP':'30-ROUND FULL-AUTO · Includes full magazine and reserve · Keeps Soul Forge ranks';if(s.type==='shedDoor')return shed.open?'OPEN · Explore the groundskeeper’s workshop':'SEALED · Opens automatically at wave 7';if(s.type==='nuke')return s.used?'DEVICE SPENT':'ONE USE · Destroys all active undead across the estate · Wakes Sir Blackthorn';if(s.type==='mausoleumDoor')return graveyard.open?'OPEN · Enter the Blackthorn family tomb':'SEALED · Clear wave 20 to unlock';if(s.type==='cellarDoor')return isCellarOpen()?'OPEN · Descend to the underground armory':'LOCKED · Opens automatically at wave 10';if(s.type==='bushmaster'&&!ranksAtRack(s))return '8-round semi-auto · 2× M4 damage · 10× precision scope';if(s.type==='lmg')return '100-round belt · 3× combat scope · Taking it triggers frenzy for the rest of this wave';if(s.type==='armor')return armorStationDescription();if(s.type==='powerup')return s.power==='double'?'Double bullet damage for 20 seconds':'Unlimited throws for 12 seconds · 0.5s recovery after each throw';if(s.type==='perk')return perkOwned.has(s.id)?'PERK ACTIVE':s.desc;if(s.type==='ammo')return 'Restock every owned weapon · Reload to fill magazines · +1 grenade';if(ranksAtRack(s)){const next=nextRank(s.type,inventory[s.type].weaponRank);return next?`RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.flavor}`:`ALL RANKS EARNED · WEAPON OWNED · PRESS ${RANK_RACKS[s.type]} TO EQUIP`;}
   if(s.type==='glock'){const next=nextRank('glock',inventory.glock.weaponRank);if(next)return `RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.flavor}`;return ammoFull('glock')?'ALL RANKS EARNED · PISTOL AMMO FULL · PRESS 1 TO EQUIP':'ALL RANKS EARNED · Restock the Glock 21 · Reload to fill the magazine';}if(s.type==='upgrade')return s.forgeMaximum?'FORGED 3/3 · '+forgeBonuses(FORGE.maxRank).damageMultiplier+'× base damage · Maximum rank · Switch weapons to forge another':'RANK '+(inventory[weapon].forgeRank+1)+' OF 3 · '+forgeBonuses(inventory[weapon].forgeRank+1).damageMultiplier+'× base damage · 25% faster reload · +25% magazine and reserve capacity';return inventory[s.type].owned?'WEAPON OWNED · USE NUMBER KEYS':'Unlock a new weapon for this run';}
 function interact(){
   if(mode!=='playing')return;
   updateForgeStations();const s=closestStation();if(!s)return;
   if(s.type==='lmg'&&waveDelay>0){notify('THE WARDEN AWAKENS DURING A WAVE · WAIT FOR THE COUNTDOWN');return;}
-  if(s.type==='nuke'){activateMausoleumNuke();return;}
+  if(s.type==='sarcophagus'){speakToGrave();return;}
   if(s.type==='olivia'){talkToOlivia();return;}
   if(s.type==='kennel'&&bella.unlocked){buyBellaRank();return;}
   if(s.type==='cellarDoor'||s.type==='mausoleumDoor'||s.type==='shedDoor'){notify(stationDescription(s));return;}
@@ -1474,14 +1466,13 @@ async function prepareRendering(){
   viewModels.forEach(g=>g.visible=true);grenadeThrow.warm();
   environmentLights.update(camera.position,0,0);lighting.prepare(0,{warm:true});
   const warmRage=enemyAssets.templates.map(r=>{const group=r.group.clone(true);enemyAssets.enrage({group});return group;});
-  const warmNuke=graveyard.nuke.group.clone(true);warmNuke.visible=true;
   const warmNano=armorStations.flatMap(s=>s.nanoModels.map(source=>{const model=source.clone(true);model.visible=true;return model;}));
   const warmBella=bella.rig.group.clone(true);warmBella.traverse(o=>{o.visible=true;});
   // v169: compile the see-through variants used while drops fade out.
   const coin=eventVisuals.coins[0].mesh,warmFading=[...Object.keys(POWERUPS).map(type=>powerupAssets.create(type)),boneChipModel(),coin.clone(true)];
   for(const g of warmFading){g.visible=true;prepareLightingMaterials(g);fadeMaterials(g).set(.5);}
   indexFloors();
-  const warm=[warmBella,warmNuke,...warmNano,...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,enemyAssets.faces.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create(),explosionFx.warmGroup()];
+  const warm=[warmBella,...warmNano,...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,enemyAssets.faces.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create(),explosionFx.warmGroup()];
   warm.forEach((g,i)=>{g.userData.lightingTransient=true;g.position.set((i%5-2)*.8,0,15-Math.floor(i/5));world.add(g);});
   try{
     renderer.setRenderTarget(rt);

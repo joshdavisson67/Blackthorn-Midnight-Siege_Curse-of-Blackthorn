@@ -1,23 +1,26 @@
 import * as T from './three.module.js';
 import {SARCOPHAGUS} from './graveyard-layout.mjs?v=28';
 
-// Sir Blackthorn (v130): the estate's first lord, woken by The Last Dawn. He
+// Sir Blackthorn (v130): the estate's first lord, woken at his grave (v190; it
+// was The Last Dawn). He
 // climbs out of the mausoleum sarcophagus, hurls grave lances from range,
 // summons Gravewarden tanks and drives nearby undead into a fury with a war
 // cry. Defeating him at the highest unlocked curse rank unlocks the next.
 export const BOSS=Object.freeze({
   name:'SIR BLACKTHORN',title:'FIRST LORD OF THE ESTATE',
   scale:1.5,              // a walker rig at brute height (BRUTE.height)
-  healthMultiplier:110,   // × the wave's walker health, curse health included
+  // v190: twice the health (was 110) and 25% more damage from sword and lances.
+  healthMultiplier:220,   // × the wave's walker health, curse health included
   speed:.82,              // × the wave's walker speed
   enragedSpeed:1.3,
-  meleeMultiplier:1.6,    // × the wave's contact damage
+  meleeMultiplier:2,      // × the wave's contact damage (was 1.6)
   // Waking: the lid slides off, he rises out of the tomb, then steps down.
   wakeDelay:1.4,lidTime:1.2,riseTime:2.4,stepTime:.8,
   rest:{x:SARCOPHAGUS.x,z:SARCOPHAGUS.z},
   front:{x:SARCOPHAGUS.x,z:SARCOPHAGUS.z+SARCOPHAGUS.d/2+.9},
-  lance:Object.freeze({minRange:4.5,maxRange:32,windup:.75,cooldown:[3.2,4.8],speed:15,damage:.85,hitRadius:.62,spread:.17,volleyBelow:.5,life:3}),
-  summonAt:Object.freeze([.75,.4]),
+  lance:Object.freeze({minRange:4.5,maxRange:32,windup:.75,cooldown:[3.2,4.8],speed:15,damage:1.0625,hitRadius:.62,spread:.17,volleyBelow:.5,life:3}),
+  // v190: a Gravewarden the moment he steps out of the tomb, and another at half health.
+  summonAt:Object.freeze([1,.5]),
   cry:Object.freeze({firstDelay:6,cooldown:15,radius:18,duration:10,speed:1.35,damage:1.3,windup:1}),
   enrageBelow:.3,enragedCooldown:.65,
   reward:5000
@@ -26,7 +29,7 @@ export const WARDEN=Object.freeze({
   name:'GRAVEWARDEN',
   scale:1.1,              // × the brute scale; collision stays brute-sized
   healthMultiplier:4,     // × a brute's health at this wave
-  speed:.62,              // × the wave's walker speed (brutes use .77)
+  speed:.682,             // × the wave's walker speed (v190: 10% faster than .62; brutes use .77)
   damageMultiplier:1.25,  // × a brute's contact damage
   shieldFactor:.25,       // damage taken through the tower shield
   emergeTime:1.6,emergeDepth:3.2,

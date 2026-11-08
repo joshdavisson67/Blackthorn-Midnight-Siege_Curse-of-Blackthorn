@@ -225,8 +225,8 @@ verifyNanoShield(qa,frames,elements);
 
 const {verifyGraveyard}=await import("./graveyard.mjs");
 verifyGraveyard(qa,frames,listeners,elements);
-const {verifyNuke}=await import('./nuke.mjs');
-verifyNuke(qa,frames,listeners,elements);
+const {verifyGraveSummon}=await import('./grave-summon.mjs');
+verifyGraveSummon(qa,frames,listeners,elements);
 const {verifyBlackthorn}=await import('./blackthorn.mjs');
 verifyBlackthorn(qa,frames,listeners,elements);
 

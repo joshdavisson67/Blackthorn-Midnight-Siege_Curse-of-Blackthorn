@@ -8,12 +8,16 @@ import {BRUTE} from '../public/game/brute.mjs';
 import {enemyBody} from '../public/game/crowd.mjs';
 import {enrageEnemy} from '../public/game/enrage.mjs';
 
-// Sir Blackthorn (v130): woken by The Last Dawn, he climbs out of the
+// Sir Blackthorn (v130): woken at his grave (v190; it was The Last Dawn), he climbs out of the
 // sarcophagus, throws grave lances, summons Gravewardens and screams a war cry.
 export function verifyBlackthorn(qa,frames,listeners,elements){
   // ---- Decisions ------------------------------------------------------------------
   assert.deepEqual([1,.6,.5,.31,.3,.05].map(bossPhase),['fresh','fresh','wounded','wounded','enraged','enraged']);
-  assert.equal(dueSummons(.8,0),0);assert.equal(dueSummons(.75,0),1);assert.equal(dueSummons(.39,0),2,'A big hit can cross both thresholds');assert.equal(dueSummons(.39,1),1);assert.equal(dueSummons(.1,2),0);
+  // v190: twice the health, 25% more damage, a Gravewarden at once and another at half health, 10% faster wardens.
+  assert.equal(BOSS.healthMultiplier,220,'Twice his old health (110×)');
+  assert(Math.abs(BOSS.meleeMultiplier-1.6*1.25)<1e-9&&Math.abs(BOSS.lance.damage-.85*1.25)<1e-9,'25% more sword and lance damage');
+  assert(Math.abs(WARDEN.speed-.62*1.1)<1e-9,'Gravewardens move 10% faster');
+  assert.equal(dueSummons(1,0),1,'A Gravewarden the moment he is summoned');assert.equal(dueSummons(.6,1),0);assert.equal(dueSummons(.5,1),1,'and another at half health');assert.equal(dueSummons(.4,0),2,'A big hit can cross both thresholds');assert.equal(dueSummons(.1,2),0);
   assert.deepEqual([1,.51,.5,.2].map(lanceVolley),[1,1,3,3]);assert.equal(cooldownScale(.5),1);assert.equal(cooldownScale(.3),BOSS.enragedCooldown);
   const stages=[0,BOSS.wakeDelay+.1,BOSS.wakeDelay+BOSS.lidTime+.1,BOSS.wakeDelay+BOSS.lidTime+BOSS.riseTime+.1,WAKE_DURATION+.01].map(t=>wakeStep(t).stage);
   assert.deepEqual(stages,['rumble','lid','rise','step','done'],'The lid slides, he rises, then steps down');
@@ -24,10 +28,10 @@ export function verifyBlackthorn(qa,frames,listeners,elements){
   ladder.select(Number(String(ladder.unlocked)));const rank=ladder.unlocked;
   qa.start();qa.holdSpawns();qa.setHealth(1e6);
   for(let i=0;i<21;i++)qa.startWave();qa.clearQueuedSpawns();frames(110);
-  const graveyard=qa.get().graveyard,s=graveyard.nuke.station,lidZ=()=>graveyard.lidGroup.position.z;
+  const graveyard=qa.get().graveyard,s=graveyard.grave,lidZ=()=>graveyard.lidGroup.position.z;
   assert(graveyard.open&&!s.locked);assert.equal(qa.get().boss.stage,'dormant');assert.equal(lidZ(),SARCOPHAGUS.z);
-  qa.setPlayer(s.x-1.3,s.z);qa.setPoints(20000);qa.interact();
-  assert.equal(qa.get().boss.stage,'waking');assert(s.used);
+  qa.setPlayer(s.x-1.6,s.z);qa.setPoints(0);qa.interact();
+  assert.equal(qa.get().boss.stage,'waking');assert(s.used);assert.equal(qa.get().points,0,'Speaking to his grave is free');
   frames(Math.ceil((BOSS.wakeDelay+BOSS.lidTime+.1)*60));
   assert(lidZ()<SARCOPHAGUS.z-1.3,'The lid has slid off the tomb');
   const rest=qa.get().colliders.find(c=>c.maxY===1.05&&Math.abs(c.x-SARCOPHAGUS.x)<.01);assert(rest&&!rest.disabled,'The fallen lid is solid');
@@ -44,9 +48,13 @@ export function verifyBlackthorn(qa,frames,listeners,elements){
   assert.equal(boss.radius,enemyBody({brute:true}).radius);assert.equal(boss.group.scale.x,BOSS.scale);
   let armor=0;boss.group.traverse(o=>{if(o.userData.armor)armor++;});assert(armor>=15,'Breastplate, pauldrons, crown, cloak and sword');
   assert(!enrageEnemy(boss,qa.get().enemyAssets.enrage),'Ordinary rage chains do not affect him');
+  frames(2);
+  const wardens=()=>qa.get().zombies.filter(e=>e.warden&&!e.dead);
+  assert.equal(qa.get().boss.summons,1);assert.equal(wardens().length,1,'He summons a Gravewarden as soon as he is out of the tomb');
+  for(const e of wardens())qa.damageEnemy(e,1e9);
 
   // ---- Spawns hold while he fights -----------------------------------------------------
-  // The wave cleared before the nuke, so the next one starts during the fight.
+  // The wave cleared before he was woken, so the next one starts during the fight.
   qa.setPlayer(70,4);for(let i=0;i<60*10&&qa.get().toSpawn===0;i++){qa.setHealth(1e6);frames(1);}
   const queued=qa.get().toSpawn;assert(queued>0,'The next wave is queued');
   frames(120);assert.equal(qa.get().toSpawn,queued,'Regular spawns wait for him');
@@ -68,11 +76,10 @@ export function verifyBlackthorn(qa,frames,listeners,elements){
 
   // ---- Gravewardens, war cry, enrage ---------------------------------------------------------
   qa.setHealth(1e6);qa.setPlayer(70,6);
-  qa.damageEnemy(boss,boss.maxHp*.26,false,{part:'torso'});frames(2);
-  const wardens=()=>qa.get().zombies.filter(e=>e.warden&&!e.dead);
-  assert.equal(wardens().length,1,'At three-quarters health he summons a Gravewarden');
+  qa.damageEnemy(boss,boss.maxHp*.5,false,{part:'torso'});frames(2);
+  assert.equal(wardens().length,1,'At half health he summons another Gravewarden');assert.equal(qa.get().boss.summons,2);
   const w=wardens()[0];
-  const now=curseWaveConfig(qa.get().wave,rank);assert(Math.abs(w.maxHp-now.health*BRUTE.healthMultiplier*WARDEN.healthMultiplier)<1e-6);assert(w.speed<now.speed*.77,'The tank is slower than a brute');
+  const now=curseWaveConfig(qa.get().wave,rank);assert(Math.abs(w.maxHp-now.health*BRUTE.healthMultiplier*WARDEN.healthMultiplier)<1e-6);assert(Math.abs(w.speed-now.speed*WARDEN.speed)<1e-9&&w.speed<now.speed*.77,'The tank is 10% quicker than before, still slower than a brute');
   assert.equal(w.group.scale.x,BRUTE.scale*WARDEN.scale);assert(!enrageEnemy(w,qa.get().enemyAssets.enrage));
   const shieldParts=[];w.group.traverse(o=>{if(o.userData.part==='shield')shieldParts.push(o);});assert(shieldParts.length>=3,'It carries a tower shield');
   const whp=w.hp;qa.damageEnemy(w,100,false,{part:'shield'});assert.equal(whp-w.hp,100*WARDEN.shieldFactor,'Shots into the shield do a quarter damage');
@@ -90,7 +97,7 @@ export function verifyBlackthorn(qa,frames,listeners,elements){
   for(let i=0;i<60*14&&walker.warCry>0;i++)frames(1);
   qa.damageEnemy(walker,1e6);qa.damageEnemy(far,1e6);
   qa.damageEnemy(boss,boss.hp-boss.maxHp*.38,false,{part:'torso'});frames(2);
-  assert.equal(qa.get().boss.summons,2,'A second Gravewarden at two-fifths health');
+  assert.equal(qa.get().boss.summons,2,'No third Gravewarden');
   const speed=boss.speed;qa.damageEnemy(boss,boss.hp-boss.maxHp*.29,false,{part:'torso'});frames(2);
   assert(boss.furious&&Math.abs(boss.speed-speed*BOSS.enragedSpeed)<1e-9,'Below 30% he is enraged');
   assert(elements.get('bossHud').classList.contains('enraged'));assert(elements.get('bossState').textContent.startsWith('ENRAGED'));
@@ -119,9 +126,9 @@ export function verifyBlackthorn(qa,frames,listeners,elements){
   // Beating him below your highest rank unlocks nothing new.
   ladder.select(Number('0'));qa.start();qa.holdSpawns();qa.setHealth(1e6);
   for(let i=0;i<21;i++)qa.startWave();qa.clearQueuedSpawns();frames(110);
-  qa.setPlayer(s.x-1.3,s.z);qa.setPoints(20000);qa.interact();frames(Math.ceil(WAKE_DURATION*60)+6);
+  qa.setPlayer(s.x-1.6,s.z);qa.interact();frames(Math.ceil(WAKE_DURATION*60)+6);
   const again=qa.get().boss.enemy,top=ladder.unlocked;assert.equal(qa.get().boss.stage,'active');
   qa.damageEnemy(again,1e9);frames(2);assert.equal(ladder.unlocked,top);assert(elements.get('banner').textContent.includes('THE HOUSE REMEMBERS'));
   qa.start();
-  console.log(`PASS: Sir Blackthorn — nuke wakes him even on an empty estate, lid slides off and he rises invulnerable from the sarcophagus, ${armor} armor pieces on a brute-sized walker rig, spawns held, grave lances that hit for ${lance} and stop at walls, three-lance volleys below half, Gravewardens at 75%/40% with quarter-damage tower shields, a war cry that reddens and speeds nearby undead for ${BOSS.cry.duration}s, enrage under 30%, curse-scaled bounty, Max Ammo, rank unlock only at the top rank, and clean resets.`);
+  console.log(`PASS: Sir Blackthorn — speaking to his grave wakes him for free, 220× walker health with 25% harder sword and lances, a Gravewarden at once and another at half health (10% faster), lid slides off and he rises invulnerable from the sarcophagus, ${armor} armor pieces on a brute-sized walker rig, spawns held, grave lances that hit for ${lance} and stop at walls, three-lance volleys below half, Gravewardens with quarter-damage tower shields, a war cry that reddens and speeds nearby undead for ${BOSS.cry.duration}s, enrage under 30%, curse-scaled bounty, Max Ammo, rank unlock only at the top rank, and clean resets.`);
 }

@@ -27,6 +27,22 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## A harder Sir Blackthorn, woken at his grave (version 190)
+
+**Summoning:** The Last Dawn nuke is gone from the mausoleum. Instead, once the tomb opens on clearing wave 20, step up beside the sarcophagus and press E to speak to **Sir Blackthorn's grave**. It's free and works once per run. The lid slides off and he rises as before. The nuke's model is kept in `mausoleum-nuke.mjs` for later, but the game no longer builds it.
+
+**Sir Blackthorn:**
+
+| | Before | Now |
+|---|---|---|
+| Health | 110× a walker | **220× a walker** (+100%) |
+| Sword | 1.6× contact damage | **2× contact damage** (+25%) |
+| Grave lance | 0.85× contact damage | **1.06× contact damage** (+25%) |
+| Gravewardens | At 75% and 40% health | **As soon as he steps out of the tomb, and again at 50%** |
+| Gravewarden speed | 0.62× walker speed | **0.68× walker speed** (+10%) |
+
+Gravewardens are still slower than brutes. The war cry, the enrage below 30% health, the lance volleys and his 5,000-essence bounty are unchanged.
+
 ## No bell rope (version 189)
 
 The Great Rotunda bell's pull rope, hand loop and knot are gone. The bell now just hangs on its chain inside the dome, with nothing dangling down beside the Soul Forge. The bell still tolls when Sir Blackthorn falls.
