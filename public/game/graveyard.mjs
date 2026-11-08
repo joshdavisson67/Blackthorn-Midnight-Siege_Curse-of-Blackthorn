@@ -2,7 +2,6 @@ import * as T from './three.module.js';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 import {GRAVEYARD,MAUSOLEUM,GRAVE_PLOTS,SARCOPHAGUS} from './graveyard-layout.mjs?v=28';
 import {alignGrassPatch,CEMETERY_PATHS} from './grounds.mjs?v=165';
-import {createMausoleumNuke} from './mausoleum-nuke.mjs?v=61';
 export function buildGraveyard({world,M,earth,box,mesh,cylinder,label,colliders,solidMeshes,interactables,batchArticulated}){
   const fixtures=new T.MeshStandardMaterial({color:0xffc777,emissive:0xff9c44,emissiveIntensity:1.2,roughness:.4});
   const graveStone=M.stone.clone(),iron=M.dark,stone=M.brick,doors=[],graves=[];
@@ -71,11 +70,14 @@ export function buildGraveyard({world,M,earth,box,mesh,cylinder,label,colliders,
   for(const xx of [x-3.4,x+3.4]){box(xx,1.8,z-1,.18,.58,.3,iron);box(xx+(xx<x?.10:-.10),1.8,z-1,.10,.40,.19,fixtures);}
   const epitaph=mesh(new T.PlaneGeometry(2.6,.62),label('THE HOUSE REMEMBERS\nTHOSE WHO DO NOT REST','#bdbbae',1024,{width:2.6,height:.62,kind:'memorial',maxLines:2}),[x,2.25,z-d/2+.26]);
   const station={type:'mausoleumDoor',x,z:frontZ,y:0,price:0,name:'BLACKTHORN MAUSOLEUM',hex:'#a6cbd7'};interactables.push(station);
-  const nuke=createMausoleumNuke({world,colliders,solidMeshes,interactables,label,batchArticulated});
+  // v190: the nuke is gone from the tomb (its model is kept in mausoleum-nuke.mjs
+  // for later). Speaking to the grave in the sarcophagus wakes Sir Blackthorn, free,
+  // once the tomb opens after wave 20.
+  const grave={type:'sarcophagus',name:'SIR BLACKTHORN’S GRAVE',x:SARCOPHAGUS.x,z:SARCOPHAGUS.z,y:0,price:0,hex:'#c9a0ff',locked:true,used:false};interactables.push(grave);
   let open=false,progress=0;
-  function unlock(){if(open)return false;open=true;gate.disabled=true;lock.visible=false;unlockSign.visible=false;nuke.unlock();return true;}
-  function update(dt){nuke.update(dt);if(!open||progress===1)return;progress=Math.min(1,progress+dt/1.6);const eased=progress*progress*(3-2*progress);for(const {hinge,side} of doors){hinge.rotation.y=-side*eased*1.72;hinge.updateMatrixWorld(true);}}
-  function reset(){open=false;progress=0;gate.disabled=false;lock.visible=true;unlockSign.visible=true;nuke.reset();openLid(0);for(const {hinge} of doors){hinge.rotation.y=0;hinge.updateMatrixWorld(true);}}
-  return {graves,doors,gate,station,nuke,lidGroup,openLid,unlock,update,reset,get open(){return open;},get progress(){return progress;}};
+  function unlock(){if(open)return false;open=true;gate.disabled=true;lock.visible=false;unlockSign.visible=false;grave.locked=false;return true;}
+  function update(dt){if(!open||progress===1)return;progress=Math.min(1,progress+dt/1.6);const eased=progress*progress*(3-2*progress);for(const {hinge,side} of doors){hinge.rotation.y=-side*eased*1.72;hinge.updateMatrixWorld(true);}}
+  function reset(){open=false;progress=0;gate.disabled=false;lock.visible=true;unlockSign.visible=true;grave.locked=true;grave.used=false;openLid(0);for(const {hinge} of doors){hinge.rotation.y=0;hinge.updateMatrixWorld(true);}}
+  return {graves,doors,gate,station,grave,lidGroup,openLid,unlock,update,reset,get open(){return open;},get progress(){return progress;}};
 }
 export function drawGraveyardMap(c,px,pz){c.fillStyle='#253e37';c.fillRect(px(54),pz(-24),26*(px(1)-px(0)),42*(pz(1)-pz(0)));c.strokeStyle='#7a8979';c.lineWidth=1;c.strokeRect(px(54),pz(-24),26*(px(1)-px(0)),42*(pz(1)-pz(0)));c.strokeStyle='#a99d77';c.lineWidth=4;c.beginPath();c.moveTo(px(54),pz(6));c.lineTo(px(70),pz(6));c.lineTo(px(70),pz(-9.5));c.stroke();c.fillStyle='#5e7170';c.fillRect(px(66),pz(-18.5),8*(px(1)-px(0)),9*(pz(1)-pz(0)));for(const x of [59,64,76])for(const z of [-19,-12,-5,1,12]){if(x===64&&z===-12)continue;c.fillStyle='#a5ada4';c.fillRect(px(x)-2,pz(z)-3,4,6);}c.fillStyle='#c6cfb3';c.textAlign='center';c.font='11px Arial';c.fillText('CEMETERY',px(67),pz(15));}
