@@ -13,7 +13,9 @@ export function verifyRotundaBell(qa,frames,listeners,elements){
   assert.equal(station.y,0);assert.equal(station.price,0);assert(bell.group.parent);
   assert(bell.bodyBounds.getSize(new T.Vector3()).x>2.6,'The bell is a large fixture rather than a small prop');
   assert(bell.bodyBounds.min.y>BRUTE.height,'Large brutes retain headroom under the bell');
-  assert(bell.handleBounds.min.y>1&&bell.handleBounds.max.y<1.6,'A standing player can reach the rope loop');
+  // v189: the pull rope and its hand loop are gone; nothing hangs below the bell.
+  bell.group.traverse(o=>assert(!/rope|knot/i.test(o.name||''),'No bell pull rope, loop or knot'));
+  assert(bell.bounds.min.y>=bell.bodyBounds.min.y-.01,'Nothing hangs below the bell');
   assert(bell.bounds.max.y>=13.35&&bell.bounds.max.y<=13.42,'Suspension reaches and embeds in the dome apex');
   let meshes=0,triangles=0;bell.group.traverse(o=>{if(o.isMesh){meshes++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;assert(o.geometry.attributes.position.array.every(Number.isFinite));assert(o.geometry.attributes.normal.array.every(Number.isFinite));assert(!o.matrixAutoUpdate,'Bell joins the frozen static world');}});
   assert(meshes<=BELL_BUDGET.meshes);assert(triangles<=BELL_BUDGET.triangles);assert.equal(triangles,bell.triangles);
@@ -28,11 +30,11 @@ export function verifyRotundaBell(qa,frames,listeners,elements){
   assert.equal(ray.intersectObject(shell,false).length,1,'Bell mouth is hollow, with a single inner ceiling rather than a cap at its lip');
   assert(ray.intersectObject(shell,false)[0].point.y>ROTUNDA_BELL.lipY+1.7);
 
-  qa.start();qa.holdSpawns();qa.setPlayer(station.x,station.z+.6);qa.setAim(0,0);frames(2);
-  assert(!elements.get('interaction').innerHTML.includes('GREAT ROTUNDA BELL'),'No prompt appears at the rope');
+  qa.start();qa.holdSpawns();qa.setPlayer(station.x+2.4,station.z+1.2);qa.setAim(0,0);frames(2);
+  assert(!elements.get('interaction').innerHTML.includes('GREAT ROTUNDA BELL'),'No bell prompt appears beneath it');
   const snapshot=()=>{const s=qa.get();return {points:s.points,totalScore:s.totalScore,health:s.health,wave:s.wave,toSpawn:s.toSpawn,mode:s.mode,rank:s.curse.rank};};
   const before=snapshot();qa.interact();listeners.keydown({code:'KeyE',repeat:false});listeners.keyup({code:'KeyE'});
-  assert.deepEqual(snapshot(),before,'E at the rope does nothing');
+  assert.deepEqual(snapshot(),before,'E beneath the bell does nothing');
   // v188: the Soul Forge stands in the middle of the rotunda, right under the bell,
   // facing the grand hall. Lanes either side of it stay open for players and brutes.
   const forge=state.interactables.find(s=>s.type==='upgrade'&&s.y===0&&roomAt(s.x,s.z)?.id==='rotunda');
