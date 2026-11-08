@@ -349,3 +349,6 @@ verifyZombieFaces(qa,frames);
 
 const {verifyMinimap}=await import('./minimap.mjs');
 verifyMinimap(qa,frames);
+
+const {verifyModePicker}=await import('./mode-picker.mjs');
+verifyModePicker();
