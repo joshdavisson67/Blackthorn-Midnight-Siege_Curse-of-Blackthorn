@@ -121,10 +121,15 @@ export function buildSecondFloor({scene,world,M,box,mesh,cylinder,sphere,label,c
     partition('x',-2,left,right,[side*35,side*21]);
     partition('x',2,left,right,[side*28]);
     wall(side*28,-7,.20,9.8,blue);
-    // Rear doors fit entirely on the landing, clear of the stair banisters.
-    partition('z',side*5.6,-11.76,11.76,[{at:-10.35,width:2.4},4],blue);
+    // v192: no wall between the reading room / private salon and the grand hall's
+    // upstairs balcony (it was at x=±5.6, with a door and a floating header over
+    // the landing). The hall's railings guard the drop, so the whole upper floor
+    // can be seen from one end to the other.
     partition('z',side*14,-11.76,11.76,[0],blue);
   }
+  // Beside the stairwell the reading-room floor now ends in open air: a stone
+  // fascia closes the slab edge below floor level (nothing stands above it).
+  block(-5.6,(PARTITION_BOTTOM+Y-.004)/2,-5.6,.20,Y-.004-PARTITION_BOTTOM,6.8,blue).name='Stairwell slab fascia';
   buryExteriorCap(wall(0,-12,84,.48,blue,WALL_BOTTOM),'z',-1);
   // The wall is built around each window; there is no opaque backing panel.
   const SILL=Y+.85,HEAD=UPPER_CEILING-.25,WINDOW_WIDTH=2.4;

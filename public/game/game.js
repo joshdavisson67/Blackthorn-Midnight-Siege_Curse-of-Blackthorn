@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {ENRAGE,enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS,SPREAD} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=191';
-import {createChangelog} from './changelog.mjs?v=191';
+import {createLeaderboard} from './leaderboard.mjs?v=192';
+import {createChangelog} from './changelog.mjs?v=192';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,advanceStagger,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -41,7 +41,7 @@ import {createEffectPool} from './effect-pool.mjs?v=47';
 import {animateZombieDog,DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=187';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=190';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=192';
 import {BELLA,BELLA_PAW,createBellaCompanion,nextBellaRank} from './bella.mjs?v=185';
 import {createExplosionFx,EXPLOSION_FX} from './explosion-fx.mjs?v=191';
 import {tagZombie,reactToHit,animateZombie,beginZombieDeath,updateZombieDeath,noteLegDamage,CRAWL,LIMP} from './zombies.mjs?v=183';
@@ -157,7 +157,10 @@ for(let z of [-12,12]){for(const side of [-1,1])box(side*(z===12?8.6:8.5),.2,z,z
 for(let x of [-10,-7,7,10]){box(x,3.4,12.32,1.5,3.1,.08,M.dark);box(x,3.4,12.38,1.28,2.9,.04,M.glass);box(x,3.4,12.41,.05,3,.05,M.gold);for(const side of [-1,1])box(x+side*.3375,3.4,12.41,.625,.05,.05,M.gold);box(x,1.9,12.36,1.9,.15,.35,M.stone);}
 
 // Sloping roof and attic facade.
-const roofMat=M.roof.clone();roofMat.side=T.DoubleSide;const roofGeo=mansionRoofGeometry(roofMat);const mainRoof=mesh(roofGeo,roofMat,[0,0,0]);mainRoof.name='Blackthorn slate roof';box(-10,9,-5,1.3,6,1.5,M.brick);box(9,9,-8,1.3,6,1.5,M.brick);
+const roofMat=M.roof.clone();roofMat.side=T.DoubleSide;const roofGeo=mansionRoofGeometry(roofMat);const mainRoof=mesh(roofGeo,roofMat,[0,0,0]);mainRoof.name='Blackthorn slate roof';
+// v192: the chimney stacks start above the upstairs ceiling (7.4 m) instead of
+// hanging 0.5 m below it into the reading room and private salon.
+box(-10,9.725,-5,1.3,4.55,1.5,M.brick);box(9,9.725,-8,1.3,4.55,1.5,M.brick);
 const crest=mesh(new T.CircleGeometry(.68,32),label('B\n1893','#d4b77a',512,{width:1.36,height:1.36,kind:'crest',maxLines:2}),[0,8.45,12.84],[1,1,1]);
 box(0,.08,13,8,.15,3,M.stone);
 for(const side of [-1,1]){const hinge=new T.Group();hinge.name='Fully open main entrance door';hinge.position.set(side*3.2,0,12.1);hinge.rotation.y=side*1.75;world.add(hinge);box(-side*.5,2,0,1,4,.18,M.wood,hinge);box(-side*.5,3,.116,.6,.8,.05,M.gold,hinge);}
@@ -287,7 +290,7 @@ const starGeo=new T.BufferGeometry(),starPos=[];for(let i=0;i<300;i++){const p=n
 // Carved wall panels, interior windows, cobwebs, and architectural trim.
 for(const side of [-1,1])for(let z=-10;z<=10;z+=2){if(Math.abs(z)<4)continue;box(side*13.63,.72,z,.09,1.3,1.8,M.carved);box(side*13.55,1.4,z,.12,.08,2,M.carved);for(const dz of [-.7,.7])box(side*13.56,.75,z+dz,.04,1.03,.06,M.carved);for(const y of [.24,1.22])box(side*13.56,y,z,.04,.06,1.45,M.carved);}
 for(const side of [-1,1])for(const z of [-4,4,10]){const g=new T.Group();g.position.set(side*13.66,3.5,z);g.rotation.y=side<0?Math.PI/2:-Math.PI/2;world.add(g);box(0,0,0,1.85,3.2,.1,M.carved,g);box(0,.0,.061,1.55,2.93,.025,M.glass,g);box(0,0,.09,.04,3,.04,M.iron,g);for(const yy of [-.75,0,.75])box(0,yy,.09,1.6,.03,.04,M.iron,g);for(const dx of [-1.05,1.05]){box(dx,.05,0,.28,3.5,.15,M.red,g);}sphere(0,1.65,0,.93,.42,.06,M.carved,g);}
-box(0,9.7,-9.7,3.8,6,3.8,M.brick);const towerTop=mesh(new T.ConeGeometry(3.2,5,4),M.roof,[0,15,-9.7]);towerTop.rotation.y=Math.PI/4;box(0,11.8,-7.78,1.8,2.1,.06,M.glass);box(0,11.8,-7.73,.06,2.1,.06,M.gold);
+box(0,10.075,-9.7,3.8,5.25,3.8,M.brick);const towerTop=mesh(new T.ConeGeometry(3.2,5,4),M.roof,[0,15,-9.7]);towerTop.rotation.y=Math.PI/4;box(0,11.8,-7.78,1.8,2.1,.06,M.glass);box(0,11.8,-7.73,.06,2.1,.06,M.gold);
 const webMat=new T.LineBasicMaterial({color:0xaeb7a4,transparent:true,opacity:.14});for(const corner of [[-5.3,6.6,11.6],[5.3,6.6,11.6],[-13.6,6.6,-11.6],[13.6,6.6,-11.6]]){const pp=[],sign=corner[0]<0?1:-1;for(let i=0;i<8;i++){const a=i/7*Math.PI/2;pp.push(0,0,0,Math.cos(a)*sign*1.5,-Math.sin(a)*1.5,0);}for(let r=.35;r<1.6;r+=.25)for(let i=0;i<7;i++){const a=i/7*Math.PI/2,b=(i+1)/7*Math.PI/2;pp.push(Math.cos(a)*sign*r,-Math.sin(a)*r,0,Math.cos(b)*sign*r,-Math.sin(b)*r,0);}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pp,3));const w=new T.LineSegments(geo,webMat);w.position.set(...corner);world.add(w);}
 const shed=buildShed({world,M,box,mesh,cylinder,label,colliders,solidMeshes,interactables,batchArticulated});
 const shedEntrance={type:'shedDoor',x:SHED.x,z:SHED_FRONT+.6,y:0,price:0,name:'GROUNDSKEEPER’S SHED',hex:'#c4c9a9',get open(){return shed.open;}};interactables.push(shedEntrance);

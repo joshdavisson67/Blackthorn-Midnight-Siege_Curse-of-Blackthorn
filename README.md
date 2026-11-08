@@ -27,6 +27,12 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## An open upper floor (version 192)
+
+The upstairs walls between the grand hall's balcony and the rooms beside it (the reading room on the west, the private salon on the east) are gone. So are the blocks that hung from the ceiling on both sides: the bottoms of the two chimney stacks and the clock tower, which reached half a metre below the upstairs ceiling and now start above it. You can now see the whole upper floor from one end to the other: down the east corridor, across the open hall, and down the west corridor.
+
+The hall's iron railings still guard the drop. Beside the stairwell, a strip of stone closes the edge of the reading-room floor below floor level, so nothing stands above the floor there. The wing corridors and their rooms are unchanged.
+
 ## M4 and Warden LMG ranks (version 191)
 
 The M4 and the Warden LMG now have their own four-rank ladders, like the pistol, Raven, M12 and Bushmaster. Ranks cost 2,000 / 4,000 / 8,000 / 16,000 essence, are bought in order and last for the run.
