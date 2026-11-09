@@ -26,8 +26,9 @@ const st=()=>qa.get();
 const r=v=>Number.isFinite(v)?v:String(v);
 const seen={};const note=(k,v=true)=>{if(v===true)seen[k]=(seen[k]||0)+1;};
 function snapshot(){const s=st();return {
-  player:[s.player.x,s.player.y,s.player.z,s.health,s.armor,s.points,s.kills,s.wave,s.inventory[s.weapon]?.ammo??null].map(r),
-  zombies:s.zombies.map(e=>[e.dead?1:0,e.brute?1:0,e.dog?1:0,e.feral?1:0,e.lurker?1:0,e.boss?1:0,e.warden?1:0,e.walkPos.x,e.walkPos.y,e.walkPos.z,e.hp,e.group.rotation.y,e.group.position.y,e.attackTime,e.stuck,e.crawling?1:0,e.crouch??0,e.warCry??0,e.bellaSwings??0].map(r))
+  player:[s.player.x,s.player.y,s.player.z,s.health,s.armor,s.points,s.totalScore,s.kills,s.wave,s.weapon,s.inventory[s.weapon]?.ammo??null,s.inventory[s.weapon]?.reserve??null,s.grenades,s.doubleTime,s.grenadeTime,s.boneChips,s.effects.length].map(r),
+  zombies:s.zombies.map(e=>[e.dead?1:0,e.brute?1:0,e.dog?1:0,e.feral?1:0,e.lurker?1:0,e.boss?1:0,e.warden?1:0,e.walkPos.x,e.walkPos.y,e.walkPos.z,e.hp,e.group.rotation.y,e.group.position.y,e.attackTime,e.stuck,e.crawling?1:0,e.crouch??0,e.warCry??0,e.bellaSwings??0,e.enraged?1:0,e.staggerLeft??0,e.death??0,e.group.visible?1:0].map(r)),
+  pickups:s.pickups.map(p=>[p.type,p.mesh.position.x,p.mesh.position.y,p.mesh.position.z,p.life,p.value??0].map(r))
 };}
 // Everything an enemy is rolled with when it is made and placed.
 const birth=e=>[e.walkPos.x,e.walkPos.y,e.walkPos.z,e.group.position.y,e.hp,e.maxHp,e.speed,e.radius,e.bodyHeight,e.crouch,e.brute?1:0,e.dog?1:0,e.rareDog?1:0,e.feral?1:0,e.lurker?1:0,e.elite?1:0,e.crawling?1:0,
@@ -50,8 +51,16 @@ const actions={
   brawl:f=>f%18===0?()=>qa.shoot():f===240?()=>qa.setKeys(['KeyA']):f===420?()=>qa.setKeys(['KeyD']):f===600?()=>qa.setKeys([]):null,
   waves:f=>f%25===0?()=>qa.shoot():null,
   mixed:f=>f%20===0?()=>qa.shoot():f===300?()=>qa.setKeys(['KeyS']):f===480?()=>qa.setKeys([]):null,
-  boss:f=>f%40===0?()=>qa.shoot():null,
+  boss:f=>f===700?()=>{for(const w of st().zombies)if(w.warden&&!w.dead){note('warden shield hit');qa.damageEnemy(w,40,false,{part:'shield',direction:new T.Vector3(0,0,1),source:'glock'});}}:f%40===0?()=>qa.shoot():null,
   late:f=>f%15===0?()=>qa.shoot():null,
+  // Thrown grenades into a ring of 20, a direct blast, and one close enough to hurt.
+  grenades:f=>f===1||f===150||f===300?()=>qa.grenade():f===450?()=>qa.explode(new T.Vector3(3,.3,13)):f===520?()=>qa.explode(st().player.clone().add(new T.Vector3(1.5,.3,0))):f===600?()=>{qa.setAim(0,-.2);}:f>600&&f%10===0?()=>qa.shoot():null,
+  // The M4 capstone's detonating rounds, then the LMG capstone's healing kills.
+  ranks:f=>f===200?()=>{let n=0;for(const e of st().zombies)if(!e.dead&&!e.dog&&!e.brute&&n++<3)for(let i=0;i<30&&!e.crawling&&!e.dead;i++)qa.damageEnemy(e,e.maxHp*.05,false,{part:'leg',side:1,direction:new T.Vector3(0,0,-1),force:1,source:'glock'});}:f===420?()=>{const inv=st().inventory.lmg;inv.owned=true;inv.weaponRank=4;inv.ammo=200;inv.reserve=500;qa.selectWeapon('lmg');qa.setHealth(40);ring(14,0,13,4);}:f%6===0?()=>qa.shoot():null,
+  // Power-ups, grave essence and a bone chip: walk over some, let one expire.
+  pickups:f=>f===60?()=>qa.setPlayer(2,20):f===120?()=>qa.setPlayer(-2,20):f===180?()=>qa.setPlayer(0,24):f===240?()=>qa.setPlayer(4,24):f===300?()=>qa.setPlayer(-4,24):f===360?()=>{qa.setPoints(0);qa.grenade();}:f===420?()=>qa.setPlayer(6,16):null,
+  // Bella freed among weak walkers: her kills drop bone chips, which the player gathers.
+  bellakills:f=>f>200&&f%90===0?()=>{const c=st().pickups.find(p=>p.type==='bone');if(c)qa.setPlayer(c.mesh.position.x,c.mesh.position.z);}:null,
   // Clear wave 5 to start its finale, then jump to wave 10 and clear it for the stench finale.
   finales:f=>f===1||f===901?()=>{if(f===901)while(st().wave<10)qa.startWave();qa.clearQueuedSpawns();for(const e of st().zombies)if(!e.dead)qa.damageEnemy(e,1e9);}:f%30===0?()=>qa.shoot():null,
 };
@@ -62,6 +71,10 @@ const watch={
   frenzy:()=>note('frenzy',st().frenzyWave===st().wave),
   surge:()=>note('surge event',st().worldEvents.active('surge')),
   finales:()=>{note('wave 5 finale',st().waveFiveFinale?.wave===5);note('stench finale',st().waveFiveFinale?.wave===10);},
+  grenades:()=>{note('lurker burst',st().zombies.some(e=>e.lurkerBurst));note('corpse cap',st().zombies.filter(e=>e.dead).length>=14);note('enraged',st().zombies.some(e=>e.enraged));note('drops on the ground',st().pickups.length>0);note('blast hurt the player',st().health<1e6);},
+  ranks:()=>{note('lurker burst (ranks)',st().zombies.some(e=>e.lurkerBurst));note('healed by a kill',st().health>40&&st().weapon==='lmg');note('crawlers',st().zombies.some(e=>e.crawling&&!e.dead));},
+  pickups:()=>{note('double damage',st().doubleTime>0);note('infinite grenades',st().grenadeTime>0);note('bone chip collected',st().boneChips>0);note('essence collected',st().points>0&&st().points<1e6);},
+  bellakills:()=>{note('bone chips dropped',st().pickups.some(p=>p.type==='bone'));note('bella kills',st().kills>0);note('chips gathered',st().boneChips>0);},
   boss:()=>{note('boss active',st().boss.stage==='active');note('war cry',st().zombies.some(e=>e.warCry>0));note('player hurt',st().health<1e6);},
 };
 const ring=(n,cx,cz,rad,y=0)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2;qa.makeZombie(cx+Math.sin(a)*rad,cz+Math.cos(a)*rad,i%5===3,i%7===5,false,y,i%6===4);}};
@@ -105,6 +118,15 @@ const trace={
   // The Awakening event: the dead rise from marked graves.
   awakening:run('awakening',()=>{qa.setHealth(1e6);qa.setPlayer(0,23);for(let i=0;i<2;i++)qa.startWave();
     let k=0;const roll=[0,.6,0,0,.4,.8];qa.setEventRandom(()=>roll[Math.min(k++,roll.length-1)]);qa.startWave();qa.holdSpawns();},1800,60),
+  grenades:run('grenades',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setGrenades(4);qa.setPlayer(0,24);qa.setAim(0,-.35);ring(20,0,14,3.2);qa.makeLurker(1.5,14.5);},900),
+  ranks:run('ranks',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,24);qa.setAim(0,-.06);const inv=st().inventory.rifle;inv.owned=true;inv.weaponRank=4;inv.ammo=50;inv.reserve=300;qa.selectWeapon('rifle');ring(14,0,13,4);qa.makeLurker(-6,19);},900),
+  pickups:run('pickups',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,30);qa.setPoints(0);
+    qa.dropPickup(2,20,'ammo');qa.dropPickup(-2,20,'double');qa.dropPickup(0,24,'grenades');qa.dropPickup(10,10,'ammo');
+    st().eventVisuals.dropEssence(4,24,0,st().pickups);qa.dropBoneChip({walkPos:new T.Vector3(-4,0,24),floorY:0});
+    const e=qa.makeZombie(6,12);e.speed=0;qa.damageEnemy(e,1e9,false,{source:'glock'});},1500,50),
+  bellakills:run('bellakills',()=>{qa.startWave();qa.holdSpawns();const b=st().bella;qa.setPlayer(b.station.x,b.station.z+1.5,UPPER_Y);qa.setPoints(1e6);qa.interact();
+    frames(240);qa.setPlayer(0,24);b.pos.set(0,0,20);frames(2);qa.setHealth(1e6);
+    for(const [x,z] of [[2,17],[-2,17],[4,15],[-4,15],[0,14],[3,12],[-3,12],[1,10]]){const e=qa.makeZombie(x,z);e.hp=e.maxHp=30;}},1500,50),
 };
 process.stderr.write('golden-trace coverage: '+JSON.stringify(seen)+'\n');
 process.stdout.write(JSON.stringify(trace)+'\n');

@@ -27,6 +27,69 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Shared combat: hits, kills, blasts and drops (version 196)
+
+This is Dead Tide step 1, slice 3. Hurting and killing enemies, explosions, and the drops they leave now live in a shared module. Nothing plays differently.
+
+- **What moved:** `public/game/enemy-combat.mjs` now holds:
+  - **Hits:** damage, the 10-essence hit award, leg hits that bring walkers down, hit reactions and stagger.
+  - **Kills:**
+    - the kill award (50 for walkers and dogs, 110 for brutes, 75 or 200 for headshots, with the lurker-blast bonus);
+    - the kill count and Blood Rage chains;
+    - power-up drops, blood, the ragdoll death and the 14-corpse limit.
+  - **Blasts:**
+    - grenades: 450 damage, full through 9 m, half to 12 m, 25 to the player within 3 m;
+    - Bella's safe blasts;
+    - the M4's detonating rounds;
+    - lurker bursts and the line-of-blast check.
+  - **Drops:** power-ups on the ground, their bob and fade, collecting them, and their expiry.
+
+  The code is unchanged, with every roll in the same order.
+- **What stays with the mansion:** its own rewards and extras:
+  - curse-rank essence and world-event bonuses on kills;
+  - Bella's bone chips;
+  - Sir Blackthorn's defeat;
+  - the Gravewarden's shield and kill reward;
+  - grave essence;
+  - what each pickup does once collected.
+
+  The player's health and armor (`hurtPlayer`), weapon timers and power-up effects stay too; they move with later slices.
+- **How a mode drives it:** `createCombat({level,run,rules})` returns `{damageEnemy,killZombie,bloodBurst,blastLine,explode,detonateRound,lurkerBurst,lurkerBursts,dropPickup,updatePickups}`.
+
+  | Part | Field | What the mode supplies |
+  |---|---|---|
+  | `level` | the same map, plus `solidMeshes` and `visibleFloor(x,z,support)` | What blocks a blast, and where scorch marks land |
+  | `run` | `player`, `zombies`, `scene`, `rand`, `rng`, `tone`, `noise`, `notify`, `rumble` | The session, its random numbers, sounds and gamepad rumble |
+  | | `sphere`, `effects`, `bloodPool`, `explosionFx`, `blastLight` | Effect meshes, pools and the explosion effects |
+  | | `powerupAssets`, `pickups`, `enemyAssets` | Drop models, the ground pickups and enemy rigs |
+  | | `elapsed`, `playing` | The run clock, and whether play is live |
+  | | `addPoints(n)`, `addKill()`, `hurtPlayer(n,from)`, `kick()` | Essence, the kill count, player damage and the blast's camera kick |
+  | | `killHeal(impact)`, `hitFeedback(headshot,impact)` | Weapon-rank healing, and the hit marker and its sound |
+  | | `collect(p)`, `releasePickup(p)` | What a pickup does, and returning a pooled one |
+  | `rules` | `killReward(base)` | The kill award after the mode's bonuses |
+  | | `onKill(e,impact)`, `bonusDrop(e)` | The mode's own extras on a kill |
+  | | `hitAmount(e,amount,impact)` | Shields and the like |
+- **One map for all three modules:** the mansion's `mansionLevel` now also carries `solidMeshes` and `visibleFloor`.
+- **Proof that nothing changed:** the golden trace now has 17 scenarios. It also records the full player state (score, ammo, grenades, timers, bone chips) and each enemy's rage, stagger, death time and visibility. Every pickup on the ground is recorded too, with its position and remaining life.
+  - **New scenarios:**
+    - grenades into a ring of 20, with a lurker, a direct blast and one beside the player;
+    - the M4 capstone's detonating rounds, leg hits and the LMG capstone's healing kills;
+    - power-ups, grave essence and a bone chip collected or left to expire;
+    - Bella killing weak walkers, then the player gathering her bone chips.
+  - **Also new:** the Sir Blackthorn fight now includes hits on the Gravewarden's shield.
+  - **Coverage:** a line on stderr confirms each scenario reached the corpse limit, Blood Rage, drops, blast damage, healing, crawlers, every power-up, essence, chips and lurker bursts.
+  - **The result:** main and this version produce byte-identical traces.
+- **A fight with no mansion:** `tests/enemy-combat.mjs` drives combat, the spawner and the AI on a bare yard with its own wall and none of the mansion's rewards. It checks:
+  - hit and kill awards;
+  - legs;
+  - blast ranges and the wall's cover;
+  - safe and unsafe blasts;
+  - detonating rounds;
+  - a lurker burst set off by the AI;
+  - drops collected and expiring;
+  - bonus drops;
+  - the corpse limit.
+
 ## Shared enemy spawner (version 195)
 
 This is Dead Tide step 1, slice 2. Making enemies and choosing where they appear now live in a shared module. Nothing plays differently.

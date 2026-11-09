@@ -358,3 +358,6 @@ await verifyEnemyAI(qa);
 
 const {verifyEnemySpawn}=await import('./enemy-spawn.mjs');
 await verifyEnemySpawn(qa);
+
+const {verifyEnemyCombat}=await import('./enemy-combat.mjs');
+await verifyEnemyCombat(qa);
