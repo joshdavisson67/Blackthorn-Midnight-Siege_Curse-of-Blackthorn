@@ -1,0 +1,87 @@
+{
+  "label": "v197 (main), re-measured beside v198",
+  "page": "index.html",
+  "date": "2026-11-09T03:11:31.796Z",
+  "note": "Headless Chromium; frame times are relative to this machine only.",
+  "load": {
+    "timeToPlayableMs": 53255,
+    "untilPlayable": {
+      "requests": 95,
+      "kb": 8945
+    },
+    "total": {
+      "requests": 95,
+      "kb": 8945
+    },
+    "heapMB": 237.2
+  },
+  "gpu": {
+    "shaderPrograms": 89,
+    "geometries": 1457,
+    "textures": 125,
+    "shaderProgramsAfterFight": 89
+  },
+  "views": {
+    "hall": {
+      "drawCalls": 2046,
+      "trianglesK": 1815,
+      "renderCpuMs": 21.99,
+      "avgMs": 5861.44,
+      "p95Ms": 16600.8,
+      "maxMs": 16600.8
+    },
+    "ballroom": {
+      "drawCalls": 1835,
+      "trianglesK": 1594,
+      "renderCpuMs": 19.2,
+      "avgMs": 3917.2,
+      "p95Ms": 15418.6,
+      "maxMs": 15418.6
+    },
+    "rotunda": {
+      "drawCalls": 1867,
+      "trianglesK": 1588,
+      "renderCpuMs": 18.35,
+      "avgMs": 2196.86,
+      "p95Ms": 3068.7,
+      "maxMs": 3068.7
+    },
+    "chapel": {
+      "drawCalls": 1479,
+      "trianglesK": 1093,
+      "renderCpuMs": 15.8,
+      "avgMs": 1556.95,
+      "p95Ms": 1665.8,
+      "maxMs": 1665.8
+    },
+    "upstairs-west": {
+      "drawCalls": 1788,
+      "trianglesK": 1645,
+      "renderCpuMs": 16.95,
+      "avgMs": 1811.56,
+      "p95Ms": 1932.4,
+      "maxMs": 1932.4
+    },
+    "courtyard": {
+      "drawCalls": 2376,
+      "trianglesK": 1996,
+      "renderCpuMs": 23.07,
+      "avgMs": 2368.95,
+      "p95Ms": 2488.2,
+      "maxMs": 2488.2
+    }
+  },
+  "fight": {
+    "enemies": 32,
+    "stillAlive": 32,
+    "firstFramesMaxMs": 5666.4,
+    "drawCalls": 2942,
+    "trianglesK": 2726,
+    "renderCpuMs": 28.23,
+    "avgMs": 3089.49,
+    "p95Ms": 3433.3,
+    "maxMs": 3542,
+    "heapMB": 243.8
+  },
+  "errors": []
+}

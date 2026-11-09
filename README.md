@@ -73,6 +73,11 @@ This is Dead Tide step 1, slice 5. The run's own values, and how the player walk
   - a jump landing;
   - armor before health, and the fatal hit;
   - both kinds of recovery.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading** is no slower, phase by phase, over 20 runs.
+  - **Frame logic:** the game's own per-frame work, timed without rendering by the new `scripts/frame-logic.mjs`, matches within 0.04–0.14 ms.
+  - **The fight:** one 11% slower fight sample was noise; its repeats matched main.
 
 ## Shared weapon runtime (version 197)
 
