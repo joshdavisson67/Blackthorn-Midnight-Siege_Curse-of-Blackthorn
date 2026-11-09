@@ -10,12 +10,13 @@ export async function verifyWeaponRuntime(qa){
   const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),game=resolve(root,'public/game'),read=f=>readFileSync(resolve(game,f),'utf8');
   // ---- Isolation ------------------------------------------------------------------------
   const imports=f=>[...read(f).matchAll(/^import[^'"]*['"]\.\/([\w.-]+?)(?:\?v=\d+)?['"]/gm)].map(m=>m[1]);
-  const shared=['three.module.js','core.mjs','combat-feedback.mjs','zombie-injuries.mjs','soul-forge.mjs','weapon-models.mjs','weapon-ranks.mjs','grenade-throw.mjs','powerups.mjs'];
+  const shared=['three.module.js','weapon-stats.mjs','combat-feedback.mjs','zombie-injuries.mjs','soul-forge.mjs','weapon-models.mjs','weapon-ranks.mjs','grenade-throw.mjs','powerups.mjs'];
   assert.deepEqual(imports('weapon-runtime.mjs').filter(f=>!shared.includes(f)),[],'The weapon runtime imports only shared modules');
   const closure=new Set(),walk=f=>{if(closure.has(f))return;closure.add(f);for(const g of imports(f))walk(g);};walk('weapon-runtime.mjs');
-  // core.mjs still carries the estate's bounds (two constant tables); graphics.mjs is the
-  // shared optics and film-pass toolkit the weapon models use. Neither builds anything.
-  const mansion=['vertical.mjs','cellar-layout.mjs','cellar.mjs','graveyard.mjs','mansion-expansion.mjs','second-floor.mjs','facade.mjs','furnishings.mjs','grounds.mjs','estate-detail.mjs','shed.mjs','shed-layout.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','rotunda-bell.mjs','world-events.mjs','world-event-visuals.mjs','curse.mjs','camp-spawns.mjs','upper-shell.mjs','exterior-stairs.mjs','lighting.mjs'];
+  // v204: the weapon table lives in weapon-stats.mjs, so the estate's bounds (core.mjs and
+  // its layout tables) stay out too. graphics.mjs is the shared optics and film-pass
+  // toolkit the weapon models use; it builds nothing.
+  const mansion=['core.mjs','estate-layout.mjs','graveyard-layout.mjs','vertical.mjs','cellar-layout.mjs','cellar.mjs','graveyard.mjs','mansion-expansion.mjs','second-floor.mjs','facade.mjs','furnishings.mjs','grounds.mjs','estate-detail.mjs','shed.mjs','shed-layout.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','rotunda-bell.mjs','world-events.mjs','world-event-visuals.mjs','curse.mjs','camp-spawns.mjs','upper-shell.mjs','exterior-stairs.mjs','lighting.mjs'];
   assert.deepEqual([...closure].filter(f=>mansion.includes(f)),[],'Nothing the weapon runtime loads builds or holds the mansion');
   const src=read('game.js');
   for(const name of ['shoot','reload','finishReload','ammoCapacity','freshInventory','selectWeapon','buyWeaponRank','grenade','releaseGrenade','grantPowerup','refillAmmo','holdToFire','viewGun','zoomOf','aimHeight'])

@@ -13,7 +13,7 @@ import {dropOpacity,fadeMaterials} from './drop-fade.mjs?v=169';
 // rewards and extras (rules); the README's version 196 section lists every field.
 export const GRENADE_BLAST_RADIUS=12,GRENADE_DAMAGE=450;
 export function createCombat({level,run,rules}){
-  const {supportBelow,floorHeight,solidMeshes,visibleFloor}=level;
+  const {supportBelow,floorHeight,solidMeshes,visibleFloor,colliders,isBlocked}=level;
   const {player,zombies,scene,rand,rng,tone,noise,notify,rumble,sphere,effects,bloodPool,explosionFx,blastLight,powerupAssets,pickups,enemyAssets,
     addPoints,addKill,hurtPlayer,kick,killHeal,hitFeedback,collect,releasePickup}=run;
   const lurkerBursts=[];
@@ -78,5 +78,10 @@ export function createCombat({level,run,rules}){
   function updatePickups(dt){for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;
   // v169: the last five seconds fade out and in, faster for the final two.
   {const fade=dropOpacity(p.life);if(fade<1&&p.life>0&&!p.fade)p.fade=fadeMaterials(p.mesh);if(p.fade)p.fade.set(fade);}if(p.mesh.userData.model)p.mesh.userData.model.rotation.y+=dt*.65;p.mesh.position.y=(p.y||0)+.8+Math.sin(run.elapsed*2+p.phase)*.15;if(p.eventPool)p.mesh.rotation.y+=dt*1.4;if(run.playing&&p.life>0&&Math.abs((p.y||0)-player.y)<1.2&&Math.hypot(p.mesh.position.x-player.x,p.mesh.position.z-player.z)<1.2){collect(p);tone(660,.4,.1,'triangle',1200);p.life=0;}if(p.life<=0){p.fade?.dispose();p.fade=null;if(p.eventPool)releasePickup(p);else scene.remove(p.mesh);pickups.splice(i,1);}}}
-  return {damageEnemy,killZombie,bloodBurst,blastLine,explode,detonateRound,lurkerBurst,lurkerBursts,dropPickup,updatePickups};
+  // v204 (Dead Tide step 2): blood, impact marks, grenades and their spoons in flight
+  // (bouncing off walls and floors, a grenade bursting when its fuse runs out) and the
+  // blast's light, every frame. Moved from game.js unchanged.
+  const effectNext=new T.Vector3();
+  function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'||e.type==='spoon'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+(e.rest??.12);if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;if(e.spin)e.spin.multiplyScalar(.5);}if(e.spin){e.mesh.rotation.x+=step*e.spin.x;e.mesh.rotation.y+=step*e.spin.y;e.mesh.rotation.z+=step*e.spin.z;}else e.mesh.rotation.x+=step*4;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else scene.remove(e.mesh);effects.splice(i,1);}}}
+  return {damageEnemy,killZombie,bloodBurst,blastLine,explode,detonateRound,lurkerBurst,lurkerBursts,dropPickup,updatePickups,updateEffects};
 }

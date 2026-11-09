@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {FERAL} from './feral.mjs?v=165';
+import {FERAL} from './feral.mjs?v=204';
 import {enemyBody} from './crowd.mjs?v=123';
 import {staggerLimits} from './combat-feedback.mjs?v=184';
 import {DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';

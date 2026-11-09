@@ -1,41 +1,12 @@
 import {parseHTML} from 'linkedom';
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
+import {writeThreeStub} from './qa-stub.mjs';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');const qaDir=resolve(root,'.qa');mkdirSync(qaDir,{recursive:true});
-// Model the renderer's frame-scoped state and shadow map dimensions, without
-// claiming GPU rendering. The real renderer clears currentRenderState after
-// every render; shadow passes cannot be called directly between frames.
-writeFileSync(resolve(qaDir,'three.module.js'),`export * from '../public/game/three.module.js';
-import {WebGLRenderTarget} from '../public/game/three.module.js';
-export class WebGLRenderer {
-  constructor(options={}){if(options.canvas?.noWebGL)throw new Error('WebGL is unavailable');this.pr=1;this.renderDepth=0;this.shadowCalls=[];this.shadowMap={enabled:false,render:(lights,scene,camera)=>{
-    if(!this.shadowMap.enabled)return;
-    if(lights.length&&this.renderDepth===0)throw new Error('Cannot read currentRenderState.state outside a render frame');
-    for(const light of lights){const shadow=light.shadow;if(!shadow.autoUpdate&&!shadow.needsUpdate)continue;
-      const size=shadow.mapSize,extent=shadow.getFrameExtents();
-      shadow.map??=new WebGLRenderTarget(size.x*extent.x,size.y*extent.y);
-      for(let face=0;face<shadow.getViewportCount();face++)shadow.updateMatrices(light,face);
-      const enemies=[];scene.traverseVisible(o=>{if(o.isMesh&&o.castShadow&&o.userData.enemy)enemies.push(o.uuid);});
-      this.shadowCalls.push({light,views:shadow.getViewportCount(),enemies,renderDepth:this.renderDepth});shadow.needsUpdate=false;
-    }
-  }};}
-  setPixelRatio(p){this.pr=p;}getPixelRatio(){return this.pr;}
-  initTexture(texture){(this.initializedTextures??=new Set()).add(texture);}
-  setSize(){}setRenderTarget(){}compileAsync(scene,camera){(this.compileCalls??=[]).push(camera.layers.mask);return Promise.resolve();}
-  clear(){}clearDepth(){}
-  render(scene,camera){this.renderDepth++;
-    try{if(scene.matrixWorldAutoUpdate===true)scene.updateMatrixWorld();if(camera.parent===null&&camera.matrixWorldAutoUpdate===true)camera.updateMatrixWorld();
-      const lights=[];scene.traverseVisible(o=>{if(o.isLight&&o.castShadow&&o.layers.test(camera.layers))lights.push(o);});
-      this.shadowMap.render(lights,scene,camera);
-    }finally{this.renderDepth--;}
-  }
-}
-// v201: scripts/golden-trace.mjs can log every call the game makes to the renderer.
-for(const name of ['setPixelRatio','setSize','setRenderTarget','clear','clearDepth','render','compileAsync','initTexture']){
-  const call=WebGLRenderer.prototype[name];WebGLRenderer.prototype[name]=function(...args){globalThis.__qaRenderLog?.(name,args,this);return call.apply(this,args);};
-}`);
-for(const file of ['explosion-fx.mjs','glock-model-parts.mjs','reticles.mjs','facade.mjs','curse.mjs','curse-ui.mjs','blackthorn-boss.mjs','olivia.mjs','column-surfaces.mjs','world-events.mjs','blackout.mjs','world-event-visuals.mjs','rotunda-bell.mjs','combat-feedback.mjs','bella.mjs','minimap-settings.mjs','render-scale.mjs','touch-controls.mjs','input-scheme.mjs','gun-audio.mjs','audio.mjs','display.mjs','reload-pose.mjs','weapon-ranks.mjs','minimap.mjs','drop-fade.mjs','camp-spawns.mjs','zombie-life.mjs','enemy-ai.mjs','enemy-spawn.mjs','enemy-combat.mjs','weapon-runtime.mjs','player.mjs','hud.mjs','controls.mjs','zombie-build.mjs','zombie-injuries.mjs','lurker.mjs','zombie-faces.mjs','gamepad-controls.mjs','shed-layout.mjs','shed.mjs','lighting.mjs','enemy-surfaces.mjs','soul-forge.mjs','signage.mjs','furnishings.mjs','rugs.mjs','version.mjs','changelog-data.mjs','changelog.mjs','armor.mjs','brute.mjs','feral.mjs','enrage.mjs','crowd.mjs','grounds.mjs','leaderboard.mjs','leaderboard-supabase.mjs','graveyard-layout.mjs','graveyard.mjs','mausoleum-nuke.mjs','cellar-layout.mjs','cellar.mjs','core.mjs','estate-layout.mjs','mansion-expansion.mjs','zombies.mjs','zombie-dog.mjs','enemy-faces.mjs','enemy-sculpt.mjs','vertical.mjs','second-floor.mjs','exterior-stairs.mjs','upper-shell.mjs','enemy-assets.mjs','combat-lights.mjs','powerups.mjs','station-models.mjs','stations.mjs','first-person.mjs','weapon-models.mjs','grenade-throw.mjs','environment-lights.mjs','effect-pool.mjs'])writeFileSync(resolve(qaDir,file),readFileSync(resolve(root,'public/game',file)));
+// The renderer's stand-in (tests/qa-stub.mjs): frame-scoped state and shadow maps, no GPU.
+writeThreeStub(qaDir);
+for(const file of ['explosion-fx.mjs','glock-model-parts.mjs','reticles.mjs','facade.mjs','curse.mjs','curse-ui.mjs','blackthorn-boss.mjs','olivia.mjs','column-surfaces.mjs','world-events.mjs','blackout.mjs','world-event-visuals.mjs','rotunda-bell.mjs','combat-feedback.mjs','bella.mjs','minimap-settings.mjs','render-scale.mjs','touch-controls.mjs','input-scheme.mjs','gun-audio.mjs','audio.mjs','display.mjs','reload-pose.mjs','weapon-ranks.mjs','minimap.mjs','drop-fade.mjs','camp-spawns.mjs','zombie-life.mjs','enemy-ai.mjs','enemy-spawn.mjs','enemy-combat.mjs','weapon-runtime.mjs','player.mjs','hud.mjs','controls.mjs','zombie-build.mjs','zombie-injuries.mjs','lurker.mjs','zombie-faces.mjs','gamepad-controls.mjs','shed-layout.mjs','shed.mjs','lighting.mjs','enemy-surfaces.mjs','soul-forge.mjs','signage.mjs','furnishings.mjs','rugs.mjs','version.mjs','changelog-data.mjs','changelog.mjs','armor.mjs','brute.mjs','feral.mjs','enrage.mjs','crowd.mjs','grounds.mjs','leaderboard.mjs','leaderboard-supabase.mjs','graveyard-layout.mjs','graveyard.mjs','mausoleum-nuke.mjs','cellar-layout.mjs','cellar.mjs','core.mjs','weapon-stats.mjs','batching.mjs','estate-layout.mjs','mansion-expansion.mjs','zombies.mjs','zombie-dog.mjs','enemy-faces.mjs','enemy-sculpt.mjs','vertical.mjs','second-floor.mjs','exterior-stairs.mjs','upper-shell.mjs','enemy-assets.mjs','combat-lights.mjs','powerups.mjs','station-models.mjs','stations.mjs','first-person.mjs','weapon-models.mjs','grenade-throw.mjs','environment-lights.mjs','effect-pool.mjs'])writeFileSync(resolve(qaDir,file),readFileSync(resolve(root,'public/game',file)));
 writeFileSync(resolve(qaDir,'graphics.mjs'),readFileSync(resolve(root,'public/game/graphics.mjs')));
 writeFileSync(resolve(qaDir,'weapon-surfaces.mjs'),readFileSync(resolve(root,'public/game/weapon-surfaces.mjs')));
 writeFileSync(resolve(qaDir,'estate-detail.mjs'),readFileSync(resolve(root,'public/game/estate-detail.mjs')));

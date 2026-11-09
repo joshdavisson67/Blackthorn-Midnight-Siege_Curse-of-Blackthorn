@@ -1,5 +1,5 @@
 import {CELLAR,inCellar,isCellarOpen} from './cellar-layout.mjs?v=28';
-import {OLIVIA_ATTIC as A,isAtticOpen} from './vertical.mjs?v=165';
+import {OLIVIA_ATTIC as A,isAtticOpen} from './vertical.mjs?v=204';
 
 // v174: no safe corners. Hold the storm cellar or Olivia's room for a few
 // seconds and the dead start clawing up through the floor in there with you,

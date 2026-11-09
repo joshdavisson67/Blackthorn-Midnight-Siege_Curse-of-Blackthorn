@@ -47,6 +47,11 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v203-siege.json`, `v203-siege-repeat.json` | v203 (step 2: the first-person view) | The mansion after moving the guns in hand, their lights, the eye and the view's motion into `first-person.mjs`, measured twice |
 | `v203-load-phases.jsonl` | v202 (main) and v203 | Forty balanced runs of `scripts/load-phases.mjs`, in two rounds |
 | `v203-frame-logic.jsonl` | v202 (main) and v203 | Twenty-four balanced pairs of `scripts/frame-logic.mjs`, in two rounds |
+| `v203-siege-rerun.json`, `v203-siege-rerun2.json`, `v203-siege-rerun3.json` | v203 (main) | The mansion re-measured three times beside v204 |
+| `v204-siege.json`, `v204-siege-repeat.json`, `v204-siege-repeat2.json` | v204 (step 2: Dead Tide's own page) | The mansion after moving the weapon table into `weapon-stats.mjs`, mesh batching into `batching.mjs` and the effects update into `enemy-combat.mjs`, measured three times |
+| `v204-load-phases.jsonl` | v203 (main) and v204 | Forty balanced runs of `scripts/load-phases.mjs`, in two rounds |
+| `v204-frame-logic.jsonl` | v203 (main) and v204 | Twenty-four balanced pairs of `scripts/frame-logic.mjs`, in two rounds |
+| `v204-tide.json`, `v204-tide-repeat.json` | v204 | Dead Tide's grey-box island on its own page, `tide.html`, measured twice |
 
 ## Step 1 (v194) against main
 
@@ -339,11 +344,77 @@ Both builds were measured in full twice: v203 first, then main first. Loading wa
 
 **Gameplay, page and view:** `scripts/golden-trace.mjs` (25 scenarios) now also records, every sample, the pose of every part of the guns in hand, the camera, both fields of view, the muzzle flash and light and the flashlight, with a new scenario that aims, fires, reloads and sprints with every gun. It produces byte-identical traces on main and v203.
 
+## Step 2, slice 2 (v204) against main
+
+v204 gives Dead Tide its own page, so this section has two parts: the mansion against main, and Dead Tide's own numbers.
+
+### The mansion
+
+Both builds were measured in full three times: v204 first, then main first, then v204 first again. The third pair rechecked one view's frame time. Loading was timed phase by phase over two rounds of 20 balanced runs, in opposite orders, and the game's own per-frame work over two rounds of 12 balanced pairs.
+
+| Mansion | v203 (main) | v204 |
+|---|---:|---:|
+| Files loaded before playable | 102 | 104 (`weapon-stats.mjs`, `batching.mjs`) |
+| Bytes loaded before playable | 8,969 KB | 8,971 KB |
+| Time to playable (three full runs) | 55.1, 60.5, 54.2 s | 50.7, 56.9, 56.9 s |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load (three runs) | 237.5, 252.0, 236.9 MB | 237.5, 237.3, 237.2 MB |
+| JS heap after the fight (three runs) | 243.8, 244.0, 243.8 MB | 243.8, 243.7, 243.8 MB |
+| Draw calls and triangles in the six views and the fight | as in step 0 | identical |
+| Load: modules / world / shaders (40 balanced runs) | 0.41 / 12.80 / 41.93 s | 0.40 / 12.66 / 41.81 s |
+| Load: total | 55.14 s | 54.87 s (−0.27 s, standard error 0.35 s) |
+| 32-zombie fight: mean frame time (software rendering, three runs) | 3,520 / 3,599 / 3,418 ms | 3,378 / 3,347 / 3,559 ms |
+| The game's own work per frame, no rendering (24 pairs) | 2.34 ms fastest · 2.71 ms median | 2.38 ms fastest · 2.62 ms median |
+
+**Verdict:** no regression.
+
+- **Counts:** every rendering, shader and memory count is identical. Both third runs read the hall at 1,939 draw calls, the known lamp-shadow timing artefact; the other four read 2,046.
+- **Heap after load:** the second main run read 252.0 MB; the other five read 236.9–237.5 MB, so that reading was collection timing on main, as in v203's records.
+- **Loading:** no phase differs beyond its run-to-run error, in either round or across all 40 runs. Shader compiling is untouched by this change: the same 89 programs, from the same warm-up, and the golden trace records every renderer call identically. Fetching and running the modules reads 4 ms faster (standard error 16 ms), so the two new files add nothing measurable to it.
+- **Frame logic:** the game's own per-frame work matches (median −0.02 ms, standard error 0.06 ms).
+- **The fight:** v204 read faster in the first two pairs and slower in the third (3,559 against 3,418 ms). Across all three it averages 3,428 ms to main's 3,512 ms.
+- **The rotunda:** the second v204 run read this view at 2,864 ms a frame, against 2,197 ms in v204's first run and 2,272–2,309 ms on main, with identical draw calls and triangles. Each view's figure is the mean of only 8 software-rendered frames, so a third pair was run, v204 first. It read 2,151 ms against main's 2,272 ms, so the slow reading did not repeat.
+- **Size:** the one measurable change is two more files and 2 KB more source. `weapon-stats.mjs` imports nothing, and `batching.mjs` imports only three.js, which the mansion already loads. They are imported by modules the mansion already loads (`core.mjs`, `hud.mjs` and `weapon-runtime.mjs`; `game.js`).
+
+**Gameplay, page and view:** `scripts/golden-trace.mjs` (25 scenarios) produces byte-identical traces on main and v204.
+
+### Dead Tide
+
+Dead Tide's page, `tide.html`, measured twice. The probe checks the title screen, five fixed views on the island and a grenade bursting in view.
+
+| Dead Tide | First run | Second run |
+|---|---:|---:|
+| Files loaded before playable | 52 | 52 |
+| Mansion files loaded | none | none |
+| Bytes loaded before playable | 1,911 KB | 1,911 KB |
+| Time to playable | 6.46 s | 6.69 s |
+| Load: modules / world / shaders | 0.31 / 0.88 / 5.27 s | 0.26 / 1.13 / 5.30 s |
+| Shader programs (after the views and the blast) | 35 (35) | 35 (35) |
+| GPU geometries / textures | 203 / 13 | 203 / 13 |
+| JS heap after load / after the blast | 36.3 / 33.1 MB | 36.0 / 32.9 MB |
+
+| View | Draw calls | Triangles | Mean frame time (software rendering, two runs) |
+|---|---:|---:|---:|
+| Title screen | 54 | 36K | 182 / 199 ms |
+| The landing beach | 52 | 35K | 187 / 195 ms |
+| Radio Hill's summit | 39 | 28K | 220 / 209 ms |
+| The wreck | 30 | 19K | 184 / 173 ms |
+| Out to sea | 24 | 19K | 155 / 155 ms |
+| Inside the shack | 42 | 29K | 266 / 248 ms |
+| A grenade bursting on the beach | 97 | 35K | 223 / 216 ms |
+
+- **Isolation:** neither run fetched any file of the mansion: not `index.html`, `boot.js`, `game.js`, `core.mjs`, the estate's layouts, lights or rooms, its curse, the leaderboard or the change log.
+- **Shaders:** all 35 programs compile under the loading screen. None more compile in the views or during the grenade blast.
+- **Beside the mansion on this machine:** Dead Tide loads 1,911 KB to the mansion's 8,971 KB and is playable in about 6.5 s to its 55 s. It compiles 35 shader programs to the mansion's 89, its heap after loading is 36 MB to the mansion's 237 MB, and its views take 24–97 draw calls to the mansion's 1,479–2,376.
+- **The frame times** are software rendering and only comparable with other runs here; real-browser FPS was not measured.
+
 ## Re-running
 
 ```
 node scripts/perf-measure.mjs --label vNNN --out perf/vNNN-siege.json
 node scripts/perf-measure.mjs --page modes.html --out perf/vNNN-modes.json
+node scripts/perf-measure.mjs --page tide.html --out perf/vNNN-tide.json   # Dead Tide on its own page
 node scripts/perf-measure.mjs --game <other checkout>/public/game --load-only
 node scripts/golden-trace.mjs > after.json   # then cmp it against a trace taken on main
 node scripts/load-phases.mjs --game <checkout>/public/game   # where loading time goes

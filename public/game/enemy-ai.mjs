@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {FERAL} from './feral.mjs?v=165';
+import {FERAL} from './feral.mjs?v=204';
 import {ENRAGE} from './enrage.mjs?v=130';
 import {SPREAD} from './crowd.mjs?v=123';
 import {advanceStagger} from './combat-feedback.mjs?v=184';

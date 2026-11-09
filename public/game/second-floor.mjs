@@ -1,7 +1,7 @@
 import * as T from './three.module.js';
 import {drawStationMarker} from './station-models.mjs?v=190';
-import {UPPER_Y as Y,UPPER_HEIGHT,UPPER_CEILING,UPPER_TILES,UPPER_ROOMS,STAIR,EXTERIOR_STAIRS,OLIVIA_ATTIC} from './vertical.mjs?v=165';
-import {prepareUpperShell,UPPER_SLAB_THICKNESS,UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
+import {UPPER_Y as Y,UPPER_HEIGHT,UPPER_CEILING,UPPER_TILES,UPPER_ROOMS,STAIR,EXTERIOR_STAIRS,OLIVIA_ATTIC} from './vertical.mjs?v=204';
+import {prepareUpperShell,UPPER_SLAB_THICKNESS,UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=204';
 import {buildExteriorStairs} from './exterior-stairs.mjs?v=109';
 // v187: depth of the lime-plaster soffit under the upper floor slab.
 export const UPPER_SOFFIT=.024;

@@ -6,6 +6,8 @@ An original, single-player, first-person zombie survival game for desktop browse
 
 **Play in your browser:** https://joshdavisson67.github.io/Blackthorn-Midnight-Siege-v119-source/ (published automatically from `main` by `.github/workflows/pages.yml`). This copy's shared leaderboard is stored in Supabase; see below.
 
+**Dead Tide (preview):** add `tide.html` to that address for the island mode's grey-box build (version 204), with no dead yet. `modes.html` is the mode picker.
+
 
 Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1/2/3 switch owned weapons, M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
 
@@ -26,6 +28,59 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## Dead Tide's own page and a grey-box island (version 204)
+
+This is Dead Tide step 2, slice 2. Dead Tide now has its own page, `tide.html`, and a grey-box island you can walk, jump and shoot on. It loads on its own: nothing of the mansion is loaded, built or lit, and the mansion loads nothing of it. There are no dead yet; they come ashore in the next build.
+
+- **Play it:** open `tide.html` next to the game (on GitHub Pages, `tide.html` after the game's address, once this is on `main`). It is a preview link: the mode picker still marks Dead Tide *In development*.
+- **The page:** `tide.html` loads `style.css`, its own `tide.css`, `tide-boot.js` and then `tide.mjs`. It never loads `boot.js`, `game.js` or any mansion module.
+  - **The title screen** circles the island at night. **Wade Ashore** starts the run and captures the mouse in the same click. **◂ All Modes** goes back to the mode picker; Settings and Controls are there too.
+  - **The HUD:** essence, kills, health, the held weapon, ammunition and grenades, the reload bar, hit marker, damage flash, messages, where you are on the island, and the FPS readout.
+  - **Pause:** Resume, Settings, Controls, New Run and Title Screen (the last two ask first). Settings are quality, look sensitivity, sound, the headshot label, touch controls and controller vibration. They are saved, and shared with the mansion.
+  - **Controls:** keyboard and mouse, touch, and controller, all through the shared play session.
+- **The island** (`public/game/island.mjs`):
+  - **The ground:** about 130 m across. The coast runs 50–75 m from the centre, with a lowland ring and a beach all the way round that meets the sea on a gentle slope. Radio Hill rises 14 m near the middle, with a flat top.
+  - **The radio shack** stands on the hilltop. Its door faces south between two lit windows, and inside are a radio desk and a warm lamp. Its walls and roof are solid.
+  - **The lattice tower** stands beside it: 24 m of red and grey steel, with a red beacon that blinks on for 0.55 s of every 1.6 s.
+  - **The wreck:** a trawler rolled onto her side at the water's edge on the south-east beach.
+  - **Palms and rocks:** 46 palms, mostly on the beaches with a grove to the west, and 26 rocks on the hill's flanks and the north shore. You can stand on the small rocks.
+  - **The sea:** one sheet of water. The shallows are lighter, surf rolls in over them, foam lines the edge of the sand, and the moon glints on the ripples. You can wade out to 0.8 m of water, more slowly as it deepens, and no further.
+  - **The night:** a teal sky with stars and the moon, moonlight, and sea fog.
+  - **It is light:** 46 meshes and 31,000 triangles. The palms and rocks are instanced.
+- **Playing:** walk, sprint, jump, aim and fire. Reload, throw grenades (they bounce, burst, and hurt you within 3 m) and use the flashlight. Runs start with the Glock; buying other guns comes with Dead Tide's stations in step 4. For now the only way to die is your own grenade ("The tide takes you.").
+- **Shared to make this possible** (the mansion is unchanged):
+  - **`weapon-stats.mjs`:** the weapon table, the aimed field of view and each weapon's controller rumble, moved out of `core.mjs` and `game.js`. The guns no longer pull in the mansion's layout tables through `core.mjs`.
+  - **`batching.mjs`:** mesh batching, moved out of `game.js`.
+  - **`enemy-combat.mjs`** now also moves blood, impact marks, grenades and their spoons in flight (`updateEffects`, moved out of `game.js`).
+  - **The proof:** main and this version produce byte-identical golden traces (all 25 scenarios).
+- **Tested** (`tests/dead-tide.mjs`, run on its own page):
+  - **Isolation:** Dead Tide's page loads only its own files and 43 shared modules. It loads none of the 39 modules that build, lay out, light or run the mansion, and the mansion loads none of Dead Tide's.
+  - **Its boot script:** it starts the run inside the Wade Ashore click, returns to the mode picker, and reports failures.
+  - **The island:**
+    - the coast, the flat hilltop and every beach's slope;
+    - every walkable slope;
+    - where the shack, tower, wreck, palms, rocks and landing spot stand;
+    - the beacon.
+  - **A full run:**
+    - the title screen;
+    - walking, sprinting and jumping with your feet on the ground, and climbing Radio Hill;
+    - entering the shack by its door, with its walls and roof holding;
+    - wading, but not into the open sea;
+    - firing, reloading and aiming, and grenades;
+    - death, New Run, pause, Settings, the controls card and the title screen.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading:** across 40 balanced runs, no load phase changed beyond its run-to-run error.
+  - **Frame logic:** the game's own per-frame work matches.
+  - **The only measurable change:** two more files (`weapon-stats.mjs` and `batching.mjs`) and 2 KB more source.
+- **Dead Tide's own numbers** (headless Chromium with software rendering, two runs):
+  - **Loading:** playable in about 6.5 s, from 52 files and 1,911 KB. The mansion takes about 55 s, from 104 files and 8,971 KB, on the same machine.
+  - **Shaders:** 35 programs, and none more are compiled during play. The mansion has 89.
+  - **Memory:** a 36 MB heap after loading. The mansion's is 237 MB.
+  - **Drawing:** 24–54 draw calls and 19,000–36,000 triangles in each view, and 97 draw calls while a grenade bursts. The mansion's views draw 1,479–2,376.
+  - **Not measured:** real-browser frame rates.
+- **Next:** the dead on the island, and a 45-enemy stress test.
 
 ## The first-person view, shared (version 203)
 

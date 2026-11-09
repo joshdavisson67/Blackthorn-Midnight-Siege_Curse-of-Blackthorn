@@ -52,6 +52,9 @@ function validateCacheVersions(){
   const checks={
     'public/game/boot.js':[`game.js?v=${CURRENT_VERSION}`],
     'public/game/index.html':[`boot.js?v=${CURRENT_VERSION}`,`style.css?v=${CURRENT_VERSION}`,`changelog.css?v=${CURRENT_VERSION}`],
+    // v204: Dead Tide's own page and boot script.
+    'public/game/tide.html':[`tide-boot.js?v=${CURRENT_VERSION}`,`style.css?v=${CURRENT_VERSION}`,`tide.css?v=${CURRENT_VERSION}`],
+    'public/game/tide-boot.js':[`tide.mjs?v=${CURRENT_VERSION}`],
     'public/game/game.js':[`leaderboard.mjs?v=${CURRENT_VERSION}`,`changelog.mjs?v=${CURRENT_VERSION}`],
     'public/game/leaderboard.mjs':[`version.mjs?v=${CURRENT_VERSION}`],
     'public/game/changelog.mjs':[`changelog-data.mjs?v=${ARCHIVED_VERSION}`]

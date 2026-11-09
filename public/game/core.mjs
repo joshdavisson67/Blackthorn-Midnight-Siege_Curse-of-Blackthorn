@@ -1,19 +1,7 @@
 import {GRAVEYARD} from './graveyard-layout.mjs?v=28';
 import {ESTATE_BOUNDS} from './estate-layout.mjs?v=28';
 export const COLLISION_SKIN=.06;
-export const weapons={
-  glock:{name:'GLOCK 21 / .45 PISTOL',mag:13,reserve:78,damage:32,rate:.24,reload:1.8,pellets:1,spread:.018,aimSpread:.002,semiAuto:true},
-  lmg:{name:'WARDEN / BELT-FED LMG',mag:100,reserve:500,damage:62,rate:.09,reload:5.2,pellets:1,spread:.021,zoom:3},
-  rifle:{name:'M4 / ASSAULT RIFLE',mag:30,reserve:180,damage:36,rate:.12,reload:2.3,pellets:1,spread:.013},
-  shotgun:{name:'M12 / COMBAT SHOTGUN',mag:8,reserve:56,damage:25,rate:.626,reload:2.8,pellets:8,spread:.072,semiAuto:true},
-  smg:{name:'RAVEN / SUBMACHINE GUN',mag:40,reserve:240,damage:29,rate:.075,reload:2.0,pellets:1,spread:.02},
-  bushmaster:{name:'AR-15 / .450 BUSHMASTER',mag:8,reserve:48,damage:72,rate:.25,reload:2.8,pellets:1,spread:.009,aimSpread:.0005,semiAuto:true,zoom:10}
-};
-export function weaponAimFov(type,baseFov=75){
-  const zoom=weapons[type].zoom;
-  // Magnification scales the perspective projection, not the angle itself.
-  return zoom?2*Math.atan(Math.tan(baseFov*Math.PI/360)/zoom)*180/Math.PI:type==='rifle'?48:56;
-}
+export {weapons,weaponAimFov} from './weapon-stats.mjs?v=204';
 export function waveConfig(wave){return {count:6+wave*3,health:78+wave*15+Math.max(0,wave-8)*10,speed:Math.min(1.05+wave*.095,2.65),damage:Math.min(18+wave*1.5,40),interval:Math.max(.6,2.1-wave*.08)};}
 // Preserve brute priority. From wave 6, one in twenty spawn slots is a rare
 // Ashfang, replacing a normal dog slot; ordinary dogs remain more common.

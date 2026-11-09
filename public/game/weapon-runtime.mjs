@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {weapons,weaponAimFov} from './core.mjs?v=165';
+import {weapons,weaponAimFov} from './weapon-stats.mjs?v=204';
 import {COMBAT} from './combat-feedback.mjs?v=184';
 import {INJURY} from './zombie-injuries.mjs?v=178';
 import {forgeBonuses} from './soul-forge.mjs?v=118';

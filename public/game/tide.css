@@ -1,0 +1,18 @@
+/* Dead Tide (v204, Dead Tide step 2). The island's page reuses the game's HUD, menus,
+   pause and settings styles from style.css; this sheet changes only its colours, its
+   title and what the grey-box preview does not have yet. */
+body.deadTide{--gold:#7fd3c7;--tide:#7fd3c7;--tide-dim:#a7cdc8;background:#041012}
+.deadTide #start,.deadTide .card>button:not(.textBtn):not(.secondary){border-color:#b5ece3;background:var(--tide);color:#051719}
+.deadTide #menu{background:radial-gradient(ellipse at center,#020b0cd9 0%,#020b0c8c 52%,#020b0c33 100%)}
+.deadTide #menu .tideTitle{margin:18px 0 0;font:800 clamp(64px,10vw,132px)/.9 'Barlow Condensed',Impact,sans-serif;letter-spacing:.04em;color:var(--ivory);text-shadow:0 6px 40px #000c}
+.deadTide #menu .tideTitle em{font-style:normal;color:var(--tide)}
+.deadTide #menu .estateTagline{max-width:34em;margin-left:auto;margin-right:auto}
+.deadTide #loading{background:#041012;color:var(--tide)}
+.deadTide #error{background:#041012}
+.deadTide #location span{color:var(--tide-dim)}
+/* No wave counter: a quiet note in its place says what this build is. */
+#previewTag{position:absolute;top:var(--hud-top-inset,30px);left:38px;font:600 10px/1.4 Barlow,Arial,sans-serif;letter-spacing:3px;color:var(--tide-dim);opacity:.7;pointer-events:none}
+/* On phones the touch buttons take that corner; the title screen already says it. */
+body.phone-ui #previewTag{display:none}
+/* No map yet, so touch play has no MAP button. */
+.deadTide #touchMap{display:none}

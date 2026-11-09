@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {OLIVIA_ATTIC as A,UPPER_CEILING,UPPER_Y} from './vertical.mjs?v=165';
+import {OLIVIA_ATTIC as A,UPPER_CEILING,UPPER_Y} from './vertical.mjs?v=204';
 
 // Easter egg (v131): Bella's kills drop bone chips. Twenty-five open a hatch
 // above her kennel; pull-down stairs lead to a little garret where Olivia

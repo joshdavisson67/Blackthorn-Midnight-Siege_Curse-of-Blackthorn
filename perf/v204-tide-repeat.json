@@ -1,0 +1,144 @@
+{
+  "label": "v204 Dead Tide, measured again",
+  "page": "tide.html",
+  "date": "2026-11-09T18:25:37.818Z",
+  "note": "Headless Chromium; frame times are relative to this machine only.",
+  "load": {
+    "timeToPlayableMs": 6687,
+    "untilPlayable": {
+      "requests": 52,
+      "kb": 1911
+    },
+    "total": {
+      "requests": 52,
+      "kb": 1911
+    },
+    "heapMB": 36,
+    "phases": {
+      "modulesMs": 255,
+      "worldMs": 1125,
+      "shadersMs": 5302
+    },
+    "files": [
+      "/tide.html",
+      "/style.css",
+      "/tide.css",
+      "/tide-boot.js",
+      "/tide.mjs",
+      "/body.woff2",
+      "/condensed.woff2",
+      "/title.woff2",
+      "/three.module.js",
+      "/display.mjs",
+      "/audio.mjs",
+      "/batching.mjs",
+      "/first-person.mjs",
+      "/grenade-throw.mjs",
+      "/explosion-fx.mjs",
+      "/effect-pool.mjs",
+      "/combat-feedback.mjs",
+      "/reticles.mjs",
+      "/weapon-surfaces.mjs",
+      "/graphics.mjs",
+      "/weapon-stats.mjs",
+      "/player.mjs",
+      "/hud.mjs",
+      "/controls.mjs",
+      "/weapon-runtime.mjs",
+      "/enemy-combat.mjs",
+      "/stations.mjs",
+      "/input-scheme.mjs",
+      "/touch-controls.mjs",
+      "/gamepad-controls.mjs",
+      "/island.mjs",
+      "/weapon-models.mjs",
+      "/render-scale.mjs",
+      "/gun-audio.mjs",
+      "/reload-pose.mjs",
+      "/crowd.mjs",
+      "/armor.mjs",
+      "/weapon-ranks.mjs",
+      "/powerups.mjs",
+      "/zombie-injuries.mjs",
+      "/soul-forge.mjs",
+      "/zombies.mjs",
+      "/enrage.mjs",
+      "/lurker.mjs",
+      "/drop-fade.mjs",
+      "/brute.mjs",
+      "/station-models.mjs",
+      "/glock-model-parts.mjs",
+      "/enemy-surfaces.mjs",
+      "/enemy-faces.mjs",
+      "/enemy-sculpt.mjs",
+      "/minimap.mjs"
+    ],
+    "mansionFiles": []
+  },
+  "gpu": {
+    "shaderPrograms": 35,
+    "geometries": 203,
+    "textures": 13,
+    "shaderProgramsAfterPlay": 35
+  },
+  "views": {
+    "title": {
+      "drawCalls": 54,
+      "trianglesK": 36,
+      "renderCpuMs": 1.91,
+      "avgMs": 199.23,
+      "p95Ms": 223.1,
+      "maxMs": 223.1
+    },
+    "spawn": {
+      "drawCalls": 52,
+      "trianglesK": 35,
+      "renderCpuMs": 2.97,
+      "avgMs": 195.03,
+      "p95Ms": 217.4,
+      "maxMs": 217.4
+    },
+    "summit": {
+      "drawCalls": 39,
+      "trianglesK": 28,
+      "renderCpuMs": 1.72,
+      "avgMs": 208.66,
+      "p95Ms": 238.6,
+      "maxMs": 238.6
+    },
+    "wreck": {
+      "drawCalls": 30,
+      "trianglesK": 19,
+      "renderCpuMs": 2.79,
+      "avgMs": 173.09,
+      "p95Ms": 192.1,
+      "maxMs": 192.1
+    },
+    "sea": {
+      "drawCalls": 24,
+      "trianglesK": 19,
+      "renderCpuMs": 3.61,
+      "avgMs": 155.35,
+      "p95Ms": 170.9,
+      "maxMs": 170.9
+    },
+    "shack": {
+      "drawCalls": 42,
+      "trianglesK": 29,
+      "renderCpuMs": 2.7,
+      "avgMs": 247.5,
+      "p95Ms": 267.3,
+      "maxMs": 267.3
+    },
+    "blast": {
+      "drawCalls": 97,
+      "trianglesK": 35,
+      "renderCpuMs": 3.53,
+      "avgMs": 215.84,
+      "p95Ms": 240.8,
+      "maxMs": 240.8
+    }
+  },
+  "heapAfterPlayMB": 32.9,
+  "errors": []
+}
