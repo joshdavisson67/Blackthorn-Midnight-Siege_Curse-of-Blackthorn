@@ -27,6 +27,52 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Shared HUD (version 199)
+
+This is Dead Tide step 1, slice 6. The HUD's shared readouts now live in a shared module. Nothing looks or plays differently.
+
+- **What moved:** `public/game/hud.mjs` now holds:
+  - **The vital readouts:**
+    - health, which turns critical below 35% and shows Spectral Fury while double damage lasts;
+    - armor (plain or Nano Shield, its charge and whether it is regenerating);
+    - essence and kills;
+    - the held weapon with its rank and Forge level, its ammunition and reserve;
+    - the grenade count or the infinite-grenade timer;
+    - owned perks and active power-ups.
+  - **The reload bar.**
+  - **Toasts and banners:** `notify` and `announce`.
+  - **Flashes:** the hit marker, the damage flash and the low-health vignette, and how they fade.
+
+  The code is unchanged.
+- **What stays with the mansion:** its own readouts, in its `updateHud`:
+  - the wave number and wave status;
+  - the frenzy and finale counters;
+  - bone chips;
+  - the world-event badge;
+  - the curse panel;
+  - Sir Blackthorn's health bar;
+  - the minimap and the FPS counter.
+
+  Dead Tide will put its threat tracker in their place. Bella's companion badge reaches the shared power-up list through a `badges()` hook.
+- **How a mode drives it:** `createHud({dom,session,state,perks,rules})`.
+
+  | Part | Field | What the mode supplies |
+  |---|---|---|
+  | `dom` | `$`, `setMarkup`, `setOpacity` | The page's own element helpers (they share its caches) |
+  | `session` | `mode` | Whether play is live, paused or on the menu |
+  | `state` | `runState` | The run's values |
+  | `perks` | the perk list | Each perk's id, name, colour and icon |
+  | `rules` | `badges()` | Extra badges after the power-ups |
+
+  It returns:
+  - `notify` and `announce`;
+  - `updateVitals` and `updateReloadHud`;
+  - `markHit`, `flashDamage`, `clearFlashes`, `clearToast`, `clearBanner` and `fadeHud`.
+- **Proof that nothing changed:** the golden trace now also records **the page itself**. At every sample it fingerprints every element on the page: its classes, inline style, hidden flag, and (for elements with no named children) its markup. Run ids, which are random, are masked.
+  - **New coverage:** a Soul Forge purchase and a stretch at low health.
+  - **The result:** main and this version produce byte-identical traces, so every HUD element read the same at every sample, in all 21 scenarios.
+- **A bare page:** `tests/hud.mjs` runs the HUD on a page of its own with a run of its own. It checks every readout, the critical and spectral states, rank and Forge names, perks, power-ups and the mode's badge, Nano Shield regeneration (only while playing), the reload bar, and every fade time.
+
 ## The player's run, shared (version 198)
 
 This is Dead Tide step 1, slice 5. The run's own values, and how the player walks, jumps, gets hurt and recovers, now live in a shared module. Nothing plays differently.

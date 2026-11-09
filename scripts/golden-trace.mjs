@@ -15,7 +15,7 @@
 let seed=0x5eed1;
 Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 let clock=1000;performance.now=()=>clock;Date.now=()=>1.7e12+clock;
-const {qa,frames,gameCanvas,listeners}=await import('../tests/harness.mjs');
+const {qa,frames,gameCanvas,listeners,elements}=await import('../tests/harness.mjs');
 const {UPPER_Y,OLIVIA_ATTIC,STAIR}=await import('../.qa/vertical.mjs');
 const {EASTER_EGG}=await import('../.qa/olivia.mjs');
 const {BOSS}=await import('../.qa/blackthorn-boss.mjs');
@@ -24,10 +24,16 @@ const {CELLAR}=await import('../.qa/cellar-layout.mjs');
 const {CAMP_RULES}=await import('../.qa/camp-spawns.mjs');
 const st=()=>qa.get();
 const r=v=>Number.isFinite(v)?v:String(v);
+// The page itself: every element's classes, inline style, hidden flag and (for those
+// with no named children) its markup, hashed per sample; run ids (random UUIDs in the
+// leaderboard's saved-run picker) are masked. GOLDEN_DOM=1 writes it out in full.
+const fnv=t=>{let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(16);};
+const domState=()=>{let t='';for(const [id,el] of elements)t+=id+'|'+(el.getAttribute('class')||'')+'|'+(el.getAttribute('style')||'')+'|'+(el.hasAttribute('hidden')?1:0)+'|'+(el.querySelector('[id]')?'':el.innerHTML)+'\n';t=t.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g,'run-id');return process.env.GOLDEN_DOM?t:fnv(t);};
 const seen={};const note=(k,v=true)=>{if(v===true)seen[k]=(seen[k]||0)+1;};
 function snapshot(){const s=st();return {
   player:[s.player.x,s.player.y,s.player.z,s.health,s.armor,s.points,s.totalScore,s.kills,s.wave,s.weapon,s.inventory[s.weapon]?.ammo??null,s.inventory[s.weapon]?.reserve??null,s.grenades,s.doubleTime,s.grenadeTime,s.boneChips,s.effects.length].map(r),
   zombies:s.zombies.map(e=>[e.dead?1:0,e.brute?1:0,e.dog?1:0,e.feral?1:0,e.lurker?1:0,e.boss?1:0,e.warden?1:0,e.walkPos.x,e.walkPos.y,e.walkPos.z,e.hp,e.group.rotation.y,e.group.position.y,e.attackTime,e.stuck,e.crawling?1:0,e.crouch??0,e.warCry??0,e.bellaSwings??0,e.enraged?1:0,e.staggerLeft??0,e.death??0,e.group.visible?1:0].map(r)),
+  dom:domState(),
   pickups:s.pickups.map(p=>[p.type,p.mesh.position.x,p.mesh.position.y,p.mesh.position.z,p.life,p.value??0].map(r)),
   run:[s.health,s.maxHealth,s.armor,s.armorMax,s.armorTier,s.runTime,s.lastHurt,s.jumpV,s.feetY,s.grounded?1:0,s.camera.position.x,s.camera.position.y,s.camera.position.z,s.camera.rotation.x,s.camera.rotation.y,[...s.perkOwned].join('+')].map(r),
   arms:[s.shotTimer,s.reloadLeft,s.reloadDuration,s.grenadeCooldown,s.aiming?1:0,s.mouseDown?1:0,s.weaponRecoil.pitch,s.weaponRecoil.yaw,s.weaponRecoil.back,s.weaponRecoil.lift,s.camera.fov,s.smgDual.visible?1:0,
@@ -64,7 +70,7 @@ const actions={
       420:()=>{qa.setKeys([]);qa.setAim(Math.PI,0);qa.setKeys(['KeyW']);},560:()=>{qa.setKeys([]);qa.hurtPlayer(30,st().player.clone());},
       700:()=>{qa.setPoints(1e6);const p=st().interactables.find(s=>s.type==='perk'&&s.name==='NIGHTSTRIDE'&&!(s.y>1));qa.setPlayer(p.x+Math.sin(p.rotation||0)*1.6,p.z+Math.cos(p.rotation||0)*1.6);frames(1);qa.interact();qa.setAim(0,0);qa.setKeys(['KeyA']);},
       780:()=>{qa.setKeys([]);const a=st().interactables.find(s=>s.type==='armor'&&s.y>1);qa.setPlayer(a.x+Math.sin(a.rotation||0)*1.6,a.z+Math.cos(a.rotation||0)*1.6,a.y);frames(1);qa.interact();qa.interact();qa.interact();},
-      800:()=>qa.hurtPlayer(25,st().player.clone()),900:()=>qa.hurtPlayer(10,st().player.clone())};
+      800:()=>qa.hurtPlayer(25,st().player.clone()),900:()=>qa.hurtPlayer(10,st().player.clone()),1100:()=>qa.setHealth(20)};
     return plan[f]||null;},
   // Every gun in turn: clicks for the semi-autos, held triggers for the automatics,
   // aiming down sights, empty magazines, reloads and a switch attempted mid-reload.
@@ -90,6 +96,7 @@ const actions={
     if(f===570)return ()=>{qa.selectWeapon('bushmaster');gameCanvas.events.mousedown({button:2});};
     if(f>570&&f<700&&f%10===0)return ()=>{gameCanvas.events.mousedown({button:0});listeners.mouseup({button:0});};
     if(f===710)return ()=>{listeners.mouseup({button:2});const crate=st().interactables.find(s=>s.type==='ammo'&&s.name==='AMMUNITION');qa.setPlayer(crate.x,crate.z+1.6);frames(1);qa.interact();qa.interact();};
+    if(f===740)return ()=>{const forge=st().interactables.find(s=>s.type==='upgrade'&&!(s.y<-1));qa.setPlayer(forge.x+Math.sin(forge.rotation||0)*1.6,forge.z+Math.cos(forge.rotation||0)*1.6);frames(1);qa.interact();};
     return null;},
   // Grenades: counted throws, infinite ones with their cooldown, and a throw into a wall.
   throws:f=>f===1||f===40||f===80?()=>qa.grenade():f===200?()=>{qa.dropPickup(st().player.x,st().player.z,'grenades');}:f>200&&f<420&&f%12===0?()=>qa.grenade():f===500?()=>{qa.setGrenades(2);qa.setPlayer(6,12.6);qa.setAim(0,0);qa.grenade();}:null,
@@ -113,7 +120,7 @@ const watch={
   finales:()=>{note('wave 5 finale',st().waveFiveFinale?.wave===5);note('stench finale',st().waveFiveFinale?.wave===10);},
   moves:()=>{const s=st();note('airborne',!s.grounded);note('upstairs',s.player.y>4);note('on the hall stairs',s.player.y>.5&&s.player.y<4);note('health regrowing',s.health>40&&s.health<100);note('nightstride',s.perkOwned.has('stride'));note('armor tier 2+',s.armorTier>=2);note('armor regrowing',s.armorTier>=2&&s.armor>0&&s.armor<s.armorMax);},
   arsenal:()=>{const s=st();note('aimed',s.aiming);note('reloading',s.reloadLeft>0);note('held trigger',s.mouseDown&&s.weapon!=='glock');note(s.weapon+' out',true);},
-  upgrades:()=>{const s=st();note('twin ravens',s.smgDual.visible);note('pistol rank 4',s.inventory.glock.weaponRank>=4);note('shotgun ranks',s.inventory.shotgun.weaponRank>0);note('bushmaster ranks',s.inventory.bushmaster.weaponRank>0);},
+  upgrades:()=>{const s=st();note('forged',Object.values(s.inventory).some(v=>v.forgeRank>0));note('twin ravens',s.smgDual.visible);note('pistol rank 4',s.inventory.glock.weaponRank>=4);note('shotgun ranks',s.inventory.shotgun.weaponRank>0);note('bushmaster ranks',s.inventory.bushmaster.weaponRank>0);},
   throws:()=>{note('infinite grenades',st().grenadeTime>0);note('grenade cooldown',st().grenadeCooldown>0);},
   grenades:()=>{note('lurker burst',st().zombies.some(e=>e.lurkerBurst));note('corpse cap',st().zombies.filter(e=>e.dead).length>=14);note('enraged',st().zombies.some(e=>e.enraged));note('drops on the ground',st().pickups.length>0);note('blast hurt the player',st().health<1e6);},
   ranks:()=>{note('lurker burst (ranks)',st().zombies.some(e=>e.lurkerBurst));note('healed by a kill',st().health>40&&st().weapon==='lmg');note('crawlers',st().zombies.some(e=>e.crawling&&!e.dead));},

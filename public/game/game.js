@@ -4,8 +4,8 @@ import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curs
 import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=198';
-import {createChangelog} from './changelog.mjs?v=198';
+import {createLeaderboard} from './leaderboard.mjs?v=199';
+import {createChangelog} from './changelog.mjs?v=199';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {createWeaponRecoil,staggerLimits,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -28,10 +28,10 @@ import {createStationBuilder} from './station-models.mjs?v=190';
 import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=187';
 import {drawMinimap} from './minimap.mjs?v=179';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {nextRank,rankInfo,rankKillHeal} from './weapon-ranks.mjs?v=191';
+import {nextRank,rankKillHeal} from './weapon-ranks.mjs?v=191';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
-import {POWERUPS,powerupIcon,createPowerupAssets} from './powerups.mjs?v=190';
+import {POWERUPS,createPowerupAssets} from './powerups.mjs?v=190';
 import {createEnemyAssets} from './enemy-assets.mjs?v=183';
 import {createCombatLights} from './combat-lights.mjs?v=190';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
@@ -63,6 +63,7 @@ import {createEnemySpawner} from './enemy-spawn.mjs?v=195';
 import {createCombat} from './enemy-combat.mjs?v=196';
 import {createWeaponRuntime} from './weapon-runtime.mjs?v=197';
 import {createRunState,createPlayer} from './player.mjs?v=198';
+import {createHud} from './hud.mjs?v=199';
 import {resetBuild} from './zombie-build.mjs?v=177';
 import {LURKER} from './lurker.mjs?v=179';
 import {clearFace} from './zombie-faces.mjs?v=183';
@@ -355,20 +356,25 @@ function makeNavigation(){
   return navigation;
 }
 let frenzyWave=0,waveFiveFinale=null;
-let mode='menu',elapsed=0,lookYaw=0,lookPitch=0,mouseDown=false,aiming=false,pointer=false,lastTime=performance.now(),recoil=0,reloadDrop=0,flashTime=0,hitTime=0,damageFlash=0,nukeFlashTime=0,toastTime=0,bannerTime=0,waveDelay=7,spawnTimer=0,toSpawn=0,spawned=0,navTimer=0,wave=0;const keys=new Set(),player=new T.Vector3(0,0,20);
+let mode='menu',elapsed=0,lookYaw=0,lookPitch=0,mouseDown=false,aiming=false,pointer=false,lastTime=performance.now(),recoil=0,reloadDrop=0,flashTime=0,waveDelay=7,spawnTimer=0,toSpawn=0,spawned=0,navTimer=0,wave=0;const keys=new Set(),player=new T.Vector3(0,0,20);
 // v198 (Dead Tide step 1): the run's own values live in one object from player.mjs,
 // shared with the weapon runtime. Walking, jumping, getting hurt and recovering are
 // player.mjs's too; the mansion hands over its floors, stairs and collision.
 const runState=createRunState();
 const {walk,recover,hurtPlayer}=createPlayer({
   level:{colliders,supportBelow,move:moveWithCollision,updateHeight:updateActorHeight},
-  run:{player,tone,noise,rumble:padRumble,gameOver,onHurt(source,shielded){damageFlash=shielded?.28:.75;combatHud.hurt(player,source,lookYaw+weaponRecoil.yaw,shielded);}},
+  run:{player,tone,noise,rumble:padRumble,gameOver,onHurt(source,shielded){flashDamage(shielded);combatHud.hurt(player,source,lookYaw+weaponRecoil.yaw,shielded);}},
   state:runState
 });
+// v199 (Dead Tide step 1): the HUD's shared readouts, the reload bar, toasts, banners
+// and flashes live in hud.mjs. The mansion's own readouts stay in updateHud below.
+const hud=createHud({dom:{$,setMarkup,setOpacity},session:{get mode(){return mode;}},state:runState,perks:perkDefs,
+  rules:{badges:()=>bella.unlocked?`<div class="powerupBadge companionBadge" style="color:#f0dbc1">${BELLA_PAW}<span>IMMORTAL COMPANION · RANK ${['I','II','III','IV'][bella.rank-1]}<b>BELLA · ${bella.activity}</b></span></div>`:''}});
+const {notify,announce,updateReloadHud,updateVitals,markHit,flashDamage,clearFlashes,clearToast,clearBanner,fadeHud}=hud;
 const curse=createCurse();
 const curseUI=createCurseUI({document,curse});
 const weaponRecoil=createWeaponRecoil(),combatHud=createCombatHud({hit:$('hit'),headshot:$('headshotIndicator'),directions:$('damageDirections'),toggle:$('headshotToggle')});
-let reloadHudVisible=false,reloadHudProgress=-1,reloadHudPercent=-1;
+
 const worldEvents=createWorldEvents({
   graves:graveyard.graves,
   onWarning(id,graves){
@@ -403,8 +409,6 @@ function initAudio(){if(audio){if(audio.state==='suspended')audio.resume();retur
 function tone(freq,dur=.1,volume=.06,type='sine',end=0){if(!audio||audio.state==='closed'||!soundOn())return;const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(end||freq*.65,audio.currentTime+dur);g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+dur);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+dur);}
 function suppressedReport(){if(!audio||audio.state==='closed'||!soundOn())return;suppressedShot(audio,audio.destination,noiseBuffer);}
 function noise(dur,volume=.15,frequency=1600){if(!audio||audio.state==='closed'||!soundOn())return;const n=audio.createBufferSource();n.buffer=noiseBuffer;const g=audio.createGain(),f=audio.createBiquadFilter();f.type='lowpass';f.frequency.value=frequency;g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);n.connect(f);f.connect(g);g.connect(audio.destination);n.start();n.stop(audio.currentTime+dur);}
-function notify(s,duration=2.6){$('toast').textContent=s;toastTime=duration;}
-function announce(title,sub=''){ $('banner').innerHTML=title+(sub?`<small>${sub}</small>`:'');bannerTime=3.2;}
 function addPoints(n){const earned=curseReward(n,curse.rank);runState.points+=earned;runState.totalScore+=earned;return earned;}
 function updateForgeStations(){for(const s of forgeStations)if(s.forgeRank!==runState.inventory[runState.weapon].forgeRank)s.setForgeRank(runState.inventory[runState.weapon].forgeRank);}
 // v197 (Dead Tide step 1): firing, reloading, ammunition, weapon ranks, the gun on
@@ -454,7 +458,7 @@ const {damageEnemy,killZombie,bloodBurst,blastLine,explode,detonateRound,lurkerB
     addPoints,addKill:()=>{runState.kills++;},hurtPlayer,kick:()=>{recoil=.1;},
     // v191: the LMG capstone mends on every kill it makes.
     killHeal(impact){const heal=runState.inventory[impact.source]?rankKillHeal(impact.source,runState.inventory[impact.source].weaponRank):0;if(heal&&mode==='playing'&&runState.health>0)runState.health=Math.min(runState.maxHealth,runState.health+heal);},
-    hitFeedback(headshot,impact){hitTime=headshot?.22:.14;if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}},
+    hitFeedback(headshot,impact){markHit(headshot);if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}},
     collect(p){if(p.type==='essence'){const reward=addPoints(p.value);notify(`GRAVE ESSENCE +${reward}`);}else if(p.type==='bone')collectBoneChip();else grantPowerup(p.type);},
     releasePickup:p=>eventVisuals.release(p)},
   rules:{
@@ -856,19 +860,10 @@ function updateHud(){
   const bruteRemaining=finale?waveFiveFinale.enemies.filter(e=>e.brute&&!e.dead).length+waveFiveFinale.kinds.slice(waveFiveFinale.enemies.length).filter(kind=>kind==='brute').length:0;
   const lurkerRemaining=finale?waveFiveFinale.enemies.filter(e=>e.lurker&&!e.dead).length+waveFiveFinale.kinds.slice(waveFiveFinale.enemies.length).filter(kind=>kind==='lurker').length:0;
   $('frenzyHud').textContent=finale?`WAVE ${waveFiveFinale.wave} FRENZY · ${remaining} UNDEAD · ${bruteRemaining} BRUTES${waveFiveFinale.wave===LURKER.finale.wave?` · ${lurkerRemaining} LURKERS`:''}`:'FRENZY · SURVIVE THE CURRENT WAVE';
-  const rank=armorRank(runState.armorTier);$('armorLabel').textContent=rank?.name||'AEGIS SHIELD';$('armorHud').classList.toggle('nano',!!rank);$('armorHud').classList.toggle('nanoRank2',rank?.rank===2);$('armorHud').classList.toggle('nanoRank3',rank?.rank===3);const recovering=!!rank&&runState.armor<runState.armorMax;const shieldWait=rank?Math.max(0,rank.regenDelay-(runState.runTime-runState.lastHurt)):0;$('armorStatus').classList.toggle('hidden',!rank);$('armorStatus').textContent=!recovering?'FULL SHIELD':shieldWait>0?`RECHARGE IN ${Math.ceil(shieldWait)}s`:`${rank.regenDelay===0?'CONTINUOUS':'RECHARGING'} · ${rank.regenRate} SHIELD/S`;$('armorHud').classList.toggle('regenerating',recovering&&shieldWait===0&&mode==='playing');$('armorHud').classList.toggle('depleted',runState.armorMax>0&&runState.armor<=0);$('armorHud').classList.toggle('hidden',runState.armorMax===0);$('armorValue').textContent=Math.ceil(runState.armor)+' / '+runState.armorMax;$('armorBar').style.width=(runState.armorMax?runState.armor/runState.armorMax*100:0)+'%';$('frenzyHud').classList.toggle('hidden',frenzyWave!==wave||!frenzyWave);const inv=runState.inventory[runState.weapon];$('wave').textContent=String(Math.max(wave,1)).padStart(2,'0');$('points').textContent=runState.points.toLocaleString();$('kills').textContent=runState.kills;$('healthLabel').textContent=runState.doubleTime>0?`SPECTRAL FURY · ${Math.ceil(runState.doubleTime)}s`:'VITAL SIGNS';$('health').textContent=Math.max(0,Math.ceil(runState.health));$('healthBar').style.width=`${Math.max(0,runState.health/runState.maxHealth*100)}%`;$('healthReadout').classList.toggle('critical',runState.health<runState.maxHealth*.35);$('healthReadout').classList.toggle('spectral',runState.doubleTime>0);$('weaponName').textContent=weapons[runState.weapon].name+(inv.weaponRank?` / ${rankInfo(runState.weapon,inv.weaponRank).name.toUpperCase()}`:'')+(inv.forgeRank?` / FORGED ${inv.forgeRank}/3`:'');$('ammo').textContent=inv.ammo;$('reserve').textContent=inv.reserve;$('reloadStatus').innerHTML=`R RELOAD <span> · </span> G GRENADE ${runState.grenadeTime>0?'∞ · '+Math.ceil(runState.grenadeTime)+'s':runState.grenades}`;$('waveState').textContent=boss.stage==='active'?'SIR BLACKTHORN · THE DEAD WAIT ON HIM':waveDelay>0?`NEXT WAVE IN ${Math.ceil(waveDelay)}s`:finale?`FRENZIED FINALE · ${remaining} UNDEAD REMAIN`:`${frenzyWave===wave&&wave?'FRENZY · ':''}${remaining} UNDEAD REMAIN`;const perkMarkup=perkDefs.filter(p=>runState.perkOwned.has(p.id)).map(p=>`<span title="${p.name}" style="color:${p.hex}">${p.icon}</span>`).join('');setMarkup('perks',perkMarkup);const powerupMarkup=[['double',runState.doubleTime],['grenades',runState.grenadeTime]].filter(([,time])=>time>0).map(([type,time])=>`<div class="powerupBadge" style="color:${POWERUPS[type].hex}">${powerupIcon(type)}<span>${POWERUPS[type].name}<b>${Math.ceil(time)}s</b></span></div>`).join('')+(bella.unlocked?`<div class="powerupBadge companionBadge" style="color:#f0dbc1">${BELLA_PAW}<span>IMMORTAL COMPANION · RANK ${['I','II','III','IV'][bella.rank-1]}<b>BELLA · ${bella.activity}</b></span></div>`:'');setMarkup('powerups',powerupMarkup);}
+  $('frenzyHud').classList.toggle('hidden',frenzyWave!==wave||!frenzyWave);$('wave').textContent=String(Math.max(wave,1)).padStart(2,'0');$('waveState').textContent=boss.stage==='active'?'SIR BLACKTHORN · THE DEAD WAIT ON HIM':waveDelay>0?`NEXT WAVE IN ${Math.ceil(waveDelay)}s`:finale?`FRENZIED FINALE · ${remaining} UNDEAD REMAIN`:`${frenzyWave===wave&&wave?'FRENZY · ':''}${remaining} UNDEAD REMAIN`;updateVitals();}
 const changelog=createChangelog({document,onOpen:pauseGame});
 const leaderboard=createLeaderboard({document,onOpen:()=>{if(mode==='playing')pauseGame();},onNewRun:()=>resetRun()});
-// Reuse two HUD nodes; transform the fill each frame without changing layout.
-function updateReloadHud(){
-  const visible=runState.reloadLeft>0&&runState.reloadDuration>0&&mode!=='menu'&&mode!=='dead';
-  const progress=visible?clamp(1-runState.reloadLeft/runState.reloadDuration,0,1):0;
-  if(visible!==reloadHudVisible){$('reloadProgress').classList.toggle('hidden',!visible);reloadHudVisible=visible;}
-  if(progress!==reloadHudProgress){$('reloadProgressFill').style.transform=`scaleX(${progress})`;reloadHudProgress=progress;}
-  const percent=Math.round(progress*100);
-  if(percent!==reloadHudPercent){$('reloadProgress').setAttribute('aria-valuenow',String(percent));reloadHudPercent=percent;}
-}
-function resetRun({capture=true}={}){applyFormFactor();boneChips=boneChipsFound=0;atticState={opening:false,time:0,open:false};oliviaCheer=0;setAtticOpen(false);attic.setProgress(0);lighting.setBlockerState('closed:closed',cellar.progress>0||graveyard.progress>0||shed.progress>0);releaseMouse();grenadeThrow.cancel();worldEvents.reset();eventVisuals.reset();curse.setRank(curseLadder.selected);resetBlackthorn();leaderboard.startRun();runState.armor=runState.armorMax=runState.armorTier=frenzyWave=0;waveFiveFinale=null;setCellarOpen(false);cellar.reset();campWatch.reset();bella.reset();stationBuilder.reset();graveyard.reset();shed.reset();nav=makeNavigation();$('estateMap').classList.add('hidden');mapWasPlaying=false;for(const e of zombies){world.remove(e.group);disposeEnemy(e);}zombies.length=0;for(const e of effects){world.remove(e.mesh);if(e.type==='blast')e.mesh.material?.dispose();}effects.length=0;explosionFx.clear();bloodPool.reset();markPool.reset();for(const p of pickups){p.fade?.dispose();p.fade=null;world.remove(p.mesh);}pickups.length=0;combatLights.reset();player.set(0,0,20);lookYaw=0;lookPitch=0;camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();runState.health=runState.maxHealth=100;runState.points=500;runState.totalScore=0;runState.kills=0;wave=0;waveDelay=7;toSpawn=0;runState.runTime=0;runState.lastHurt=-20;runState.perkOwned.clear();runState.grenades=3;runState.doubleTime=0;runState.grenadeTime=0;runState.grenadeCooldown=0;runState.inventory=freshInventory();applyWeaponRanks();runState.reloadLeft=0;runState.shotTimer=0;runState.feetY=0;runState.jumpV=0;runState.grounded=true;damageFlash=nukeFlashTime=hitTime=0;runState.shotId=0;weaponRecoil.reset();combatHud.reset();toastTime=0;setOpacity('toast',0);clearPlayInput();gunGroups.glock.userData.slideTime=0;updatePistolSlide(gunGroups.glock,0,runState.inventory.glock.ammo);selectWeapon('glock');mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');if(capture)requestPointer();else{$('pauseTitle').textContent='The estate is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}announce('BLACKTHORN ESTATE','BUY PERKS. WATCH YOUR AMMO. SURVIVE.');nav.rebuild(player.x,player.z,player.y);updateHud();}
+function resetRun({capture=true}={}){applyFormFactor();boneChips=boneChipsFound=0;atticState={opening:false,time:0,open:false};oliviaCheer=0;setAtticOpen(false);attic.setProgress(0);lighting.setBlockerState('closed:closed',cellar.progress>0||graveyard.progress>0||shed.progress>0);releaseMouse();grenadeThrow.cancel();worldEvents.reset();eventVisuals.reset();curse.setRank(curseLadder.selected);resetBlackthorn();leaderboard.startRun();runState.armor=runState.armorMax=runState.armorTier=frenzyWave=0;waveFiveFinale=null;setCellarOpen(false);cellar.reset();campWatch.reset();bella.reset();stationBuilder.reset();graveyard.reset();shed.reset();nav=makeNavigation();$('estateMap').classList.add('hidden');mapWasPlaying=false;for(const e of zombies){world.remove(e.group);disposeEnemy(e);}zombies.length=0;for(const e of effects){world.remove(e.mesh);if(e.type==='blast')e.mesh.material?.dispose();}effects.length=0;explosionFx.clear();bloodPool.reset();markPool.reset();for(const p of pickups){p.fade?.dispose();p.fade=null;world.remove(p.mesh);}pickups.length=0;combatLights.reset();player.set(0,0,20);lookYaw=0;lookPitch=0;camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();runState.health=runState.maxHealth=100;runState.points=500;runState.totalScore=0;runState.kills=0;wave=0;waveDelay=7;toSpawn=0;runState.runTime=0;runState.lastHurt=-20;runState.perkOwned.clear();runState.grenades=3;runState.doubleTime=0;runState.grenadeTime=0;runState.grenadeCooldown=0;runState.inventory=freshInventory();applyWeaponRanks();runState.reloadLeft=0;runState.shotTimer=0;runState.feetY=0;runState.jumpV=0;runState.grounded=true;clearFlashes();runState.shotId=0;weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();gunGroups.glock.userData.slideTime=0;updatePistolSlide(gunGroups.glock,0,runState.inventory.glock.ammo);selectWeapon('glock');mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');if(capture)requestPointer();else{$('pauseTitle').textContent='The estate is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}announce('BLACKTHORN ESTATE','BUY PERKS. WATCH YOUR AMMO. SURVIVE.');nav.rebuild(player.x,player.z,player.y);updateHud();}
 let capturePending=false,captureWanted=false,captureAttempt=0,captureTimer=null,touchControls=null;
 function hasMouseLock(){return document.pointerLockElement===canvas;}
 function clearPlayInput(){mouseDown=false;aiming=false;keys.clear();touchControls?.reset();}
@@ -981,7 +976,7 @@ function returnToMenu(){
   resetRun({capture:false});
   mode='menu';clearPlayInput();releaseMouse();touchControls?.setActive(false);
   $('pause').classList.add('hidden');$('hud').classList.add('hidden');$('menu').classList.remove('hidden');
-  bannerTime=0;setOpacity('banner',0);renderCurseMenu();
+  clearBanner();renderCurseMenu();
   const start=$('start');start.disabled=false;start.innerHTML='ENTER THE ESTATE <span>→</span>';start.focus({preventScroll:true});
 }
 function resumeGame(){if(mode==='paused')requestPointer();}
@@ -1224,7 +1219,7 @@ gunGroups[type].userData.body.visible=sight.housing.visible=!sight.mask.visible;
 {const scoped=scopedGuns.some(({sight})=>sight.mask.visible);if(scoped!==radarScoped){radarScoped=scoped;radar.classList.toggle('scoped',scoped);drawRadar();}}setOpacity('crosshair',ads?0:1);
 hudTick-=dt;if(hudTick<=0){updateHud();drawRadar();hudTick=.1;}}
 else if(mode==='menu'){camera.position.set(11.8,2.1,24);camera.lookAt(-1,3.3,0);camera.position.x+=Math.sin(elapsed*.12)*.3;gunRoot.visible=false;rain.visible=true;}
-updateReloadHud();combatHud.update(dt,player,lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(dualOn()?dualMuzzle:viewGun(runState.weapon).userData.muzzle);muzzleLight.intensity=flashTime>0?(runState.weapon==='smg'?5:15):0;hitTime=Math.max(0,hitTime-dt);setOpacity('hit',hitTime>0?1:0);damageFlash=Math.max(0,damageFlash-dt*.8);setOpacity('damage',Math.max(damageFlash,mode==='playing'&&runState.health<30?.16:0));nukeFlashTime=Math.max(0,nukeFlashTime-dt*1.5);setOpacity('nukeFlash',nukeFlashTime);toastTime=Math.max(0,toastTime-dt);setOpacity('toast',toastTime>0?1:0);bannerTime=Math.max(0,bannerTime-dt);setOpacity('banner',bannerTime>0?1:0);
+updateReloadHud();combatHud.update(dt,player,lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(dualOn()?dualMuzzle:viewGun(runState.weapon).userData.muzzle);muzzleLight.intensity=flashTime>0?(runState.weapon==='smg'?5:15):0;fadeHud(dt,mode==='playing');
 for(const l of lamps)l.light.intensity=l.base*(.95+Math.sin(elapsed*4+l.phase)*.04+Math.sin(elapsed*7.1+l.phase)*.015);fire.scale.y=.55+Math.sin(elapsed*8)*.08;stationBuilder.update(elapsed);for(const m of mist){m.position.x+=dt*.025;if(m.position.x>43)m.position.x=-43;}
 for(let i=0;i<rainPos.length;i+=3){rainPos[i+1]-=dt*9;if(rainPos[i+1]<0)rainPos[i+1]=18;if(rainPos[i]<player.x-22)rainPos[i]+=44;if(rainPos[i]>player.x+22)rainPos[i]-=44;if(rainPos[i+2]<player.z-22)rainPos[i+2]+=44;if(rainPos[i+2]>player.z+22)rainPos[i+2]-=44;}rainGeo.attributes.position.needsUpdate=true;
 lighting.setBlockerState((cellar.progress===1?'open':'closed')+':'+(graveyard.progress===1?'open':'closed')+(shed.progress===1?':shed-open':''));bloodPool.sync();markPool.sync();combatLights.update(effects,pickups,player);estateDetail.update(elapsed,dt);blackout.apply(worldEvents.darkness());environmentLights.update(camera.position,elapsed,player.y);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;lighting.prepare(elapsed);renderCleanFrame(renderer,scene,camera,viewCamera,rt,postScene,postCamera,gunRoot.visible||grenadeThrow.root.visible,world,weaponViewFov);}
