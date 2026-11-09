@@ -12,9 +12,43 @@
 // fixed before the game loads; every scenario starts from a fresh run. Every enemy's
 // birth is recorded too: where it appeared and everything it was rolled with. A
 // coverage line on stderr confirms each scenario reached the behaviour it tests.
+//
+// v201: sound and the screen are traced too. A recording Web Audio context logs every
+// node the game makes, how it is wired, and every value and ramp it is given; the
+// renderer stand-in logs every call (targets, sizes, both camera passes, shader
+// compiles and texture uploads). Both are hashed per sample; GOLDEN_LOGS=1 writes
+// them out in full.
 let seed=0x5eed1;
 Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 let clock=1000;performance.now=()=>clock;Date.now=()=>1.7e12+clock;
+const n6=v=>typeof v==='number'?(Number.isFinite(v)?+v.toFixed(6):String(v)):v===null||v===undefined?String(v):typeof v==='object'?(v.constructor?.name||'object'):String(v);
+const renderLog=[];
+globalThis.__qaRenderLog=(name,args,renderer)=>{let d=name;
+  if(name==='render'||name==='compileAsync'){const [scene,c]=args;d+=` ${scene.children.length} ${c.type} ${c.layers.mask} ${n6(c.fov)} ${n6(c.aspect)} ${n6(c.near)} ${n6(c.far)} ${scene.background?.isColor?scene.background.getHexString():n6(scene.background)} ${renderer.autoClear}`;}
+  else if(name==='setRenderTarget'){const t=args[0];d+=t?` ${t.width}x${t.height}/${t.samples}`:' screen';}
+  else if(name==='initTexture'){const t=args[0];d+=t?` ${t.constructor.name} ${t.image?.width}x${t.image?.height} ${t.name}`:' none';}
+  else d+=' '+args.map(n6).join(' ');
+  renderLog.push(d);};
+const audioLog=[];
+class RecordingAudio{
+  constructor(){this.state='running';this.sampleRate=8;this.destination={id:'out'};this.count=0;RecordingAudio.current=this;audioLog.push('context');}
+  get currentTime(){return +(clock/1000).toFixed(4);}
+  param(id,value){const p={setValueAtTime:(v,t)=>audioLog.push(`${id} set ${n6(v)} ${n6(t)}`),exponentialRampToValueAtTime:(v,t)=>audioLog.push(`${id} ramp ${n6(v)} ${n6(t)}`),linearRampToValueAtTime:(v,t)=>audioLog.push(`${id} line ${n6(v)} ${n6(t)}`)};
+    Object.defineProperty(p,'value',{get:()=>value,set:v=>{value=v;audioLog.push(`${id} = ${n6(v)}`);}});return p;}
+  node(kind,params){const id='n'+this.count++,n={id,kind};note('sound: '+kind);
+    const describe=()=>[kind,n.type,n.loop,n.buffer?n.buffer.id:'-'].join(' ');
+    for(const [k,v] of Object.entries(params))n[k]=this.param(id+'.'+k,v);
+    n.connect=t=>{audioLog.push(`${id} > ${t.id} (${describe()})`);return t;};
+    n.start=(...a)=>audioLog.push(`${id} start ${a.map(n6).join(' ')} (${describe()})`);n.stop=(...a)=>audioLog.push(`${id} stop ${a.map(n6).join(' ')}`);
+    audioLog.push(`${id} new ${kind}`);return n;}
+  createBuffer(channels,length,rate){const data=new Float32Array(length),id='b'+this.count++;audioLog.push(`${id} buffer ${channels} ${length} ${rate}`);
+    return {id,duration:length/rate,length,sampleRate:rate,getChannelData:()=>data,sum:()=>data.reduce((a,b)=>a+b,0)};}
+  createBufferSource(){return this.node('source',{playbackRate:1});}
+  createBiquadFilter(){return this.node('filter',{frequency:350,Q:1});}
+  createGain(){return this.node('gain',{gain:1});}
+  createOscillator(){return this.node('oscillator',{frequency:440});}
+  resume(){this.state='running';audioLog.push('resume');note('sound: resumed');}
+}
 const {qa,frames,gameCanvas,listeners,elements,windowEvents,document:page,acquireMouse}=await import('../tests/harness.mjs');
 const {UPPER_Y,OLIVIA_ATTIC,STAIR}=await import('../.qa/vertical.mjs');
 const {EASTER_EGG}=await import('../.qa/olivia.mjs');
@@ -23,6 +57,9 @@ const T=await import('../.qa/three.module.js');
 const {CELLAR}=await import('../.qa/cellar-layout.mjs');
 const {CAMP_RULES}=await import('../.qa/camp-spawns.mjs');
 const st=()=>qa.get();
+globalThis.window.AudioContext=RecordingAudio;
+const fullLogs=process.env.GOLDEN_LOGS==='1',bootLog=renderLog.splice(0);
+const drain=log=>{const t=log.splice(0).join('\n');return fullLogs?t:fnv(t);};
 const r=v=>Number.isFinite(v)?v:String(v);
 // The page itself: every element's classes, inline style, hidden flag and (for those
 // with no named children) its markup, hashed per sample; run ids (random UUIDs in the
@@ -38,8 +75,13 @@ function snapshot(){const s=st();return {
   run:[s.health,s.maxHealth,s.armor,s.armorMax,s.armorTier,s.runTime,s.lastHurt,s.jumpV,s.feetY,s.grounded?1:0,s.camera.position.x,s.camera.position.y,s.camera.position.z,s.camera.rotation.x,s.camera.rotation.y,[...s.perkOwned].join('+')].map(r),
   session:[s.mode,s.pointer?1:0,s.mouseDown?1:0,s.aiming?1:0,s.lookYaw,s.lookPitch,page.pointerLockElement?1:0,s.keys?.size??0].map(r),
   arms:[s.shotTimer,s.reloadLeft,s.reloadDuration,s.grenadeCooldown,s.aiming?1:0,s.mouseDown?1:0,s.weaponRecoil.pitch,s.weaponRecoil.yaw,s.weaponRecoil.back,s.weaponRecoil.lift,s.camera.fov,s.smgDual.visible?1:0,
-    ...Object.values(s.inventory).flatMap(v=>[v.owned?1:0,v.ammo,v.reserve,v.weaponRank,v.forgeRank]),...Object.values(s.gunGroups).map(g=>g.visible?1:0)].map(r)
+    ...Object.values(s.inventory).flatMap(v=>[v.owned?1:0,v.ammo,v.reserve,v.weaponRank,v.forgeRank]),...Object.values(s.gunGroups).map(g=>g.visible?1:0)].map(r),
+  screen:[drain(renderLog),...screenState(s)].map(r),
+  audio:drain(audioLog)
 };}
+// The renderer's settings, the scene target and both cameras.
+const screenState=s=>{const R=s.renderer;return [R.pr,R.autoClear,R.shadowMap.enabled,R.shadowMap.type,R.toneMapping,R.toneMappingExposure,R.outputColorSpace,s.rt.width,s.rt.height,s.rt.samples,
+  s.camera.aspect,s.camera.near,s.camera.far,s.camera.fov,s.viewCamera.fov,s.viewCamera.layers.mask,s.scene.fog.density,R.compileCalls?.length??0,R.initializedTextures?.size??0,s.postMat.uniforms.brightness.value];};
 // Everything an enemy is rolled with when it is made and placed.
 const birth=e=>[e.walkPos.x,e.walkPos.y,e.walkPos.z,e.group.position.y,e.hp,e.maxHp,e.speed,e.radius,e.bodyHeight,e.crouch,e.brute?1:0,e.dog?1:0,e.rareDog?1:0,e.feral?1:0,e.lurker?1:0,e.elite?1:0,e.crawling?1:0,
   e.templateIndex,e.routeSide,e.flank,e.attack,e.groan,e.navigation?.seed,e.life?.type,e.life?.vigor,e.vigor,e.injury?.major,e.injury?.legless?1:0,e.injury?.props?.length,e.campBorn,e.graveBorn?1:0,e.emergeLeft,e.group.scale.x,e.face?.variant,e.build?.k,e.style].map(r);
@@ -66,6 +108,15 @@ const actions={
   // The play session: mouse look, keys for every action, Escape to pause, Resume (mouse
   // capture), settings, both confirm prompts, a hidden tab, a lost focus, the main menu
   // and back in; then touch play and the controller's actions.
+  // v201: the screen and the sound. Each quality (pixel ratio, antialiasing, shadows,
+  // dust), a portrait window and back, slow frames that lower the resolution and
+  // quick ones that raise it again, the sound off and on mid-fight, and a sleeping
+  // audio context woken by Resume.
+  screen:f=>{const quality=v=>()=>{elements.get('quality').value=v;elements.get('quality').onchange();},size=(w,h)=>()=>{globalThis.innerWidth=w;globalThis.innerHeight=h;windowEvents.resize?.();},
+      sound=on=>()=>{elements.get('sound').checked=on;elements.get('sound').onchange?.();},key=code=>()=>listeners.keydown({code,key:code,preventDefault(){},repeat:false,target:{}});
+    const plan={30:quality('low'),90:quality('ultra'),150:size(820,1180),210:size(1280,720),240:()=>frames(30,40),241:()=>frames(60,30),242:()=>frames(60,26),
+      330:sound(false),360:sound(true),400:quality('high'),450:()=>{RecordingAudio.current.state='suspended';key('Escape')();},460:()=>elements.get('resume').onclick?.(),465:acquireMouse,520:quality('low'),580:()=>{globalThis.devicePixelRatio=1;quality('high')();}};
+    return plan[f]||(f%20===0?()=>qa.shoot():null);},
   shell:f=>{const key=(code,more={})=>()=>listeners.keydown({code,key:code,preventDefault(){},repeat:false,target:{},...more}),up=code=>()=>listeners.keyup({code}),click=id=>()=>elements.get(id).onclick?.();
     const plan={1:()=>{for(let i=0;i<20;i++)listeners.mousemove({movementX:7,movementY:-3});},20:()=>{for(let i=0;i<20;i++)listeners.mousemove({movementX:-4,movementY:5});},
       30:key('KeyW'),60:up('KeyW'),61:key('Digit2'),62:key('Digit3'),63:key('Digit1'),64:()=>{st().inventory.glock.ammo=3;},65:key('KeyR'),66:key('KeyR',{repeat:true}),120:key('KeyF'),121:key('KeyF'),122:key('KeyG'),
@@ -134,6 +185,7 @@ const watch={
   frenzy:()=>note('frenzy',st().frenzyWave===st().wave),
   surge:()=>note('surge event',st().worldEvents.active('surge')),
   finales:()=>{note('wave 5 finale',st().waveFiveFinale?.wave===5);note('stench finale',st().waveFiveFinale?.wave===10);},
+  screen:()=>{const s=st();note('screen: reduced resolution',s.rt.width<Math.round(innerWidth*s.renderer.pr));note('screen: portrait',innerHeight>innerWidth);note('screen: low quality',s.rt.samples===2);note('screen: ultra pixel ratio',s.renderer.pr===2);note('screen: high pixel ratio',s.renderer.pr===1.5);note('sound: muted',!elements.get('sound').checked);},
   shell:()=>{const s=st();note('session '+s.mode,true);note('mouse locked',!!page.pointerLockElement);note('aiming (shell)',s.aiming);},
   moves:()=>{const s=st();note('airborne',!s.grounded);note('upstairs',s.player.y>4);note('on the hall stairs',s.player.y>.5&&s.player.y<4);note('health regrowing',s.health>40&&s.health<100);note('nightstride',s.perkOwned.has('stride'));note('armor tier 2+',s.armorTier>=2);note('armor regrowing',s.armorTier>=2&&s.armor>0&&s.armor<s.armorMax);},
   arsenal:()=>{const s=st();note('aimed',s.aiming);note('reloading',s.reloadLeft>0);note('held trigger',s.mouseDown&&s.weapon!=='glock');note(s.weapon+' out',true);},
@@ -201,8 +253,10 @@ const trace={
   upgrades:run('upgrades',()=>{qa.holdSpawns();qa.setHealth(1e6);for(let i=0;i<8;i++){const e=qa.makeZombie(-4+i,15);e.hp=e.maxHp=4e3;e.speed=.2;}},760,20),
   throws:run('throws',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setGrenades(3);qa.setPlayer(0,24);qa.setAim(0,-.25);ring(12,0,14,3);},700,25),
   moves:run('moves',()=>{qa.holdSpawns();qa.setHealth(70);qa.setPlayer(0,9);qa.setAim(0,0);},1200,10),
+  screen:run('screen',()=>{globalThis.devicePixelRatio=2;qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,22);qa.setAim(0,-.05);for(let i=0;i<6;i++){const e=qa.makeZombie(-5+i*2,12);e.hp=e.maxHp=4e3;e.speed=.25;}},600,15),
   shell:run('shell',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,20);qa.setAim(0,0);for(const k of ['shotgun','smg'])st().inventory[k].owned=true;st().inventory.glock.weaponRank=0;},900,10),
 };
+trace.boot={render:fullLogs?bootLog.join('\n'):fnv(bootLog.join('\n')),calls:bootLog.length,compiles:bootLog.filter(l=>l.startsWith('compileAsync')).length,uploads:bootLog.filter(l=>l.startsWith('initTexture')).length};
 process.stderr.write('golden-trace coverage: '+JSON.stringify(seen)+'\n');
 process.stdout.write(JSON.stringify(trace)+'\n');
 process.exit(0);

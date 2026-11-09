@@ -4,8 +4,8 @@ import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curs
 import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=200';
-import {createChangelog} from './changelog.mjs?v=200';
+import {createLeaderboard} from './leaderboard.mjs?v=201';
+import {createChangelog} from './changelog.mjs?v=201';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {createWeaponRecoil,staggerLimits,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -17,10 +17,10 @@ import {buildCellar,drawCellarMap} from './cellar.mjs?v=190';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
 import {buildShed} from './shed.mjs?v=187';
 import * as T from './three.module.js';
-import {createRenderScale} from './render-scale.mjs?v=120';
+import {createDisplay} from './display.mjs?v=201';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createControlScheme} from './input-scheme.mjs?v=142';
-import {suppressedShot} from './gun-audio.mjs?v=150';
+import {createAudio} from './audio.mjs?v=201';
 import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
@@ -50,7 +50,7 @@ import {createFurnishings} from './furnishings.mjs?v=187';
 import {createRugBuilder} from './rugs.mjs?v=59';
 import {createSignage} from './signage.mjs?v=94';
 import {FORGE,forgeBonuses} from './soul-forge.mjs?v=118';
-import {loadEstateTextures,tiledBox,ambientEnvironment,makeFilmPass,renderCleanFrame,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=187';
+import {loadEstateTextures,tiledBox,ambientEnvironment,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=187';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
 import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=190';
 import {buildRotundaBell,ROTUNDA_BELL} from './rotunda-bell.mjs?v=189';
@@ -71,11 +71,11 @@ import {clearFace} from './zombie-faces.mjs?v=183';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
 const reticleHud=createReticleHud($('crosshair'));
-const canvas=$('game');let renderer;
-try{renderer=new T.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});}catch(e){$('loading').classList.add('hidden');$('error').classList.remove('hidden');$('error').textContent='This game needs WebGL hardware acceleration. Enable hardware acceleration in your browser and reload.';throw e;}
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;renderer.outputColorSpace=T.SRGBColorSpace;
-const scene=new T.Scene();scene.background=new T.Color(0x09131e);scene.fog=new T.FogExp2(0x101c26,.014);
-const camera=new T.PerspectiveCamera(75,innerWidth/innerHeight,.09,240);camera.rotation.order='YXZ';scene.add(camera);const viewCamera=new T.PerspectiveCamera();let weaponViewFov=75;
+// v201 (Dead Tide step 1): the renderer, both cameras, the film pass, the quality
+// setting, dynamic resolution, resizing and the shader warm-up live in display.mjs.
+// The mansion keeps its sky, fog, lights and world.
+const canvas=$('game');const display=createDisplay({canvas,onFailure(message){$('loading').classList.add('hidden');$('error').classList.remove('hidden');$('error').textContent=message;}});
+const {renderer,scene,camera,viewCamera}=display;scene.background=new T.Color(0x09131e);scene.fog=new T.FogExp2(0x101c26,.014);let weaponViewFov=75;
 const world=new T.Group();scene.add(world);const colliders=[],solidMeshes=[],interactables=[],lamps=[],zombies=[],effects=[],pickups=[],portraits=[];
 // Keep room entrances explicit so layout checks cover the full approach to
 // each opening, including the library entrance beside the stair flight.
@@ -283,7 +283,7 @@ const FLASHLIGHT=Object.freeze({intensity:22*1.25,distance:28*1.25,angle:.5*1.15
 const FLASHLIGHT_INTENSITY=FLASHLIGHT.intensity;
 const flashlight=new T.SpotLight(0xe2eddd,FLASHLIGHT_INTENSITY,FLASHLIGHT.distance,FLASHLIGHT.angle,FLASHLIGHT.penumbra,FLASHLIGHT.decay);flashlight.map=flashlightBeamTexture();flashlight.position.set(.18,-.1,0);camera.add(flashlight);camera.add(flashlight.target);flashlight.target.position.set(0,0,-15);flashlight.visible=true;let flashlightOn=true;
 // Clear each frame and resolve with spatial antialiasing; preserve the 15% brightness boost.
-const film=makeFilmPass(innerWidth,innerHeight);const rt=film.target,postMat=film.material;const postScene=new T.Scene();const postCamera=new T.OrthographicCamera(-1,1,1,-1,0,1);postScene.add(new T.Mesh(new T.PlaneGeometry(2,2),postMat));
+display.addFilm();
 // The night sky uses layered clouds instead of a flat backdrop.
 const skyMat=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,uniforms:{time:{value:0},skyLight:{value:1}},vertexShader:'varying vec3 localP;void main(){localP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec3 localP;uniform float time;uniform float skyLight;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}void main(){vec3 d=normalize(localP);vec2 uv=d.xz/(abs(d.y)+.4)*3.;uv+=vec2(time*.007,time*.002);float cloud=0.;float a=.5;for(int i=0;i<5;i++){cloud+=noise(uv)*a;uv*=2.03;a*=.5;}vec3 base=mix(vec3(.027,.042,.061),vec3(.008,.019,.039),max(0.,d.y));base+=vec3(.024,.032,.035)*smoothstep(.32,.8,cloud);float halo=pow(max(0.,dot(d,normalize(vec3(-35.,44.,-55.)))),18.);base+=vec3(.04,.065,.08)*halo;gl_FragColor=vec4(base*skyLight,1.);
 #include <tonemapping_fragment>
@@ -365,6 +365,8 @@ let elapsed=0,lastTime=performance.now(),recoil=0,reloadDrop=0,flashTime=0,waveD
 // shared with the weapon runtime. Walking, jumping, getting hurt and recovering are
 // player.mjs's too; the mansion hands over its floors, stairs and collision.
 const runState=createRunState();
+// v201 (Dead Tide step 1): sound lives in audio.mjs; the page's switch turns it on and off.
+const soundOn=()=>$('sound').checked;const gameAudio=createAudio({isOn:soundOn}),{init:initAudio,tone,noise,suppressedReport}=gameAudio;
 const {walk,recover,hurtPlayer}=createPlayer({
   level:{colliders,supportBelow,move:moveWithCollision,updateHeight:updateActorHeight},
   run:{player,tone,noise,rumble:padRumble,gameOver,onHurt(source,shielded){flashDamage(shielded);combatHud.hurt(player,source,session.lookYaw+weaponRecoil.yaw,shielded);}},
@@ -408,11 +410,6 @@ function spawnGraveEnemy({grave,slot}){
 
 let bestWave=0,bestKills=0;try{const b=JSON.parse(localStorage.getItem('blackthorn-best')||'{}');bestWave=b.wave||0;bestKills=b.kills||0;}catch{}
 $('best').textContent=bestWave?`PERSONAL BEST / WAVE ${bestWave} · ${bestKills} KILLS`:'';
-const soundOn=()=>$('sound').checked;let audio=null,noiseBuffer=null,ambience=null;
-function initAudio(){if(audio){if(audio.state==='suspended')audio.resume();return;}try{audio=new (window.AudioContext||window.webkitAudioContext)();noiseBuffer=audio.createBuffer(1,audio.sampleRate*2,audio.sampleRate);const data=noiseBuffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;const n=audio.createBufferSource();n.buffer=noiseBuffer;n.loop=true;const filter=audio.createBiquadFilter();filter.type='lowpass';filter.frequency.value=200;ambience=audio.createGain();ambience.gain.value=soundOn()?.018:0;n.connect(filter);filter.connect(ambience);ambience.connect(audio.destination);n.start();}catch{}}
-function tone(freq,dur=.1,volume=.06,type='sine',end=0){if(!audio||audio.state==='closed'||!soundOn())return;const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(end||freq*.65,audio.currentTime+dur);g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+dur);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+dur);}
-function suppressedReport(){if(!audio||audio.state==='closed'||!soundOn())return;suppressedShot(audio,audio.destination,noiseBuffer);}
-function noise(dur,volume=.15,frequency=1600){if(!audio||audio.state==='closed'||!soundOn())return;const n=audio.createBufferSource();n.buffer=noiseBuffer;const g=audio.createGain(),f=audio.createBiquadFilter();f.type='lowpass';f.frequency.value=frequency;g.gain.setValueAtTime(volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);n.connect(f);f.connect(g);g.connect(audio.destination);n.start();n.stop(audio.currentTime+dur);}
 function addPoints(n){const earned=curseReward(n,curse.rank);runState.points+=earned;runState.totalScore+=earned;return earned;}
 function updateForgeStations(){for(const s of forgeStations)if(s.forgeRank!==runState.inventory[runState.weapon].forgeRank)s.setForgeRank(runState.inventory[runState.weapon].forgeRank);}
 // v197 (Dead Tide step 1): firing, reloading, ammunition, weapon ranks, the gun on
@@ -939,7 +936,7 @@ try{
   if(!launch.has('sound')&&(sound==='0'||sound==='1'))$('sound').checked=sound==='1';
 }catch{}
 $('sensitivity').oninput=$('sensitivity').onchange=()=>{showSensitivity();try{localStorage.setItem(SENSITIVITY_KEY,$('sensitivity').value);}catch{}};
-$('sound').onchange=()=>{if(ambience)ambience.gain.value=soundOn()?.018:0;showSound();try{localStorage.setItem(SOUND_KEY,soundOn()?'1':'0');}catch{}};
+$('sound').onchange=()=>{gameAudio.syncAmbience();showSound();try{localStorage.setItem(SOUND_KEY,soundOn()?'1':'0');}catch{}};
 showSensitivity();showSound();
 configureMinimap({radar:$('radar'),navigation:$('hudNavigation'),vitals:$('hudVitals'),toggle:$('minimapToggle')});
 function toggleFlashlight(){flashlightOn=!flashlightOn;flashlight.intensity=flashlightOn?FLASHLIGHT_INTENSITY:0;}
@@ -1037,8 +1034,8 @@ function padOnTarget(){
 }
 const gamepad=createGamepadControls({win:window,document,actions:{...padActions,start:padStart,back:padBack}});
 schemeChanged(controlScheme.scheme);
-let rendererPrepared=false;const QUALITY_KEY='blackthorn-quality',renderScale=createRenderScale($('quality').value);
-$('quality').onchange=()=>{const q=$('quality').value;try{localStorage.setItem(QUALITY_KEY,q);}catch{}renderScale.reset(q);renderer.setPixelRatio(q==='ultra'?Math.min(devicePixelRatio,2):q==='low'?1:Math.min(devicePixelRatio,1.5));lighting.setQuality(q);if(rendererPrepared)Promise.all([renderer.compileAsync?.(scene,camera),renderer.compileAsync?.(scene,viewCamera)]).catch(()=>{});rt.samples=Math.min(q==='low'?2:4,renderer.capabilities?.maxSamples??4);rt.dispose();estateDetail.dust.visible=q!=='low';resize();};
+// The mansion's quality: its lamp shadows, and drifting dust only above Performance.
+display.useScreen({select:$('quality'),fps:$('fps'),layout(){applyFormFactor();fitTouchStick();},quality:q=>lighting.setQuality(q),detail:q=>{estateDetail.dust.visible=q!=='low';}});
 document.addEventListener('pointerlockchange',onPointerLockChange);
 document.addEventListener('pointerlockerror',onPointerLockError);
 document.addEventListener('visibilitychange',onVisibilityChange);
@@ -1086,8 +1083,8 @@ const radar=$('radar'),rx=radar.getContext('2d');// v162: north-up minimap; see 
 function fitRadar(){const s=Math.round(Math.min(560,Math.max(120,radar.clientWidth*Math.min(devicePixelRatio||1,3))));if(radar.clientWidth&&radar.width!==s){radar.width=radar.height=s;}}
 let radarScoped=false;
 function drawRadar(){fitRadar();return drawMinimap(rx,{width:radar.width,height:radar.height,player,yaw:session.lookYaw,colliders,zombies,stations:interactables,bella,scoped:radarScoped});}
-let hudTick=0,frameCount=0,fpsTime=0;
-function tick(now){requestAnimationFrame(tick);gamepad.poll(Math.min(Math.max(0,(now-lastTime)/1000),.05),{enabled:padPlay(),playing:session.mode==='playing'&&$('guide').classList.contains('hidden'),layer:padLayer(),sensitivity:Number($('sensitivity').value),aiming:session.aiming&&!grenadeThrow.active,zoom:(zoomOf(runState.weapon)||1),onTarget:session.mode==='playing'&&padOnTarget()});updateControllerStatus();document.body.classList.toggle('pad-playing',padPlay()&&session.mode==='playing');if(session.mode==='playing'&&!directControls()&&!hasMouseLock())pauseGame();touchControls?.setActive(session.mode==='playing'&&$('guide').classList.contains('hidden'));const frameSeconds=Math.max(0,(now-lastTime)/1000),dt=Math.min(frameSeconds,.05);lastTime=now;elapsed+=dt;fpsTime+=frameSeconds;frameCount++;if(session.mode==='playing'&&!document.hidden){const before=renderScale.scale;renderScale.sample(frameSeconds);if(renderScale.scale!==before)resize();}else renderScale.interrupt();if(fpsTime>1){$('fps').textContent=`${Math.round(frameCount/fpsTime)} FPS · ${$('quality').value.toUpperCase()}${renderScale.scale<1?` · ${Math.round(renderScale.scale*100)}% RES`:''}`;fpsTime=0;frameCount=0;}
+let hudTick=0;
+function tick(now){requestAnimationFrame(tick);gamepad.poll(Math.min(Math.max(0,(now-lastTime)/1000),.05),{enabled:padPlay(),playing:session.mode==='playing'&&$('guide').classList.contains('hidden'),layer:padLayer(),sensitivity:Number($('sensitivity').value),aiming:session.aiming&&!grenadeThrow.active,zoom:(zoomOf(runState.weapon)||1),onTarget:session.mode==='playing'&&padOnTarget()});updateControllerStatus();document.body.classList.toggle('pad-playing',padPlay()&&session.mode==='playing');if(session.mode==='playing'&&!directControls()&&!hasMouseLock())pauseGame();touchControls?.setActive(session.mode==='playing'&&$('guide').classList.contains('hidden'));const frameSeconds=Math.max(0,(now-lastTime)/1000),dt=Math.min(frameSeconds,.05);lastTime=now;elapsed+=dt;display.frame(frameSeconds,session.mode==='playing'&&!document.hidden);
 if(session.mode==='curse')runState.runTime+=dt;
 if(session.mode==='playing'){weaponRecoil.update(dt);cellar.update(dt);graveyard.update(dt);shed.update(dt);runState.runTime+=dt;runState.shotTimer=Math.max(0,runState.shotTimer-dt);runState.grenadeCooldown=Math.max(0,runState.grenadeCooldown-dt);if(session.mouseDown&&holdToFire())shoot();if(runState.reloadLeft>0){runState.reloadLeft-=dt;if(runState.reloadLeft<=0){runState.reloadLeft=0;finishReload();}}
 const stick=touchControls?.active?touchControls.move:padPlay()&&gamepad.connected?gamepad.move:null,moving=keys.has('KeyW')||keys.has('KeyS')||keys.has('KeyA')||keys.has('KeyD')||!!(stick&&(stick.x||stick.z));const aimingWeapon=session.aiming&&!grenadeThrow.active&&runState.reloadLeft===0;const sprint=(keys.has('ShiftLeft')||keys.has('ShiftRight')||!!touchControls?.sprint||(padPlay()&&gamepad.sprint))&&!aimingWeapon&&!session.mouseDown;let x=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),z=(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0);if(stick&&!x&&!z){x=stick.x;z=stick.z;}walk(dt,x,z,{sprint,aiming:aimingWeapon,yaw:session.lookYaw});
@@ -1111,45 +1108,37 @@ else if(session.mode==='menu'){camera.position.set(11.8,2.1,24);camera.lookAt(-1
 updateReloadHud();combatHud.update(dt,player,session.lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(dualOn()?dualMuzzle:viewGun(runState.weapon).userData.muzzle);muzzleLight.intensity=flashTime>0?(runState.weapon==='smg'?5:15):0;fadeHud(dt,session.mode==='playing');
 for(const l of lamps)l.light.intensity=l.base*(.95+Math.sin(elapsed*4+l.phase)*.04+Math.sin(elapsed*7.1+l.phase)*.015);fire.scale.y=.55+Math.sin(elapsed*8)*.08;stationBuilder.update(elapsed);for(const m of mist){m.position.x+=dt*.025;if(m.position.x>43)m.position.x=-43;}
 for(let i=0;i<rainPos.length;i+=3){rainPos[i+1]-=dt*9;if(rainPos[i+1]<0)rainPos[i+1]=18;if(rainPos[i]<player.x-22)rainPos[i]+=44;if(rainPos[i]>player.x+22)rainPos[i]-=44;if(rainPos[i+2]<player.z-22)rainPos[i+2]+=44;if(rainPos[i+2]>player.z+22)rainPos[i+2]-=44;}rainGeo.attributes.position.needsUpdate=true;
-lighting.setBlockerState((cellar.progress===1?'open':'closed')+':'+(graveyard.progress===1?'open':'closed')+(shed.progress===1?':shed-open':''));bloodPool.sync();markPool.sync();combatLights.update(effects,pickups,player);estateDetail.update(elapsed,dt);blackout.apply(worldEvents.darkness());environmentLights.update(camera.position,elapsed,player.y);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;lighting.prepare(elapsed);renderCleanFrame(renderer,scene,camera,viewCamera,rt,postScene,postCamera,gunRoot.visible||grenadeThrow.root.visible,world,weaponViewFov);}
-function resize(){applyFormFactor();fitTouchStick();const pr=renderer.getPixelRatio();renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const scale=renderScale.scale;rt.setSize(Math.max(1,Math.round(innerWidth*pr*scale)),Math.max(1,Math.round(innerHeight*pr*scale)));}window.addEventListener('resize',resize);resize();
+lighting.setBlockerState((cellar.progress===1?'open':'closed')+':'+(graveyard.progress===1?'open':'closed')+(shed.progress===1?':shed-open':''));bloodPool.sync();markPool.sync();combatLights.update(effects,pickups,player);estateDetail.update(elapsed,dt);blackout.apply(worldEvents.darkness());environmentLights.update(camera.position,elapsed,player.y);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;lighting.prepare(elapsed);display.render(gunRoot.visible||grenadeThrow.root.visible,world,weaponViewFov);}
+window.addEventListener('resize',display.resize);display.resize();
+// What the mansion warms before play: every gun and the grenade in hand, scope masks,
+// event visuals, power-ups and drops (and their fading copies), the enemy builds and
+// their enraged look, Nano Shield models and Bella, with its lamps lit as in play.
 async function prepareRendering(){
-  if(!renderer.compileAsync)return;
-  const finishEventWarmup=eventVisuals.warm();
-  const viewModels=[...Object.values(gunGroups),bushDot],savedVisibility=viewModels.map(g=>g.visible),savedGun=gunRoot.visible;
-  const scopeMasks=scopedGuns.map(({sight})=>sight.mask),savedMasks=scopeMasks.map(mask=>mask.visible);scopeMasks.forEach(mask=>mask.visible=true);
-  const warmPickups=Object.keys(POWERUPS).map(type=>powerupAssets.create(type));
-  for(const group of warmPickups)prepareLightingMaterials(group);
-  prepareLightingMaterials(bloodPool.instances);
-  camera.position.set(0,1.68,20);camera.rotation.set(0,0,0);gunRoot.visible=true;
-  viewModels.forEach(g=>g.visible=true);grenadeThrow.warm();
-  environmentLights.update(camera.position,0,0);lighting.prepare(0,{warm:true});
-  const warmRage=enemyAssets.templates.map(r=>{const group=r.group.clone(true);enemyAssets.enrage({group});return group;});
-  const warmNano=armorStations.flatMap(s=>s.nanoModels.map(source=>{const model=source.clone(true);model.visible=true;return model;}));
-  const warmBella=bella.rig.group.clone(true);warmBella.traverse(o=>{o.visible=true;});
-  // v169: compile the see-through variants used while drops fade out.
-  const coin=eventVisuals.coins[0].mesh,warmFading=[...Object.keys(POWERUPS).map(type=>powerupAssets.create(type)),boneChipModel(),coin.clone(true)];
-  for(const g of warmFading){g.visible=true;prepareLightingMaterials(g);fadeMaterials(g).set(.5);}
-  indexFloors();
-  const warm=[warmBella,...warmNano,...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,enemyAssets.faces.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create(),explosionFx.warmGroup()];
-  warm.forEach((g,i)=>{g.userData.lightingTransient=true;g.position.set((i%5-2)*.8,0,15-Math.floor(i/5));world.add(g);});
-  try{
-    renderer.setRenderTarget(rt);
-    await renderer.compileAsync(scene,camera);
-    viewCamera.copy(camera,false);viewCamera.layers.set(1);await renderer.compileAsync(scene,viewCamera);
-    for(const s of forgeStations)for(const m of s.forgeMaterials)renderer.initTexture?.(m.map);
-    for(const texture of weaponSurfaces().textures)renderer.initTexture?.(texture);
-    renderer.initTexture?.(enemyAssets.surfaces.map);renderer.initTexture?.(enemyAssets.surfaces.bumpMap);renderer.initTexture?.(enemyAssets.surfaces.detail);
-    // Upload the shared enemy buffers while the loading screen is still up.
-    renderCleanFrame(renderer,scene,camera,viewCamera,rt,postScene,postCamera,true,world);
-  }finally{
-    renderer.setRenderTarget(null);finishEventWarmup();
-    warm.forEach(g=>{g.removeFromParent();g.position.set(0,0,0);});
-    viewModels.forEach((g,i)=>g.visible=savedVisibility[i]);scopeMasks.forEach((mask,i)=>mask.visible=savedMasks[i]);gunRoot.visible=savedGun;grenadeThrow.cancel();
-  }
+  return display.prepare(()=>{
+    const finishEventWarmup=eventVisuals.warm();
+    const viewModels=[...Object.values(gunGroups),bushDot],savedVisibility=viewModels.map(g=>g.visible),savedGun=gunRoot.visible;
+    const scopeMasks=scopedGuns.map(({sight})=>sight.mask),savedMasks=scopeMasks.map(mask=>mask.visible);scopeMasks.forEach(mask=>mask.visible=true);
+    const warmPickups=Object.keys(POWERUPS).map(type=>powerupAssets.create(type));
+    for(const group of warmPickups)prepareLightingMaterials(group);
+    prepareLightingMaterials(bloodPool.instances);
+    camera.position.set(0,1.68,20);camera.rotation.set(0,0,0);gunRoot.visible=true;
+    viewModels.forEach(g=>g.visible=true);grenadeThrow.warm();
+    environmentLights.update(camera.position,0,0);lighting.prepare(0,{warm:true});
+    const warmRage=enemyAssets.templates.map(r=>{const group=r.group.clone(true);enemyAssets.enrage({group});return group;});
+    const warmNano=armorStations.flatMap(s=>s.nanoModels.map(source=>{const model=source.clone(true);model.visible=true;return model;}));
+    const warmBella=bella.rig.group.clone(true);warmBella.traverse(o=>{o.visible=true;});
+    // v169: compile the see-through variants used while drops fade out.
+    const coin=eventVisuals.coins[0].mesh,warmFading=[...Object.keys(POWERUPS).map(type=>powerupAssets.create(type)),boneChipModel(),coin.clone(true)];
+    for(const g of warmFading){g.visible=true;prepareLightingMaterials(g);fadeMaterials(g).set(.5);}
+    indexFloors();
+    return {world,
+      warm:[warmBella,...warmNano,...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,enemyAssets.faces.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create(),explosionFx.warmGroup()],
+      textures:()=>[...forgeStations.flatMap(s=>s.forgeMaterials.map(m=>m.map)),...weaponSurfaces().textures,enemyAssets.surfaces.map,enemyAssets.surfaces.bumpMap,enemyAssets.surfaces.detail],
+      done(){finishEventWarmup();viewModels.forEach((g,i)=>g.visible=savedVisibility[i]);scopeMasks.forEach((mask,i)=>mask.visible=savedMasks[i]);gunRoot.visible=savedGun;grenadeThrow.cancel();}};
+  });
 }
-try{const saved=localStorage.getItem(QUALITY_KEY);if(saved&&saved!==$('quality').value&&[...$('quality').options].some(o=>o.value===saved)){$('quality').value=saved;$('quality').onchange();}}catch{}
-await prepareRendering();rendererPrepared=true;lastTime=performance.now();$('loading').classList.add('hidden');window.Blackthorn?.ready(startFromMenu);requestAnimationFrame(tick);
+display.restoreQuality();
+await prepareRendering();lastTime=performance.now();$('loading').classList.add('hidden');window.Blackthorn?.ready(startFromMenu);requestAnimationFrame(tick);
 // Batch static geometry and each articulated body section to limit draw calls.
 function combineMeshes(list,parent){if(list.length<2)return;const inverse=new T.Matrix4().copy(parent.matrixWorld).invert(),positions=[],normals=[],uvs=[],colors=[],rageColors=[],finishes=[],hasColors=list.some(m=>m.geometry.hasAttribute('color')),hasRageColors=list.some(m=>m.geometry.hasAttribute('rageColor')),hasFinishes=list.some(m=>m.geometry.hasAttribute('surfaceFinish'));for(const m of list){const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(new T.Matrix4().multiplyMatrices(inverse,m.matrixWorld));positions.push(geo.attributes.position.array);normals.push(geo.attributes.normal.array);uvs.push(geo.attributes.uv.array);if(hasColors)colors.push(geo.attributes.color?.array||new Float32Array(geo.attributes.position.count*3).fill(1));if(hasRageColors)rageColors.push(geo.attributes.rageColor?.array||geo.attributes.color?.array||new Float32Array(geo.attributes.position.count*3).fill(1));if(hasFinishes)finishes.push(geo.attributes.surfaceFinish.array);geo.dispose();}function concat(arrays){const dst=new Float32Array(arrays.reduce((n,a)=>n+a.length,0));let at=0;for(const a of arrays){dst.set(a,at);at+=a.length;}return dst;}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(concat(positions),3));geo.setAttribute('normal',new T.BufferAttribute(concat(normals),3));geo.setAttribute('uv',new T.BufferAttribute(concat(uvs),2));if(hasColors)geo.setAttribute('color',new T.BufferAttribute(concat(colors),3));if(hasRageColors)geo.setAttribute('rageColor',new T.BufferAttribute(concat(rageColors),3));if(hasFinishes)geo.setAttribute('surfaceFinish',new T.BufferAttribute(concat(finishes),2));geo.computeBoundingSphere();const merged=new T.Mesh(geo,list[0].material);merged.castShadow=list.some(m=>m.castShadow);merged.receiveShadow=true;parent.add(merged);for(const m of list)m.parent.remove(m);}
 function batchStaticWorld(){scene.updateMatrixWorld(true);const buckets=new Map();world.traverse(m=>{if(!m.isMesh||m.isInstancedMesh||m.userData.dynamic||m===fire)return;const p=m.getWorldPosition(new T.Vector3());let k=m.material.uuid+":"+Math.floor(p.x/24)+":"+Math.floor(p.z/24)+":"+m.castShadow;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);});for(const list of buckets.values())combineMeshes(list,world);}

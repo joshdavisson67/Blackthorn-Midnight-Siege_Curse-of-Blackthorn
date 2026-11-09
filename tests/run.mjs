@@ -373,3 +373,9 @@ await verifyHud();
 
 const {verifyControls}=await import('./controls.mjs');
 await verifyControls();
+
+const {verifyAudio}=await import('./audio.mjs');
+await verifyAudio();
+
+const {verifyDisplay}=await import('./display.mjs');
+await verifyDisplay();

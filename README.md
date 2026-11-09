@@ -27,6 +27,53 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## The screen and the sound, shared (version 201)
+
+This is Dead Tide step 1, slice 8. The renderer, the cameras, the quality setting, resizing, drawing a frame, the shader warm-up and the game's sound now live in two shared modules. Nothing looks or sounds different.
+
+- **The screen:** `createDisplay({canvas,far,onFailure})` in `public/game/display.mjs` makes:
+  - the WebGL renderer with the mansion's settings (soft shadows, filmic tone, exposure 1.22), and the message shown when WebGL is missing;
+  - the scene, the world camera (how far it sees is the mode's choice; the mansion keeps 240 m) and the camera that draws the held weapon;
+  - the film pass the world renders into (`addFilm()`), made after the mansion's world as before, so every object keeps its place in creation order.
+
+  It also holds:
+  - **Quality:** the pixel ratio, antialiasing and starting resolution for Performance, Balanced and Ultra; the quality saved by either mode applies to both.
+  - **Dynamic resolution:** it measures live play only, with the FPS readout once a second.
+  - **Resizing**, **drawing a frame** (world, then weapon, then film) and **the shader warm-up** under the loading screen.
+
+  The code is unchanged.
+- **The sound:** `createAudio({isOn})` in `public/game/audio.mjs` holds:
+  - the Web Audio context, started on the first Resume and woken again after the browser suspends it;
+  - the two-second noise buffer and the low wind under everything;
+  - tones, noise bursts and the MP5's suppressed report.
+
+  Every sound is silent until the first Resume and while the sound switch is off; the wind follows the switch at once.
+- **What stays with the mansion:**
+  - its sky, fog, lights and world;
+  - its lamp-shadow quality, and the drifting dust shown only above Performance;
+  - the page layout run before each resize;
+  - what it warms before play: every gun and the grenade in hand, scope masks, event visuals, power-ups and fading drops, the enemy builds and their enraged look, Nano Shield models and Bella, with its lamps lit as in play;
+  - every sound it plays and when.
+- **How a mode drives the screen:**
+
+  | Call | Field | What the mode supplies |
+  |---|---|---|
+  | `createDisplay` | `canvas`, `far`, `onFailure` | The game canvas, how far the camera sees, and how to show the WebGL message |
+  | `useScreen` | `select`, `fps` | The quality menu and the FPS readout |
+  | `useScreen` | `layout`, `quality`, `detail` | Its layout before each resize, what quality changes in its shaders (applied before they recompile), and what it shows or hides |
+  | `prepare(stage)` | `world`, `warm`, `textures`, `done` | Its world, the models to warm (stood five metres ahead of the camera, then removed), its textures, and how to put things back |
+  | every frame | `frame(seconds,live)`, `render(showWeapon,world,fov)` | The frame time, whether play is live, and the weapon's field of view |
+- **The perf scripts:** the perf probe and `scripts/load-phases.mjs` still work on every build, before and after this change.
+- **Proof that nothing changed:** the golden trace now has 23 scenarios and records sound and the screen too.
+  - **Sound:** a recording Web Audio context logs every node the game makes, how it is wired, and every value and ramp.
+  - **Screen:** the renderer stand-in logs every call: targets, sizes, both camera passes, shader compiles and texture uploads, from the warm-up to the last frame.
+  - **New scenario:** each quality, a portrait window and back, slow frames that lower the resolution and quick ones that raise it, the sound off and on mid-fight, and a sleeping audio context woken by Resume.
+  - **The result:** main and this version produce byte-identical traces, every page fingerprint, sound and renderer call included.
+- **On their own:**
+  - `tests/display.mjs` runs the screen on a bare page with a world of its own. It checks the WebGL message, the renderer and cameras, each quality, resizing, dynamic resolution and its readout, the order a frame is drawn in, the warm-up, and the saved quality.
+  - `tests/audio.mjs` runs the sound with a switch of its own. It checks silence before Resume, the wind, each kind of sound and its timing, the switch, waking a sleeping context, and a closed one.
+- **Mansion performance:** PERF_PLACEHOLDER
+
 ## The play session, shared (version 200)
 
 This is Dead Tide step 1, slice 7. Capturing the mouse, pausing, the settings page, the are-you-sure prompts and the play controls now live in a shared module. Nothing plays differently.
