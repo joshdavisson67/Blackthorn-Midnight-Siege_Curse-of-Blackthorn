@@ -27,6 +27,65 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Shared weapon runtime (version 197)
+
+This is Dead Tide step 1, slice 4. Everything the player's guns and grenades do now lives in a shared module. Nothing plays differently.
+
+- **What moved:** `public/game/weapon-runtime.mjs` now holds:
+  - **Firing:**
+    - each shot's ammunition, fire rate, rumble, muzzle flash and sound;
+    - the aimed or hip spread;
+    - the damage formula: Deadeye, the Soul Forge, rank damage, headshots ×2.6, crushed skulls and double damage;
+    - bullet marks;
+    - the M4 capstone's detonating rounds;
+    - recoil.
+  - **Reloading and ammunition:** magazine and reserve sizes from ranks and the Forge, reloads and Quick Hands, restocks and the max-ammo refill.
+  - **Weapon ranks:** buying a rank with essence, and its effects: magazines arriving loaded, the pistol's dot, the twin Ravens, the Bushmaster's red dot, and full-auto ranks.
+  - **The gun on screen:** drawing a weapon, which guns are visible, the twin-gun muzzles, aim height, zoom and aiming field of view.
+  - **Grenades and power-ups:** counted and infinite throws and their cooldown, releasing the grenade and its spoon (never through a wall), and what each power-up does once collected.
+
+  The code is unchanged, with every roll in the same order.
+- **What stays with the mansion for now:**
+  - **The run's values:** the inventory, the held weapon, timers, essence and aim are handed over as `state`, with getters and setters, until the run-state slice.
+  - **Other systems:** the frame loop's countdowns, the stations that sell guns and ranks (and their prices), the HUD and the input bindings, each with its own slice.
+- **How a mode drives it:** `createWeaponRuntime({level,view,run,state,combat})` returns the functions above.
+
+  | Part | Field | What the mode supplies |
+  |---|---|---|
+  | `level` | `colliders`, `isBlocked`, `solidMeshes` | What stops a shot or a thrown grenade |
+  | `view` | `camera`, `gunGroups`, `bushDot`, `smgDual`, `dualGuns`, `dualMuzzle`, `flash`, `reticleHud`, `weaponRecoil`, `grenadeThrow`, `grenadeAssets` | The first-person guns, sights and throwing arm |
+  | `run` | `scene`, `zombies`, `effects`, `markPool`, `rand` | The session's scene, enemies, effect pools and random numbers |
+  | | `tone`, `noise`, `notify`, `rumble`, `suppressedReport` | Sounds, messages and rumble |
+  | | `updateHud()`, `updateReloadHud()` | HUD refreshes |
+  | | `shotRumble`, `raycaster` | Per-weapon rumble and the shared ray |
+  | `state` | `inventory`, `weapon`, `mode`, `aiming`, `lookYaw`, `lookPitch`, `perkOwned`, `points` | The run's values |
+  | | `reloadLeft`, `reloadDuration`, `shotTimer`, `shotId`, `grenades`, `grenadeTime`, `grenadeCooldown`, `doubleTime` | Weapon timers and counts |
+  | | `flashTime`, `recoil`, `dualSide`, `weaponViewFov` | View effects |
+  | `combat` | `damageEnemy`, `bloodBurst`, `detonateRound` | From `enemy-combat.mjs` |
+
+  Dead Tide can pass a plain object as `state`.
+- **Proof that nothing changed:** the golden trace now has 20 scenarios. It also records every gun's ownership, ammunition, reserve and ranks, plus the timers, aim, held trigger, recoil, field of view and which guns are on screen.
+  - **New scenarios:**
+    - every gun fired in turn, with clicks, held triggers, aiming down sights, empty magazines, reloads and a switch tried mid-reload;
+    - ranks bought at the pistol bench and the SMG, shotgun and Bushmaster racks, then the dotted pistol, twin Ravens, shotgun and red-dot Bushmaster fired, and a restock at the ammunition crate;
+    - grenades thrown from the count, infinite ones with their cooldown, and one thrown against a wall.
+  - **The result:** main and this version produce byte-identical traces.
+- **A range with no mansion:** `tests/weapon-runtime.mjs` drives the runtime with its own state, target and stubs. It checks:
+  - drawing only owned guns;
+  - the pistol's damage, and headshot, Deadeye and double-damage multipliers;
+  - every shotgun pellet;
+  - semi-auto against held fire;
+  - reloading on empty, and Quick Hands;
+  - ranks for essence only, and the M4's 40-round magazine;
+  - detonating rounds;
+  - counted and infinite grenades;
+  - every power-up.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Load-time check:** 14 load pairs suggested v197 was 0.8 s slower, so I timed the phases. Fetching the modules and building the world take the same time in both builds; all the variation is in shader compiling, which is identical work.
+  - **The only measurable change:** one more file and 4 KB more source.
+  - **New tool:** `scripts/load-phases.mjs` times the three load phases for any build.
+
 ## Shared combat: hits, kills, blasts and drops (version 196)
 
 This is Dead Tide step 1, slice 3. Hurting and killing enemies, explosions, and the drops they leave now live in a shared module. Nothing plays differently.

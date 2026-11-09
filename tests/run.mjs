@@ -361,3 +361,6 @@ await verifyEnemySpawn(qa);
 
 const {verifyEnemyCombat}=await import('./enemy-combat.mjs');
 await verifyEnemyCombat(qa);
+
+const {verifyWeaponRuntime}=await import('./weapon-runtime.mjs');
+await verifyWeaponRuntime(qa);

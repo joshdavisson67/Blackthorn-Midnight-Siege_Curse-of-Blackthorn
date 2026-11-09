@@ -15,7 +15,7 @@
 let seed=0x5eed1;
 Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 let clock=1000;performance.now=()=>clock;Date.now=()=>1.7e12+clock;
-const {qa,frames}=await import('../tests/harness.mjs');
+const {qa,frames,gameCanvas,listeners}=await import('../tests/harness.mjs');
 const {UPPER_Y,OLIVIA_ATTIC}=await import('../.qa/vertical.mjs');
 const {EASTER_EGG}=await import('../.qa/olivia.mjs');
 const {BOSS}=await import('../.qa/blackthorn-boss.mjs');
@@ -28,7 +28,9 @@ const seen={};const note=(k,v=true)=>{if(v===true)seen[k]=(seen[k]||0)+1;};
 function snapshot(){const s=st();return {
   player:[s.player.x,s.player.y,s.player.z,s.health,s.armor,s.points,s.totalScore,s.kills,s.wave,s.weapon,s.inventory[s.weapon]?.ammo??null,s.inventory[s.weapon]?.reserve??null,s.grenades,s.doubleTime,s.grenadeTime,s.boneChips,s.effects.length].map(r),
   zombies:s.zombies.map(e=>[e.dead?1:0,e.brute?1:0,e.dog?1:0,e.feral?1:0,e.lurker?1:0,e.boss?1:0,e.warden?1:0,e.walkPos.x,e.walkPos.y,e.walkPos.z,e.hp,e.group.rotation.y,e.group.position.y,e.attackTime,e.stuck,e.crawling?1:0,e.crouch??0,e.warCry??0,e.bellaSwings??0,e.enraged?1:0,e.staggerLeft??0,e.death??0,e.group.visible?1:0].map(r)),
-  pickups:s.pickups.map(p=>[p.type,p.mesh.position.x,p.mesh.position.y,p.mesh.position.z,p.life,p.value??0].map(r))
+  pickups:s.pickups.map(p=>[p.type,p.mesh.position.x,p.mesh.position.y,p.mesh.position.z,p.life,p.value??0].map(r)),
+  arms:[s.shotTimer,s.reloadLeft,s.reloadDuration,s.grenadeCooldown,s.aiming?1:0,s.mouseDown?1:0,s.weaponRecoil.pitch,s.weaponRecoil.yaw,s.weaponRecoil.back,s.weaponRecoil.lift,s.camera.fov,s.smgDual.visible?1:0,
+    ...Object.values(s.inventory).flatMap(v=>[v.owned?1:0,v.ammo,v.reserve,v.weaponRank,v.forgeRank]),...Object.values(s.gunGroups).map(g=>g.visible?1:0)].map(r)
 };}
 // Everything an enemy is rolled with when it is made and placed.
 const birth=e=>[e.walkPos.x,e.walkPos.y,e.walkPos.z,e.group.position.y,e.hp,e.maxHp,e.speed,e.radius,e.bodyHeight,e.crouch,e.brute?1:0,e.dog?1:0,e.rareDog?1:0,e.feral?1:0,e.lurker?1:0,e.elite?1:0,e.crawling?1:0,
@@ -53,6 +55,33 @@ const actions={
   mixed:f=>f%20===0?()=>qa.shoot():f===300?()=>qa.setKeys(['KeyS']):f===480?()=>qa.setKeys([]):null,
   boss:f=>f===700?()=>{for(const w of st().zombies)if(w.warden&&!w.dead){note('warden shield hit');qa.damageEnemy(w,40,false,{part:'shield',direction:new T.Vector3(0,0,1),source:'glock'});}}:f%40===0?()=>qa.shoot():null,
   late:f=>f%15===0?()=>qa.shoot():null,
+  // Every gun in turn: clicks for the semi-autos, held triggers for the automatics,
+  // aiming down sights, empty magazines, reloads and a switch attempted mid-reload.
+  arsenal:f=>{const down=b=>()=>gameCanvas.events.mousedown({button:b}),up=b=>()=>listeners.mouseup({button:b});
+    const plan={1:()=>qa.selectWeapon('glock'),130:()=>{qa.selectWeapon('smg');down(0)();},250:up(0),260:()=>qa.selectWeapon('shotgun'),300:down(2),400:up(2),
+      420:()=>{qa.selectWeapon('bushmaster');down(2)();},540:up(2),560:()=>{qa.selectWeapon('rifle');down(2)();down(0)();},680:()=>{up(0)();up(2)();},700:()=>{qa.selectWeapon('lmg');down(0)();},830:up(0),
+      840:()=>qa.reload(),850:()=>qa.selectWeapon('glock'),900:()=>qa.selectWeapon('smg'),905:()=>qa.reload()};
+    if(plan[f])return plan[f];
+    if((f<120||(f>260&&f<410)||(f>420&&f<550))&&f%20===0)return down(0);
+    if((f<120||(f>260&&f<410)||(f>420&&f<550))&&f%20===4)return up(0);
+    return null;},
+  // Weapon ranks bought at the bench and racks, then fired: the pistol's dot, the twin
+  // Ravens, the shotgun and the Bushmaster's red dot; and a restock at the ammo crate.
+  upgrades:f=>{if(f===1)return ()=>{qa.setPoints(1e6);for(let i=0;i<5;i++){at('glock');qa.interact();}};
+    if(f===40)return ()=>{st().inventory.smg.owned=true;for(let i=0;i<5;i++){at('smg');qa.interact();}};
+    if(f===80)return ()=>{st().inventory.shotgun.owned=true;for(let i=0;i<4;i++){at('shotgun');qa.interact();}};
+    if(f===120)return ()=>{st().inventory.bushmaster.owned=true;for(let i=0;i<6;i++){at('bushmaster');qa.interact();}};
+    if(f===160)return ()=>{qa.setPlayer(0,24);qa.setAim(0,-.06);qa.selectWeapon('smg');gameCanvas.events.mousedown({button:0});};
+    if(f===300)return ()=>{listeners.mouseup({button:0});qa.selectWeapon('glock');};
+    if(f>300&&f<420&&f%15===0)return ()=>{gameCanvas.events.mousedown({button:0});listeners.mouseup({button:0});};
+    if(f===430)return ()=>{qa.selectWeapon('shotgun');};
+    if(f>430&&f<560&&f%30===0)return ()=>{gameCanvas.events.mousedown({button:0});listeners.mouseup({button:0});};
+    if(f===570)return ()=>{qa.selectWeapon('bushmaster');gameCanvas.events.mousedown({button:2});};
+    if(f>570&&f<700&&f%10===0)return ()=>{gameCanvas.events.mousedown({button:0});listeners.mouseup({button:0});};
+    if(f===710)return ()=>{listeners.mouseup({button:2});const crate=st().interactables.find(s=>s.type==='ammo'&&s.name==='AMMUNITION');qa.setPlayer(crate.x,crate.z+1.6);frames(1);qa.interact();qa.interact();};
+    return null;},
+  // Grenades: counted throws, infinite ones with their cooldown, and a throw into a wall.
+  throws:f=>f===1||f===40||f===80?()=>qa.grenade():f===200?()=>{qa.dropPickup(st().player.x,st().player.z,'grenades');}:f>200&&f<420&&f%12===0?()=>qa.grenade():f===500?()=>{qa.setGrenades(2);qa.setPlayer(6,12.6);qa.setAim(0,0);qa.grenade();}:null,
   // Thrown grenades into a ring of 20, a direct blast, and one close enough to hurt.
   grenades:f=>f===1||f===150||f===300?()=>qa.grenade():f===450?()=>qa.explode(new T.Vector3(3,.3,13)):f===520?()=>qa.explode(st().player.clone().add(new T.Vector3(1.5,.3,0))):f===600?()=>{qa.setAim(0,-.2);}:f>600&&f%10===0?()=>qa.shoot():null,
   // The M4 capstone's detonating rounds, then the LMG capstone's healing kills.
@@ -71,12 +100,16 @@ const watch={
   frenzy:()=>note('frenzy',st().frenzyWave===st().wave),
   surge:()=>note('surge event',st().worldEvents.active('surge')),
   finales:()=>{note('wave 5 finale',st().waveFiveFinale?.wave===5);note('stench finale',st().waveFiveFinale?.wave===10);},
+  arsenal:()=>{const s=st();note('aimed',s.aiming);note('reloading',s.reloadLeft>0);note('held trigger',s.mouseDown&&s.weapon!=='glock');note(s.weapon+' out',true);},
+  upgrades:()=>{const s=st();note('twin ravens',s.smgDual.visible);note('pistol rank 4',s.inventory.glock.weaponRank>=4);note('shotgun ranks',s.inventory.shotgun.weaponRank>0);note('bushmaster ranks',s.inventory.bushmaster.weaponRank>0);},
+  throws:()=>{note('infinite grenades',st().grenadeTime>0);note('grenade cooldown',st().grenadeCooldown>0);},
   grenades:()=>{note('lurker burst',st().zombies.some(e=>e.lurkerBurst));note('corpse cap',st().zombies.filter(e=>e.dead).length>=14);note('enraged',st().zombies.some(e=>e.enraged));note('drops on the ground',st().pickups.length>0);note('blast hurt the player',st().health<1e6);},
   ranks:()=>{note('lurker burst (ranks)',st().zombies.some(e=>e.lurkerBurst));note('healed by a kill',st().health>40&&st().weapon==='lmg');note('crawlers',st().zombies.some(e=>e.crawling&&!e.dead));},
   pickups:()=>{note('double damage',st().doubleTime>0);note('infinite grenades',st().grenadeTime>0);note('bone chip collected',st().boneChips>0);note('essence collected',st().points>0&&st().points<1e6);},
   bellakills:()=>{note('bone chips dropped',st().pickups.some(p=>p.type==='bone'));note('bella kills',st().kills>0);note('chips gathered',st().boneChips>0);},
   boss:()=>{note('boss active',st().boss.stage==='active');note('war cry',st().zombies.some(e=>e.warCry>0));note('player hurt',st().health<1e6);},
 };
+const at=type=>{const list=st().interactables.filter(s=>s.type===type),s=list.find(s=>!(s.y>1))||list[0];qa.setPlayer(s.x+Math.sin(s.rotation||0)*1.6,s.z+Math.cos(s.rotation||0)*1.6,s.y||0);frames(1);};
 const ring=(n,cx,cz,rad,y=0)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2;qa.makeZombie(cx+Math.sin(a)*rad,cz+Math.cos(a)*rad,i%5===3,i%7===5,false,y,i%6===4);}};
 const trace={
   brawl:run('brawl',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,20);qa.setAim(0,-.08);
@@ -127,6 +160,10 @@ const trace={
   bellakills:run('bellakills',()=>{qa.startWave();qa.holdSpawns();const b=st().bella;qa.setPlayer(b.station.x,b.station.z+1.5,UPPER_Y);qa.setPoints(1e6);qa.interact();
     frames(240);qa.setPlayer(0,24);b.pos.set(0,0,20);frames(2);qa.setHealth(1e6);
     for(const [x,z] of [[2,17],[-2,17],[4,15],[-4,15],[0,14],[3,12],[-3,12],[1,10]]){const e=qa.makeZombie(x,z);e.hp=e.maxHp=30;}},1500,50),
+  arsenal:run('arsenal',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,24);qa.setAim(0,-.06);for(const k in st().inventory)st().inventory[k].owned=true;
+    for(let i=0;i<10;i++){const a=(i/10-.5)*1.2,e=qa.makeZombie(Math.sin(a)*9,24-Math.cos(a)*9,i%3===0);e.hp=e.maxHp=5e3;e.speed=.3;}},1000,25),
+  upgrades:run('upgrades',()=>{qa.holdSpawns();qa.setHealth(1e6);for(let i=0;i<8;i++){const e=qa.makeZombie(-4+i,15);e.hp=e.maxHp=4e3;e.speed=.2;}},760,20),
+  throws:run('throws',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setGrenades(3);qa.setPlayer(0,24);qa.setAim(0,-.25);ring(12,0,14,3);},700,25),
 };
 process.stderr.write('golden-trace coverage: '+JSON.stringify(seen)+'\n');
 process.stdout.write(JSON.stringify(trace)+'\n');
