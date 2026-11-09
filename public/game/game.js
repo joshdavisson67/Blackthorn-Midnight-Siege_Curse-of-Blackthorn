@@ -4,10 +4,10 @@ import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curs
 import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=196';
-import {createChangelog} from './changelog.mjs?v=196';
+import {createLeaderboard} from './leaderboard.mjs?v=197';
+import {createChangelog} from './changelog.mjs?v=197';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
-import {COMBAT,createWeaponRecoil,staggerLimits,createCombatHud} from './combat-feedback.mjs?v=184';
+import {createWeaponRecoil,staggerLimits,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
 import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnMap} from './grounds.mjs?v=165';
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
@@ -25,12 +25,12 @@ import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 import {createStationBuilder} from './station-models.mjs?v=190';
-import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=187';
+import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=187';
 import {drawMinimap} from './minimap.mjs?v=179';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual,rankAuto,rankRecoil,rankDetonate,rankKillHeal} from './weapon-ranks.mjs?v=191';
+import {nextRank,rankInfo,rankKillHeal} from './weapon-ranks.mjs?v=191';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
-import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
+import {createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
 import {POWERUPS,powerupIcon,createPowerupAssets} from './powerups.mjs?v=190';
 import {createEnemyAssets} from './enemy-assets.mjs?v=183';
 import {createCombatLights} from './combat-lights.mjs?v=190';
@@ -61,8 +61,8 @@ import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-
 import {createEnemyAI} from './enemy-ai.mjs?v=194';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=195';
 import {createCombat} from './enemy-combat.mjs?v=196';
+import {createWeaponRuntime} from './weapon-runtime.mjs?v=197';
 import {resetBuild} from './zombie-build.mjs?v=177';
-import {INJURY} from './zombie-injuries.mjs?v=178';
 import {LURKER} from './lurker.mjs?v=179';
 import {clearFace} from './zombie-faces.mjs?v=183';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
@@ -397,12 +397,23 @@ function notify(s,duration=2.6){$('toast').textContent=s;toastTime=duration;}
 function announce(title,sub=''){ $('banner').innerHTML=title+(sub?`<small>${sub}</small>`:'');bannerTime=3.2;}
 function addPoints(n){const earned=curseReward(n,curse.rank);points+=earned;totalScore+=earned;return earned;}
 function updateForgeStations(){for(const s of forgeStations)if(s.forgeRank!==inventory[weapon].forgeRank)s.setForgeRank(inventory[weapon].forgeRank);}
-// Weapon ranks set the base magazine (v159) and a reserve that grows with it
-// (v160); the Soul Forge scales both on top.
-function ammoCapacity(k=weapon){const inv=inventory[k],w=weapons[k],multiplier=forgeBonuses(inv.forgeRank).ammoMultiplier;return {mag:Math.ceil(rankMagazine(k,inv.weaponRank,w.mag)*multiplier)*(rankDual(k,inv.weaponRank)?2:1),reserve:Math.ceil(rankReserve(k,inv.weaponRank,w.mag,w.reserve)*multiplier)};}
-function freshInventory(){return Object.fromEntries(Object.entries(weapons).map(([k,v])=>[k,{ammo:v.mag,reserve:v.reserve,owned:k==='glock',forgeRank:0,weaponRank:0}]));}
+// v197 (Dead Tide step 1): firing, reloading, ammunition, weapon ranks, the gun on
+// screen, grenades and power-ups live in weapon-runtime.mjs. The run's values stay
+// here for now and are handed over as `state`.
+const {ammoCapacity,freshInventory,restockTarget,restockWeapon,ammoFull,refillAmmo,shoot,reload,finishReload,holdToFire,buyWeaponRank,grenade,grenadeCue,releaseGrenade,grantPowerup,
+  dualOn,fireDualSide,selectWeapon,applyWeaponRanks,syncDualSmg,syncBushmasterSight,viewGun,bushDotOn,zoomOf,aimFovOf,aimHeight}=createWeaponRuntime({
+  level:{colliders,isBlocked,solidMeshes},
+  view:{camera,gunGroups,bushDot,smgDual,dualGuns,dualMuzzle,flash,reticleHud,weaponRecoil,grenadeThrow,grenadeAssets},
+  run:{scene:world,zombies,effects,markPool,rand,tone,noise,notify,rumble:padRumble,suppressedReport,updateHud,updateReloadHud,get shotRumble(){return SHOT_RUMBLE;},get raycaster(){return raycaster;}},
+  state:{get inventory(){return inventory;},get weapon(){return weapon;},set weapon(v){weapon=v;},get mode(){return mode;},get aiming(){return aiming;},get lookYaw(){return lookYaw;},get lookPitch(){return lookPitch;},get perkOwned(){return perkOwned;},
+    get points(){return points;},set points(v){points=v;},get reloadLeft(){return reloadLeft;},set reloadLeft(v){reloadLeft=v;},get reloadDuration(){return reloadDuration;},set reloadDuration(v){reloadDuration=v;},
+    get shotTimer(){return shotTimer;},set shotTimer(v){shotTimer=v;},get grenades(){return grenades;},set grenades(v){grenades=v;},get grenadeTime(){return grenadeTime;},set grenadeTime(v){grenadeTime=v;},
+    get grenadeCooldown(){return grenadeCooldown;},set grenadeCooldown(v){grenadeCooldown=v;},get doubleTime(){return doubleTime;},set doubleTime(v){doubleTime=v;},
+    get flashTime(){return flashTime;},set flashTime(v){flashTime=v;},get recoil(){return recoil;},set recoil(v){recoil=v;},get dualSide(){return dualSide;},set dualSide(v){dualSide=v;},
+    get weaponViewFov(){return weaponViewFov;},set weaponViewFov(v){weaponViewFov=v;},get shotId(){return shotId;},set shotId(v){shotId=v;}},
+  combat:{get damageEnemy(){return damageEnemy;},get bloodBurst(){return bloodBurst;},get detonateRound(){return detonateRound;}}
+});
 inventory=freshInventory();let doubleTime=0,grenadeTime=0,grenadeCooldown=0;
-function selectWeapon(k){if(!inventory[k].owned||reloadLeft>0)return;if(weapon!==k){weaponRecoil.reset();camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();}weapon=k;reticleHud.select(k);recoil=.06;flash.position.copy(viewGun(k).userData.muzzle);flash.scale.setScalar(k==='glock'?.58:k==='smg'?.32:1);flash.position.z-=.11*flash.scale.x;for(const t in gunGroups)gunGroups[t].visible=t===k;syncDualSmg();syncBushmasterSight();updateHud();}
 selectWeapon('glock');
 const crowd=createCrowd(zombies,player);
 const playerCanOccupy=(x,z,y)=>crowd.canOccupy(x,z,y,PLAYER_RADIUS,1.8,null,player);
@@ -494,94 +505,17 @@ function beginWaveFiveFinale(){
 }
 function unlockShed(){if(!shed.unlock())return false;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('A DOOR HAS BLOWN OPEN SOMEWHERE…',5);noise(.45,.16,350);tone(65,.65,.09,'sawtooth',28);return true;}
 function startWave(){wave++;frenzyWave=0;waveFiveFinale=null;upperSpawnSlot=wave>10?Math.floor(rng()*4):0;if(wave>=SHED.unlockWave)unlockShed();if(wave>MAUSOLEUM.unlockAfterWave)unlockMausoleum();if(wave===CELLAR.unlockWave){setCellarOpen(true);cellar.gate.disabled=true;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('NORTH GROUNDS · THE STORM CELLAR IS OPEN');}const cfg=curseWaveConfig(wave,curse.rank);toSpawn=cfg.count;spawned=0;spawnTimer=.7;waveDelay=0;announce(`WAVE ${String(wave).padStart(2,'0')}`,wave===10?'STORM CELLAR UNSEALED · NORTH GROUNDS':wave===11?'THE DEAD NOW RISE ON THE SECOND FLOOR':wave===1?'THE ESTATE HAS AWAKENED':wave===6?'ASHFANG HOUNDS JOIN THE HUNT':wave===7?'FERAL STALKERS JOIN THE HUNT':wave%5===0?'THE BRUTES HAVE RISEN':'THE DEAD GROW RESTLESS');tone(130,1,.1,'sawtooth',45);worldEvents.beginWave(wave);}
-const raycaster=new T.Raycaster();const dir=new T.Vector3();let shotId=0;
-function shoot(){if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||shotTimer>0)return;const inv=inventory[weapon],w=weapons[weapon];if(inv.ammo<=0){shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;shotTimer=w.rate/rankFireRate(weapon,inv.weaponRank);{const r=SHOT_RUMBLE[weapon];if(r)padRumble(...r);}const id=++shotId;if(weapon==='glock')gunGroups.glock.userData.slideTime=.12;if(dualOn())fireDualSide();flashTime=.045;if(weapon==='smg')suppressedReport();else{noise(weapon==='shotgun'?.22:.12,.18,weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);}const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
-camera.rotation.set(clamp(lookPitch+weaponRecoil.pitch,-1.3,1.3),lookYaw+weaponRecoil.yaw,0);camera.updateMatrixWorld();
-for(let i=0;i<w.pellets;i++){const spread=aiming?(w.aimSpread??w.spread*.28):w.spread;dir.set(rand(-spread,spread),rand(-spread,spread),-1).normalize().applyQuaternion(camera.quaternion);raycaster.set(camera.position,dir);const hits=raycaster.intersectObjects(hitObjects,true);if(hits.length){const h=hits[0],e=h.object.userData.enemy;if(e&&!e.dead){const head=h.object.userData.head;const damage=w.damage*(perkOwned.has('eye')?1.5:1)*forgeBonuses(inv.forgeRank).damageMultiplier*rankDamage(weapon,inv.weaponRank)*(head?2.6*(e.crushed?INJURY.crushedHeadshot:1):1)*(doubleTime>0?2:1);damageEnemy(e,damage,head,{direction:dir.clone(),point:h.point.clone(),part:h.object.userData.part,side:h.object.userData.side,limb:h.object.userData.limb,force:COMBAT[weapon].force,source:weapon,shotId:id});bloodBurst(h.point,3);}else if(Math.random()<.5){const effect=markPool.acquire();if(effect){effect.mesh.position.copy(h.point);effect.mesh.scale.set(.025,.025,.025);effect.vel.set(0,0,0);effect.life=effect.max=6;effects.push(effect);}}const detonate=rankDetonate(weapon,inv.weaponRank);if(detonate)detonateRound(h.point.clone().addScaledVector(dir,-.08),detonate,weapon);}}
-weaponRecoil.fire(weapon,aiming,rankRecoil(weapon,inv.weaponRank));if(inv.ammo===0)notify('MAGAZINE EMPTY · PRESS R');updateHud();}
-function reload(){const inv=inventory[weapon],w=weapons[weapon];if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||inv.ammo>=ammoCapacity().mag||inv.reserve<=0)return;reloadDuration=w.reload*forgeBonuses(inv.forgeRank).reloadMultiplier*rankReloadTime(weapon,inv.weaponRank)*(perkOwned.has('quick')?.5:1);reloadLeft=reloadDuration;updateReloadHud();tone(330,.12,.06,'square');}
-function finishReload(){const inv=inventory[weapon],needed=Math.max(0,ammoCapacity().mag-inv.ammo),n=Math.min(needed,inv.reserve);inv.ammo+=n;inv.reserve-=n;tone(500,.1,.05,'square');}
+const raycaster=new T.Raycaster();let shotId=0;
 
-// Include the missing magazine rounds in reserve, so a normal reload leaves
-// both compartments full. Repeated refills replace this allowance, not stack it.
-function restockTarget(k){const inv=inventory[k],capacity=ammoCapacity(k);return capacity.reserve+Math.max(0,capacity.mag-inv.ammo);}
-function restockWeapon(k){inventory[k].reserve=restockTarget(k);}
-function ammoFull(k){return inventory[k].reserve>=restockTarget(k);}
 // ---- Weapon upgrade ranks (v159) ----------------------------------------
 // The pistol bench sells the Glock's ranks in order, then restocks its ammo.
-function aimHeight(k){const u=viewGun(k).userData;return u.pistolDot&&rankHasDot(k,inventory[k].weaponRank)?u.pistolDot.height:u.sightHeight;}
-function applyWeaponRanks(){setPistolDot(gunGroups.glock,rankHasDot('glock',inventory.glock.weaponRank));if(gunGroups[weapon])gunGroups[weapon].visible=true;syncDualSmg();syncBushmasterSight();}
 // The bench's price always reflects the next rank (or the 250 restock once all are earned).
 Object.defineProperty(pistolBench,'price',{get(){const next=nextRank('glock',inventory.glock.weaponRank);return next?next.price:250;}});
-const RANK_LABEL={glock:'PISTOL',smg:'RAVEN',shotgun:'M12',bushmaster:'BUSHMASTER',rifle:'M4',lmg:'WARDEN'};
 // Weapon racks that sell their weapon's ranks once it is owned (v161 SMG, v164 shotgun, v165 Bushmaster,
 // v191 the M4 at the tool shed and the Warden LMG at its cellar exhibit). Values are the equip keys.
 const RANK_RACKS={smg:3,shotgun:2,bushmaster:5,rifle:6,lmg:4};
-// The Bushmaster's red dot (Rank I) swaps its view model and drops the 10x zoom.
-function bushDotOn(){return rankHasDot('bushmaster',inventory.bushmaster?.weaponRank??0);}
-function viewGun(k){return k==='bushmaster'&&bushDotOn()?bushDot:gunGroups[k];}
-function zoomOf(k){return k==='bushmaster'&&bushDotOn()?0:weapons[k].zoom||0;}
-function aimFovOf(k){return k==='bushmaster'&&bushDotOn()?weaponAimFov('rifle'):weaponAimFov(k);}
-function syncBushmasterSight(){const held=weapon==='bushmaster',dot=bushDotOn();gunGroups.bushmaster.visible=held&&!dot;bushDot.visible=held&&dot;}const ranksAtRack=s=>s.type in RANK_RACKS&&inventory[s.type].owned;
-// Semi-auto weapons fire once per pull until a full-auto rank (v164).
-function holdToFire(){return !weapons[weapon].semiAuto||rankAuto(weapon,inventory[weapon].weaponRank);}
+const ranksAtRack=s=>s.type in RANK_RACKS&&inventory[s.type].owned;
 function buyPistolRank(){return buyWeaponRank('glock');}
-function buyWeaponRank(k){
-  const inv=inventory[k],next=nextRank(k,inv.weaponRank),before=ammoCapacity(k);if(!next)return false;
-  if(points<next.price){notify(`NEED ${next.price-points} MORE ESSENCE`);tone(110,.2,.03,'square');return false;}
-  points-=next.price;inv.weaponRank=next.rank;applyWeaponRanks();
-  // Bigger magazines (and the twin guns' second magazine) arrive loaded. Magazine
-  // ranks add the reserve rounds they need; the twin guns add none (v161).
-  if(next.mag||next.dual){const after=ammoCapacity(k);inv.ammo=after.mag;inv.reserve+=Math.max(0,after.reserve-before.reserve);}
-  reloadLeft=0;selectWeapon(k);
-  notify(`${RANK_LABEL[k]} RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect.toUpperCase()}`,4);
-  tone(520,.18,.08,'triangle',1040);tone(780,.3,.05,'triangle',1560);
-  updateHud();return true;
-}
-// Twin Ravens: swap the held MP5 for the pair while the SMG is out.
-function dualOn(){return weapon==='smg'&&rankDual('smg',inventory.smg.weaponRank);}
-function syncDualSmg(){const on=dualOn();smgDual.visible=on;if(on)gunGroups.smg.visible=false;}
-function fireDualSide(){
-  dualSide^=1;const d=dualGuns[dualSide];d.kick=1;
-  // userData.muzzle already carries the gun's scale; add only its turn and offset.
-  dualMuzzle.copy(d.g.userData.muzzle).applyQuaternion(d.g.quaternion).add(d.g.position);
-  flash.position.copy(dualMuzzle);flash.position.z-=.11*flash.scale.x;
-}
-function refillAmmo(){
-  for(const k in inventory)if(inventory[k].owned)restockWeapon(k);
-  grenades=Math.min(4,grenades+1);
-}
-function grenade(){
-  if(mode!=='playing'||grenadeThrow.active||(grenades<=0&&grenadeTime<=0))return false;
-  const unlimited=grenadeTime>0;
-  if(unlimited&&grenadeCooldown>0)return false;
-  if(!grenadeThrow.begin())return false;
-  // Infinite throws recover for half a second after the arm retracts.
-  grenadeCooldown=unlimited?GRENADE_THROW.duration+POWERUPS.grenades.cooldown:0;
-  if(!unlimited)grenades--;flashTime=0;updateHud();tone(650,.08,.035,'square');return true;
-}
-const grenadeLaunchRay=new T.Raycaster();
-// v186: the pin's click as the left hand yanks it.
-function grenadeCue(cue){if(cue==='pin'){tone(1900,.035,.022,'square',1200);tone(3100,.03,.012,'triangle',2400);}}
-function releaseGrenade(position,rotation,firstStep){
-  // Sweep from the eye to the releasing hand so nearby walls cannot be bypassed.
-  const offset=position.clone().sub(camera.position),distance=offset.length();grenadeLaunchRay.set(camera.position,offset.normalize());grenadeLaunchRay.near=0;grenadeLaunchRay.far=distance+.10;
-  const hit=grenadeLaunchRay.intersectObjects(solidMeshes,true)[0];if(hit)position.copy(camera.position).addScaledVector(offset,Math.max(0,Math.min(distance,hit.distance-.11)));
-  const delta=position.clone().sub(camera.position),steps=Math.max(1,Math.ceil(delta.length()/.025));
-  for(let i=0;i<=steps;i++){
-    const p=camera.position.clone().addScaledVector(delta,i/steps);
-    if(isBlocked(p.x,p.z,.10,colliders,undefined,p.y-.10,.20)){position.copy(camera.position).addScaledVector(delta,Math.max(0,i-1)/steps);break;}
-  }
-  const g=grenadeAssets.create();g.userData.lightingTransient=true;g.position.copy(position);g.quaternion.copy(rotation);world.add(g);
-  const velocity=new T.Vector3(0,.23,-1).applyQuaternion(camera.quaternion).normalize().multiplyScalar(11);
-  effects.push({mesh:g,vel:velocity,life:1.65,max:1.65,type:'grenade',firstStep});noise(.09,.035,1800);
-  // v186: the pin was pulled in the hand; the spoon flips off as it leaves.
-  g.getObjectByName('Pin and ring').visible=false;const lever=g.getObjectByName('Spoon');g.updateMatrixWorld(true);
-  const spoon=grenadeAssets.createSpoon();lever.matrixWorld.decompose(spoon.position,spoon.quaternion,spoon.scale);lever.visible=false;spoon.userData.lightingTransient=true;world.add(spoon);
-  const side=new T.Vector3(1,0,0).applyQuaternion(camera.quaternion);
-  effects.push({mesh:spoon,vel:velocity.clone().multiplyScalar(.35).addScaledVector(side,1.6).add(new T.Vector3(0,2.6,0)),life:2.4,max:2.4,type:'spoon',spin:new T.Vector3(17,9,4),rest:.004});
-  tone(2600,.05,.012,'triangle',3400);
-}
 function hurtPlayer(amount,source){padRumble(Math.min(1,.35+amount/60),.5,amount>=30?260:170);const absorbed=Math.min(armor,amount);armor-=absorbed;health-=amount-absorbed;lastHurt=runTime;damageFlash=absorbed===amount?.28:.75;combatHud.hurt(player,source,lookYaw+weaponRecoil.yaw,absorbed===amount);if(health<=0)gameOver();}
 function unlockMausoleum(){if(!graveyard.unlock())return false;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('EAST CEMETERY · THE MAUSOLEUM IS UNSEALED');tone(160,1,.09,'sine',70);return true;}
 // v190: speak to the grave in the sarcophagus to wake Sir Blackthorn. It costs
@@ -1253,7 +1187,6 @@ const {updateEnemies,hasClearPath}=createEnemyAI({
 function bellaBite(enemy,damage,direction){if(!enemy.boss&&!enemy.elite)enemy.bellaAggro=true;damageEnemy(enemy,damage,false,{direction:direction.clone(),part:enemy.dog?'head':'leg',force:.45,source:'Bella'});tone(460,.08,.018,'triangle',620);}
 const effectNext=new T.Vector3();
 function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'||e.type==='spoon'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+(e.rest??.12);if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;if(e.spin)e.spin.multiplyScalar(.5);}if(e.spin){e.mesh.rotation.x+=step*e.spin.x;e.mesh.rotation.y+=step*e.spin.y;e.mesh.rotation.z+=step*e.spin.z;}else e.mesh.rotation.x+=step*4;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else world.remove(e.mesh);effects.splice(i,1);}}}
-function grantPowerup(type){if(type==='ammo'){refillAmmo();notify('MAX AMMO · RESERVES RESTOCKED');}else if(type==='double'){doubleTime=POWERUPS.double.duration;notify('×2 · DOUBLE DAMAGE FOR 20s');}else if(type==='grenades'){grenadeTime=POWERUPS.grenades.duration;notify('INFINITE GRENADES · 12s · PRESS G');}}
 const radar=$('radar'),rx=radar.getContext('2d');// v162: north-up minimap; see minimap.mjs.
 // v163: the canvas backing store follows the map's on-screen size (it grows
 // with the screen on PC), so the bigger map stays sharp.
