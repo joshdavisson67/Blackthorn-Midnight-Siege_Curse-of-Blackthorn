@@ -49,7 +49,8 @@ if(mansion)appendFileSync(join(stage,'game.js'),`
    pause(){hasMouseLock=()=>true;resetRun({capture:false});spawnTimer=Infinity;toSpawn=0;for(const z of zombies)z.group.visible=false;mode='paused';},
    view(eye,target){const dx=target[0]-eye[0],dy=target[1]-eye[1],dz=target[2]-eye[2];player.set(eye[0],eye[1]>3.5?4.3:0,eye[2]);window.__perfPhoto={x:eye[0],y:eye[1],z:eye[2],yaw:Math.atan2(-dx,-dz),pitch:Math.atan2(dy,Math.hypot(dx,dz))};},
    fight(n){window.__perfPhoto=null;hasMouseLock=()=>true;resetRun({capture:false});mode='playing';spawnTimer=Infinity;toSpawn=0;
-     player.set(0,0,22);feetY=0;lookYaw=0;lookPitch=-.05;health=maxHealth=1e9;
+     // v198 moved the run's values into runState; older builds keep them as variables.
+     player.set(0,0,22);if(typeof runState==='object'){runState.feetY=0;runState.health=runState.maxHealth=1e9;}else{feetY=0;health=maxHealth=1e9;}lookYaw=0;lookPitch=-.05;
      const kinds=['walker','walker','walker','brute','walker','feral','walker','dog','walker','walker','ash','walker','feral','walker','brute','walker'];
      for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=9+(i%4)*1.6,k=kinds[i%kinds.length];
        makeZombie(Math.sin(a)*r,22+Math.cos(a)*r*.55,k==='brute',k==='dog'||k==='ash',k==='ash',0,k==='feral');}
