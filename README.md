@@ -27,6 +27,60 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## The play session, shared (version 200)
+
+This is Dead Tide step 1, slice 7. Capturing the mouse, pausing, the settings page, the are-you-sure prompts and the play controls now live in a shared module. Nothing plays differently.
+
+- **The session's values:** ten values that `game.js` kept as separate variables now live in one object, `session`, made by `createSession()` in `public/game/controls.mjs`. They are:
+  - the mode (menu, capturing, playing, paused, curse or dead);
+  - whether the mouse is captured;
+  - the trigger and aim;
+  - the two look angles;
+  - the four mouse-capture flags.
+
+  The same scope-aware rename as v198 rewrote the 150 places that used them. The HUD now takes `session` directly.
+- **What moved:** `createControls({page,session,state,act,ui,hooks})` now holds:
+  - **Capturing the mouse:** waiting for the browser, playing once it is locked, explaining a refused lock and offering a retry, and touch and controller play that needs no lock.
+  - **Pausing and resuming:** Escape, a hidden tab, lost focus and losing the lock all pause, with the mode's own summary on the pause screen.
+  - **The pause menu's pages:** the settings page (from the pause menu or the title screen) and the are-you-sure prompts, which act at once after a death.
+  - **The play controls:**
+    - mouse look by sensitivity and sight zoom;
+    - one shot per press, and aiming;
+    - every play key;
+    - jumping from the ground;
+    - the touch and controller action sets, including cycling through owned weapons.
+
+  The code is unchanged.
+- **What stays with the mansion:**
+  - its own menus and overlays: the field guide, estate map, curse choice, changelog and leaderboard;
+  - which of them a key or button reaches first, before the play keys get their turn;
+  - its pause summary (wave, kills, essence) and settings heading;
+  - what its prompts do;
+  - returning to the title screen and game over;
+  - the controller's Menu and Back buttons.
+
+  Every browser event is still registered by `game.js`, at the same places in the same order; the handlers come from the module.
+- **How a mode drives it:**
+
+  | Part | Field | What the mode supplies |
+  |---|---|---|
+  | `page` | `$`, `canvas`, `keys` | The page, the game canvas and the held-key set |
+  | `session` / `state` | `session`, `runState` | The session's and the run's values |
+  | `act` | `shoot`, `reload`, `grenade`, `selectWeapon`, `zoomOf`, `interact`, `toggleFlashlight`, `openEstateMap`, `initAudio`, `fitTouchStick` | What the controls do |
+  | `ui` | `touchControls`, `controlScheme` | The touch controls and the active control scheme |
+  | `hooks` | `onPause`, `onPauseMenu`, `pauseSummary`, `settingsEyebrow`, `settingsFromMenu`, `confirm`, `lookBlocked` | The mode's own pause wording, prompts, and when look is blocked |
+- **The perf probe:** it now reports the mouse as locked through the browser's own property instead of replacing `hasMouseLock`, so it still works on every build.
+- **Proof that nothing changed:** the golden trace now has 22 scenarios. It also records the mode, mouse capture, trigger, aim and look.
+  - **New scenario:** mouse look, every play key, Escape, settings, both prompts, Resume and mouse capture, a hidden tab, lost focus, the main menu and back, a lost lock, and the touch and standard schemes.
+  - **The result:** main and this version produce byte-identical traces, every page fingerprint included.
+- **A bare page:** `tests/controls.mjs` runs the session on a page of its own with play actions of its own. It checks:
+  - capture, and a refused lock;
+  - look, fire, aim and every key;
+  - jumping;
+  - each way of pausing;
+  - settings and the prompts;
+  - touch and controller play.
+
 ## Shared HUD (version 199)
 
 This is Dead Tide step 1, slice 6. The HUD's shared readouts now live in a shared module. Nothing looks or plays differently.

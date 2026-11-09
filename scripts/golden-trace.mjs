@@ -15,7 +15,7 @@
 let seed=0x5eed1;
 Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 let clock=1000;performance.now=()=>clock;Date.now=()=>1.7e12+clock;
-const {qa,frames,gameCanvas,listeners,elements}=await import('../tests/harness.mjs');
+const {qa,frames,gameCanvas,listeners,elements,windowEvents,document:page,acquireMouse}=await import('../tests/harness.mjs');
 const {UPPER_Y,OLIVIA_ATTIC,STAIR}=await import('../.qa/vertical.mjs');
 const {EASTER_EGG}=await import('../.qa/olivia.mjs');
 const {BOSS}=await import('../.qa/blackthorn-boss.mjs');
@@ -36,6 +36,7 @@ function snapshot(){const s=st();return {
   dom:domState(),
   pickups:s.pickups.map(p=>[p.type,p.mesh.position.x,p.mesh.position.y,p.mesh.position.z,p.life,p.value??0].map(r)),
   run:[s.health,s.maxHealth,s.armor,s.armorMax,s.armorTier,s.runTime,s.lastHurt,s.jumpV,s.feetY,s.grounded?1:0,s.camera.position.x,s.camera.position.y,s.camera.position.z,s.camera.rotation.x,s.camera.rotation.y,[...s.perkOwned].join('+')].map(r),
+  session:[s.mode,s.pointer?1:0,s.mouseDown?1:0,s.aiming?1:0,s.lookYaw,s.lookPitch,page.pointerLockElement?1:0,s.keys?.size??0].map(r),
   arms:[s.shotTimer,s.reloadLeft,s.reloadDuration,s.grenadeCooldown,s.aiming?1:0,s.mouseDown?1:0,s.weaponRecoil.pitch,s.weaponRecoil.yaw,s.weaponRecoil.back,s.weaponRecoil.lift,s.camera.fov,s.smgDual.visible?1:0,
     ...Object.values(s.inventory).flatMap(v=>[v.owned?1:0,v.ammo,v.reserve,v.weaponRank,v.forgeRank]),...Object.values(s.gunGroups).map(g=>g.visible?1:0)].map(r)
 };}
@@ -62,6 +63,21 @@ const actions={
   mixed:f=>f%20===0?()=>qa.shoot():f===300?()=>qa.setKeys(['KeyS']):f===480?()=>qa.setKeys([]):null,
   boss:f=>f===700?()=>{for(const w of st().zombies)if(w.warden&&!w.dead){note('warden shield hit');qa.damageEnemy(w,40,false,{part:'shield',direction:new T.Vector3(0,0,1),source:'glock'});}}:f%40===0?()=>qa.shoot():null,
   late:f=>f%15===0?()=>qa.shoot():null,
+  // The play session: mouse look, keys for every action, Escape to pause, Resume (mouse
+  // capture), settings, both confirm prompts, a hidden tab, a lost focus, the main menu
+  // and back in; then touch play and the controller's actions.
+  shell:f=>{const key=(code,more={})=>()=>listeners.keydown({code,key:code,preventDefault(){},repeat:false,target:{},...more}),up=code=>()=>listeners.keyup({code}),click=id=>()=>elements.get(id).onclick?.();
+    const plan={1:()=>{for(let i=0;i<20;i++)listeners.mousemove({movementX:7,movementY:-3});},20:()=>{for(let i=0;i<20;i++)listeners.mousemove({movementX:-4,movementY:5});},
+      30:key('KeyW'),60:up('KeyW'),61:key('Digit2'),62:key('Digit3'),63:key('Digit1'),64:()=>{st().inventory.glock.ammo=3;},65:key('KeyR'),66:key('KeyR',{repeat:true}),120:key('KeyF'),121:key('KeyF'),122:key('KeyG'),
+      200:key('Escape'),210:click('settingsPause'),215:key('Escape'),220:click('restart'),225:click('confirmNo'),230:click('resume'),235:acquireMouse,
+      300:()=>{page.hidden=true;listeners.visibilitychange?.();page.hidden=false;},310:click('resume'),315:acquireMouse,
+      400:()=>windowEvents.blur?.(),410:click('resume'),415:acquireMouse,
+      450:key('Escape'),460:click('mainMenuPause'),465:click('confirmYes'),480:()=>qa.start(),490:acquireMouse,
+      500:key('Escape'),510:click('restart'),515:click('confirmYes'),520:acquireMouse,
+      560:()=>{gameCanvas.events.mousedown({button:0,preventDefault(){}});gameCanvas.events.mousedown({button:2,preventDefault(){}});},600:()=>{listeners.mouseup({button:0});listeners.mouseup({button:2});},
+      620:()=>{page.exitPointerLock();},630:()=>{gameCanvas.events.mousedown({button:0,preventDefault(){}});},635:acquireMouse,
+      700:()=>{const s=st();s.controlScheme.choose?.('touch');},710:click('resume'),720:()=>{const t=st().touchControls;},800:()=>{st().controlScheme.choose?.('standard');}};
+    return plan[f]||null;},
   // Walking, sprinting, aimed strafing and jumping; the hall stairs up and down; health
   // coming back after a hit; Nightstride; and body armor that soaks up and regrows.
   moves:f=>{const key=code=>()=>listeners.keydown({code,key:code,preventDefault(){},repeat:false,target:{}});
@@ -118,6 +134,7 @@ const watch={
   frenzy:()=>note('frenzy',st().frenzyWave===st().wave),
   surge:()=>note('surge event',st().worldEvents.active('surge')),
   finales:()=>{note('wave 5 finale',st().waveFiveFinale?.wave===5);note('stench finale',st().waveFiveFinale?.wave===10);},
+  shell:()=>{const s=st();note('session '+s.mode,true);note('mouse locked',!!page.pointerLockElement);note('aiming (shell)',s.aiming);},
   moves:()=>{const s=st();note('airborne',!s.grounded);note('upstairs',s.player.y>4);note('on the hall stairs',s.player.y>.5&&s.player.y<4);note('health regrowing',s.health>40&&s.health<100);note('nightstride',s.perkOwned.has('stride'));note('armor tier 2+',s.armorTier>=2);note('armor regrowing',s.armorTier>=2&&s.armor>0&&s.armor<s.armorMax);},
   arsenal:()=>{const s=st();note('aimed',s.aiming);note('reloading',s.reloadLeft>0);note('held trigger',s.mouseDown&&s.weapon!=='glock');note(s.weapon+' out',true);},
   upgrades:()=>{const s=st();note('forged',Object.values(s.inventory).some(v=>v.forgeRank>0));note('twin ravens',s.smgDual.visible);note('pistol rank 4',s.inventory.glock.weaponRank>=4);note('shotgun ranks',s.inventory.shotgun.weaponRank>0);note('bushmaster ranks',s.inventory.bushmaster.weaponRank>0);},
@@ -184,6 +201,7 @@ const trace={
   upgrades:run('upgrades',()=>{qa.holdSpawns();qa.setHealth(1e6);for(let i=0;i<8;i++){const e=qa.makeZombie(-4+i,15);e.hp=e.maxHp=4e3;e.speed=.2;}},760,20),
   throws:run('throws',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setGrenades(3);qa.setPlayer(0,24);qa.setAim(0,-.25);ring(12,0,14,3);},700,25),
   moves:run('moves',()=>{qa.holdSpawns();qa.setHealth(70);qa.setPlayer(0,9);qa.setAim(0,0);},1200,10),
+  shell:run('shell',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,20);qa.setAim(0,0);for(const k of ['shotgun','smg'])st().inventory[k].owned=true;st().inventory.glock.weaponRank=0;},900,10),
 };
 process.stderr.write('golden-trace coverage: '+JSON.stringify(seen)+'\n');
 process.stdout.write(JSON.stringify(trace)+'\n');
