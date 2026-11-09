@@ -26,6 +26,10 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v198-load-phases.jsonl` | v197 (main) and v198 | Twenty balanced runs of `scripts/load-phases.mjs` |
 | `v198-frame-logic.jsonl` | v197 (main) and v198 | Twelve alternating pairs of `scripts/frame-logic.mjs` |
 | `v198-fights.jsonl` | v197 (main) and v198 | Four more 32-zombie fight samples, alternating |
+| `v198-siege-rerun.json` | v198 (main) | The mansion re-measured beside v199 |
+| `v199-siege.json` | v199 (step 1: shared HUD) | The mansion after moving the HUD's shared readouts into `hud.mjs` |
+| `v199-load-phases.jsonl` | v198 (main) and v199 | Twenty balanced runs of `scripts/load-phases.mjs` |
+| `v199-frame-logic.jsonl` | v198 (main) and v199 | Twelve balanced pairs of `scripts/frame-logic.mjs` |
 
 ## Step 1 (v194) against main
 
@@ -178,6 +182,32 @@ Both builds were measured in full, back to back. Loading was then timed phase by
 - **The one measurable change** is one more file and 5 KB more source.
 
 **Gameplay:** `scripts/golden-trace.mjs` (21 scenarios) produces byte-identical traces on main and v198.
+
+## Step 1, slice 6 (v199) against main
+
+Both builds were measured in full, back to back. Loading was timed phase by phase over 20 balanced runs, and the game's own per-frame work over 12 balanced pairs.
+
+| Mansion | v198 (main) | v199 |
+|---|---:|---:|
+| Files loaded before playable | 96 | 97 (`hud.mjs`) |
+| Bytes loaded before playable | 8,950 KB | 8,952 KB |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load / after the fight | 237.0 / 243.8 MB | 237.2 / 244.1 MB |
+| Draw calls and triangles in the six views and the fight | as in step 0 | identical |
+| Load: modules / world / shaders (20 balanced runs) | 0.35 / 11.85 / 38.93 s | 0.36 / 11.96 / 39.07 s |
+| Load: total | 51.14 s | 51.39 s (+0.26 s, standard error 0.60 s) |
+| 32-zombie fight: mean frame time (software rendering) | 3,328 ms | 3,278 ms |
+| The game's own work per frame, no rendering (12 pairs) | 2.33 ms fastest · 2.64 ms median | 2.18 ms fastest · 2.56 ms median |
+
+**Verdict:** no regression.
+
+- **Counts:** every rendering, shader and memory count is identical.
+- **Loading:** every load phase matches within noise.
+- **Frame logic:** the game's own per-frame work is no slower (−0.15 ms at the fastest, standard error 0.10 ms).
+- **Size:** the one measurable change is one more file and 2 KB more source.
+
+**Gameplay and page:** `scripts/golden-trace.mjs` (21 scenarios, now fingerprinting every element on the page at every sample) produces byte-identical traces on main and v199.
 
 ## Re-running
 

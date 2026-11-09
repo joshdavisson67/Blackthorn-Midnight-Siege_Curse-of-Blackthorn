@@ -72,6 +72,11 @@ This is Dead Tide step 1, slice 6. The HUD's shared readouts now live in a share
   - **New coverage:** a Soul Forge purchase and a stretch at low health.
   - **The result:** main and this version produce byte-identical traces, so every HUD element read the same at every sample, in all 21 scenarios.
 - **A bare page:** `tests/hud.mjs` runs the HUD on a page of its own with a run of its own. It checks every readout, the critical and spectral states, rank and Forge names, perks, power-ups and the mode's badge, Nano Shield regeneration (only while playing), the reload bar, and every fade time.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Within noise:** every load phase.
+  - **Frame logic:** the game's own per-frame work is no slower.
+  - **The only measurable change:** one more file and 2 KB more source.
 
 ## The player's run, shared (version 198)
 
