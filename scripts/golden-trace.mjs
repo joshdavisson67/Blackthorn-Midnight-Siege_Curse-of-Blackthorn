@@ -19,6 +19,11 @@
 // compiles and texture uploads). Both are hashed per sample; GOLDEN_LOGS=1 writes
 // them out in full.
 //
+// v203: the first-person view. Every sample hashes the pose of every part of the
+// guns in hand (slide, twin SMG kicks, scope masks, bodies), with the camera's pose
+// and both fields of view, the muzzle flash and light, and the flashlight; a new
+// scenario aims, fires, reloads and sprints with every gun, the twin Ravens, the
+// Blood Moon dot sight, a grenade and the flashlight.
 // v202: a station tour. Every station on the estate is visited in turn, early in a run
 // and again after wave 21 (shed, cellar, tomb and attic open): the prompt the player sees,
 // then E with no essence, with plenty, and once more, recording the message shown,
@@ -83,8 +88,14 @@ function snapshot(){const s=st();return {
   arms:[s.shotTimer,s.reloadLeft,s.reloadDuration,s.grenadeCooldown,s.aiming?1:0,s.mouseDown?1:0,s.weaponRecoil.pitch,s.weaponRecoil.yaw,s.weaponRecoil.back,s.weaponRecoil.lift,s.camera.fov,s.smgDual.visible?1:0,
     ...Object.values(s.inventory).flatMap(v=>[v.owned?1:0,v.ammo,v.reserve,v.weaponRank,v.forgeRank]),...Object.values(s.gunGroups).map(g=>g.visible?1:0)].map(r),
   screen:[drain(renderLog),...screenState(s)].map(r),
+  view:viewState(s),
   audio:drain(audioLog)
 };}
+// The view in hand: every node under the gun root, hashed; then the camera and lights.
+const viewState=s=>{let t='';s.gunRoot.traverse(o=>{t+=o.name+'|'+o.visible+'|'+o.position.toArray().join(',')+'|'+o.rotation.toArray().slice(0,3).join(',')+'|'+o.scale.toArray().join(',')+'\n';});
+  if(process.env.GOLDEN_VIEW==='1')return t;
+  return [fnv(t),s.gunRoot.visible?1:0,...s.camera.position.toArray(),...s.camera.rotation.toArray().slice(0,3),s.camera.fov,s.viewFov,s.viewKick,s.flashTime,s.reloadDrop,s.flash.visible?1:0,s.muzzleLight.intensity,...s.muzzleLight.position.toArray(),
+    s.flashlight.intensity,s.flashlight.visible?1:0,s.flashlightOn?1:0,s.grenadeThrow.root.visible?1:0,elements.get('crosshair').style.opacity].map(r);};
 // The renderer's settings, the scene target and both cameras.
 const screenState=s=>{const R=s.renderer;return [R.pr,R.autoClear,R.shadowMap.enabled,R.shadowMap.type,R.toneMapping,R.toneMappingExposure,R.outputColorSpace,s.rt.width,s.rt.height,s.rt.samples,
   s.camera.aspect,s.camera.near,s.camera.far,s.camera.fov,s.viewCamera.fov,s.viewCamera.layers.mask,s.scene.fog.density,R.compileCalls?.length??0,R.initializedTextures?.size??0,s.postMat.uniforms.brightness.value];};
@@ -114,6 +125,16 @@ const actions={
   // The play session: mouse look, keys for every action, Escape to pause, Resume (mouse
   // capture), settings, both confirm prompts, a hidden tab, a lost focus, the main menu
   // and back in; then touch play and the controller's actions.
+  // v203: aim, fire, reload and sprint with every gun; the twin Ravens, the dot sight,
+  // a grenade and the flashlight.
+  sights:f=>{const guns=['glock','shotgun','smg','bushmaster','rifle','lmg'],b=Math.floor(f/100),k=f%100,key=code=>()=>listeners.keydown({code,key:code,preventDefault(){},repeat:false,target:{}});
+    if(b<guns.length){const g=guns[b];
+      if(k===1)return ()=>{for(let i=0;i<400&&st().reloadLeft>0;i++)frames(1);qa.selectWeapon(g);};if(k===20)return ()=>gameCanvas.events.mousedown({button:2});if(k===40||k===46)return ()=>qa.shoot();
+      if(k===60)return ()=>listeners.mouseup({button:2});if(k===64)return ()=>{st().inventory[g].ammo=1;qa.reload();};if(k===80)return ()=>qa.setKeys(['KeyW','ShiftLeft']);if(k===95)return ()=>qa.setKeys([]);return null;}
+    if(b===6){if(k===1)return ()=>{for(let i=0;i<400&&st().reloadLeft>0;i++)frames(1);st().inventory.smg.weaponRank=4;qa.selectWeapon('glock');qa.selectWeapon('smg');};if(k===20)return ()=>gameCanvas.events.mousedown({button:2});if(k>=30&&k<=60&&k%6===0)return ()=>qa.shoot();if(k===70)return ()=>listeners.mouseup({button:2});return null;}
+    if(b===7){if(k===1)return ()=>{for(let i=0;i<400&&st().reloadLeft>0;i++)frames(1);st().inventory.bushmaster.weaponRank=1;qa.selectWeapon('glock');qa.selectWeapon('bushmaster');};if(k===20)return ()=>gameCanvas.events.mousedown({button:2});if(k===40)return ()=>qa.shoot();if(k===70)return ()=>listeners.mouseup({button:2});return null;}
+    if(b===8){if(k===1)return ()=>qa.grenade();if(k===50)return key('KeyF');if(k===70)return key('KeyF');if(k===80)return ()=>qa.setKeys(['KeyA']);if(k===95)return ()=>qa.setKeys([]);}
+    return null;},
   // v201: the screen and the sound. Each quality (pixel ratio, antialiasing, shadows,
   // dust), a portrait window and back, slow frames that lower the resolution and
   // quick ones that raise it again, the sound off and on mid-fight, and a sleeping
@@ -191,6 +212,7 @@ const watch={
   frenzy:()=>note('frenzy',st().frenzyWave===st().wave),
   surge:()=>note('surge event',st().worldEvents.active('surge')),
   finales:()=>{note('wave 5 finale',st().waveFiveFinale?.wave===5);note('stench finale',st().waveFiveFinale?.wave===10);},
+  sights:()=>{const s=st();note('view: aimed',s.gunRoot.position.x<.05&&s.aiming);note('view: scoped',s.viewFov<30);note('view: flash',s.flash.visible);note('view: reload drop',s.reloadDrop>0);note('view: sprint roll',Math.abs(s.gunRoot.rotation.z+.25)<1e-9);note('view: twin ravens',s.smgDual.visible);note('view: dot sight',s.weapon==='bushmaster'&&s.gunGroups.bushmaster.visible===false&&s.gunRoot.visible);note('view: flashlight off',!s.flashlightOn);note('view: grenade in hand',s.grenadeThrow.root.visible);},
   screen:()=>{const s=st();note('screen: reduced resolution',s.rt.width<Math.round(innerWidth*s.renderer.pr));note('screen: portrait',innerHeight>innerWidth);note('screen: low quality',s.rt.samples===2);note('screen: ultra pixel ratio',s.renderer.pr===2);note('screen: high pixel ratio',s.renderer.pr===1.5);note('sound: muted',!elements.get('sound').checked);},
   shell:()=>{const s=st();note('session '+s.mode,true);note('mouse locked',!!page.pointerLockElement);note('aiming (shell)',s.aiming);},
   moves:()=>{const s=st();note('airborne',!s.grounded);note('upstairs',s.player.y>4);note('on the hall stairs',s.player.y>.5&&s.player.y<4);note('health regrowing',s.health>40&&s.health<100);note('nightstride',s.perkOwned.has('stride'));note('armor tier 2+',s.armorTier>=2);note('armor regrowing',s.armorTier>=2&&s.armor>0&&s.armor<s.armorMax);},
@@ -274,6 +296,7 @@ const trace={
   upgrades:run('upgrades',()=>{qa.holdSpawns();qa.setHealth(1e6);for(let i=0;i<8;i++){const e=qa.makeZombie(-4+i,15);e.hp=e.maxHp=4e3;e.speed=.2;}},760,20),
   throws:run('throws',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setGrenades(3);qa.setPlayer(0,24);qa.setAim(0,-.25);ring(12,0,14,3);},700,25),
   moves:run('moves',()=>{qa.holdSpawns();qa.setHealth(70);qa.setPlayer(0,9);qa.setAim(0,0);},1200,10),
+  sights:run('sights',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setGrenades(3);qa.setPlayer(0,24);qa.setAim(0,-.05);for(const k in st().inventory){st().inventory[k].owned=true;st().inventory[k].weaponRank=0;}},900,10),
   // The station tour, early and late in a run (see visitStations).
   stations:run('stations',()=>{qa.holdSpawns();qa.setHealth(1e9);visitStations('early');
     for(let i=0;i<21;i++){qa.startWave();for(const e of st().zombies)if(!e.dead)qa.damageEnemy(e,1e9);}qa.holdSpawns();frames(900);
