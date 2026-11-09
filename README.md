@@ -69,7 +69,17 @@ This is Dead Tide step 2, slice 2. Dead Tide now has its own page, `tide.html`, 
     - wading, but not into the open sea;
     - firing, reloading and aiming, and grenades;
     - death, New Run, pause, Settings, the controls card and the title screen.
-- **Performance:** PERF_PLACEHOLDER
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading:** across 40 balanced runs, no load phase changed beyond its run-to-run error.
+  - **Frame logic:** the game's own per-frame work matches.
+  - **The only measurable change:** two more files (`weapon-stats.mjs` and `batching.mjs`) and 2 KB more source.
+- **Dead Tide's own numbers** (headless Chromium with software rendering, two runs):
+  - **Loading:** playable in about 6.5 s, from 52 files and 1,911 KB. The mansion takes about 55 s, from 104 files and 8,971 KB, on the same machine.
+  - **Shaders:** 35 programs, and none more are compiled during play. The mansion has 89.
+  - **Memory:** a 36 MB heap after loading. The mansion's is 237 MB.
+  - **Drawing:** 24–54 draw calls and 19,000–36,000 triangles in each view, and 97 draw calls while a grenade bursts. The mansion's views draw 1,479–2,376.
+  - **Not measured:** real-browser frame rates.
 - **Next:** the dead on the island, and a 45-enemy stress test.
 
 ## The first-person view, shared (version 203)
