@@ -57,7 +57,12 @@ This is Dead Tide step 2, slice 1. The guns in hand and how the view moves now l
   - **New scenario:** aiming, firing, reloading and sprinting with every gun, then the Twin Ravens, the dot sight, a grenade and the flashlight.
   - **The result:** main and this version produce byte-identical traces.
 - **On its own:** `tests/first-person.mjs` runs the view with a camera, a run and weapons of its own. It checks the guns and their lights, the eye and both fields of view, every gun pose, the muzzle flash and the flashlight.
-- **Mansion performance:** PERF_PLACEHOLDER
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading:** across 40 balanced runs, no load phase changed beyond its run-to-run error.
+  - **Frame logic:** the game's own per-frame work matches.
+  - **The only measurable change:** one more file and 3 KB more source.
+- **Next:** Dead Tide's own page and a grey-box island, built on these shared pieces.
 
 ## Stations, shared (version 202)
 

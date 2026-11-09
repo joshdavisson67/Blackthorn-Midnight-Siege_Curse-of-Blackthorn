@@ -43,6 +43,10 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v202-siege.json`, `v202-siege-repeat.json` | v202 (step 1: stations) | The mansion after moving the stations and their interaction into `stations.mjs`, measured twice |
 | `v202-load-phases.jsonl` | v201 (main) and v202 | Forty balanced runs of `scripts/load-phases.mjs`, in two rounds |
 | `v202-frame-logic.jsonl` | v201 (main) and v202 | Twenty-four balanced pairs of `scripts/frame-logic.mjs`, in two rounds |
+| `v202-siege-rerun.json`, `v202-siege-rerun2.json` | v202 (main) | The mansion re-measured twice beside v203 |
+| `v203-siege.json`, `v203-siege-repeat.json` | v203 (step 2: the first-person view) | The mansion after moving the guns in hand, their lights, the eye and the view's motion into `first-person.mjs`, measured twice |
+| `v203-load-phases.jsonl` | v202 (main) and v203 | Forty balanced runs of `scripts/load-phases.mjs`, in two rounds |
+| `v203-frame-logic.jsonl` | v202 (main) and v203 | Twenty-four balanced pairs of `scripts/frame-logic.mjs`, in two rounds |
 
 ## Step 1 (v194) against main
 
@@ -305,6 +309,35 @@ Both builds were measured in full twice: v202 first, then main first. Loading wa
 - **Size:** the one measurable change is one more file and 4 KB more source.
 
 **Gameplay and page:** `scripts/golden-trace.mjs` (24 scenarios, now with a tour of all 37 stations) produces byte-identical traces on main and v202.
+
+## Step 2, slice 1 (v203) against main
+
+Both builds were measured in full twice: v203 first, then main first. Loading was timed phase by phase over two rounds of 20 balanced runs, in opposite orders, and the game's own per-frame work over two rounds of 12 balanced pairs.
+
+| Mansion | v202 (main) | v203 |
+|---|---:|---:|
+| Files loaded before playable | 101 | 102 (`first-person.mjs`) |
+| Bytes loaded before playable | 8,966 KB | 8,969 KB |
+| Time to playable (two full runs) | 59.0, 55.2 s | 58.3, 57.6 s |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load (two runs) | 250.8, 237.3 MB | 237.1, 237.3 MB |
+| JS heap after the fight (two runs) | 243.8, 244.7 MB | 243.9, 243.9 MB |
+| Draw calls and triangles in the six views and the fight | as in step 0 | identical |
+| Load: modules / world / shaders (40 balanced runs) | 0.39 / 13.16 / 42.79 s | 0.41 / 13.24 / 43.26 s |
+| Load: total | 56.33 s | 56.92 s (+0.59 s, standard error 0.50 s) |
+| 32-zombie fight: mean frame time (software rendering, two runs) | 3,653 / 3,479 ms | 3,642 / 3,425 ms |
+| The game's own work per frame, no rendering (24 pairs) | 2.35 ms fastest · 2.72 ms median | 2.40 ms fastest · 2.73 ms median |
+
+**Verdict:** no regression.
+
+- **Counts:** every rendering, shader and memory count is identical. The first main run read the hall at 1,939 draw calls, the known lamp-shadow timing artefact; its repeat and both v203 runs read 2,046.
+- **Heap after load:** the first main run read 250.8 MB; the other three runs read 237.1–237.3 MB, so that reading was collection timing on main.
+- **Loading:** no phase differs beyond its run-to-run error. Shaders read +0.75 s (standard error 0.76 s) in the first round and +0.20 s (standard error 0.56 s) in the second. Shader compiling is untouched by this change: the same 89 programs from the same warm-up, and the golden trace records every renderer call identically. Fetching and running the modules reads 20 ms longer (standard error 12 ms), about what one more small file costs here (v198 read +27 ms for the same reason).
+- **Frame logic:** the game's own per-frame work matches (median −0.02 ms, standard error 0.08 ms).
+- **Size:** the one measurable change is one more file and 3 KB more source.
+
+**Gameplay, page and view:** `scripts/golden-trace.mjs` (25 scenarios) now also records, every sample, the pose of every part of the guns in hand, the camera, both fields of view, the muzzle flash and light and the flashlight, with a new scenario that aims, fires, reloads and sprints with every gun. It produces byte-identical traces on main and v203.
 
 ## Re-running
 
