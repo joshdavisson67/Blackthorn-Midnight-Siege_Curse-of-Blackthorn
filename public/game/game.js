@@ -3,12 +3,11 @@ import {FERAL} from './feral.mjs?v=165';
 import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curseWaveConfig,curseReward,chooseCurseEnemyKind} from './curse.mjs?v=165';
 import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
-import {enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=195';
-import {createChangelog} from './changelog.mjs?v=195';
+import {createLeaderboard} from './leaderboard.mjs?v=196';
+import {createChangelog} from './changelog.mjs?v=196';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
-import {COMBAT,createWeaponRecoil,staggerLimits,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
+import {COMBAT,createWeaponRecoil,staggerLimits,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
 import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnMap} from './grounds.mjs?v=165';
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
@@ -28,11 +27,11 @@ import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 import {createStationBuilder} from './station-models.mjs?v=190';
 import {createWeaponModel,updatePistolSlide,setPistolDot} from './weapon-models.mjs?v=187';
 import {drawMinimap} from './minimap.mjs?v=179';
-import {dropOpacity,fadeMaterials} from './drop-fade.mjs?v=169';
+import {fadeMaterials} from './drop-fade.mjs?v=169';
 import {nextRank,rankInfo,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual,rankAuto,rankRecoil,rankDetonate,rankKillHeal} from './weapon-ranks.mjs?v=191';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
 import {GRENADE_THROW,createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
-import {POWERUPS,choosePowerup,powerupIcon,createPowerupAssets} from './powerups.mjs?v=190';
+import {POWERUPS,powerupIcon,createPowerupAssets} from './powerups.mjs?v=190';
 import {createEnemyAssets} from './enemy-assets.mjs?v=183';
 import {createCombatLights} from './combat-lights.mjs?v=190';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
@@ -42,8 +41,8 @@ import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,s
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=187';
 import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=192';
 import {BELLA,BELLA_PAW,createBellaCompanion,nextBellaRank} from './bella.mjs?v=185';
-import {createExplosionFx,EXPLOSION_FX} from './explosion-fx.mjs?v=191';
-import {tagZombie,reactToHit,beginZombieDeath,noteLegDamage,CRAWL} from './zombies.mjs?v=183';
+import {createExplosionFx} from './explosion-fx.mjs?v=191';
+import {tagZombie} from './zombies.mjs?v=183';
 import {addEstateDetail} from './estate-detail.mjs?v=187';
 import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=187';
 import {createReticleHud} from './reticles.mjs?v=167';
@@ -61,9 +60,10 @@ import {createBlackout} from './blackout.mjs?v=135';
 import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-spawns.mjs?v=174';
 import {createEnemyAI} from './enemy-ai.mjs?v=194';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=195';
+import {createCombat} from './enemy-combat.mjs?v=196';
 import {resetBuild} from './zombie-build.mjs?v=177';
 import {INJURY} from './zombie-injuries.mjs?v=178';
-import {LURKER,lurkerPlayerDamage,lurkerEnemyDamage} from './lurker.mjs?v=179';
+import {LURKER} from './lurker.mjs?v=179';
 import {clearFace} from './zombie-faces.mjs?v=183';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
@@ -412,7 +412,7 @@ function bruteCrouchAt(x,z,y){
 // v195 (Dead Tide step 1): the mansion as the shared enemy modules see it. The
 // spawner (enemy-spawn.mjs) and the AI (enemy-ai.mjs) both take this map.
 const mansionLevel={colliders,isBlocked,supportBelow,floorHeight:enemyFloorHeight,rampHeight:(x,z)=>cellarStairHeight(x,z)??stairHeight(x,z),move:moveWithCollision,crouchAt:bruteCrouchAt,
-  canStand:(x,z,y,r)=>y!==UPPER_Y||hasUpperFloor(x,z,r),get nav(){return nav;},crowd};
+  canStand:(x,z,y,r)=>y!==UPPER_Y||hasUpperFloor(x,z,r),get nav(){return nav;},crowd,solidMeshes,visibleFloor};
 // Making and placing enemies lives in enemy-spawn.mjs; when and what to spawn
 // (waves, finales, curse ranks, camping, the upper floor) stays here.
 const {makeZombie,makeLurker,injure,spawnKind,placement,choosePoint,disposeEnemy}=createEnemySpawner({
@@ -422,24 +422,27 @@ const {makeZombie,makeLurker,injure,spawnKind,placement,choosePoint,disposeEnemy
 });
 // v179: whether a wave spawn is a Grotesque Lurker comes from dice of its own.
 function lurkerDice(w,slot){let h=(seed^Math.imul(w,0x9E3779B1)^Math.imul(slot+1,0x85EBCA77))>>>0;h=Math.imul(h^h>>>16,0x45d9f3b)>>>0;h=Math.imul(h^h>>>16,0x45d9f3b)>>>0;return ((h^h>>>16)>>>0)/4294967296;}
-const lurkerBursts=[];
-// A lurker bursts: everything within 4 m with a clear line takes the blast.
-function lurkerBurst(e){
-  // Where it stood when it went off (the ragdoll may already be moving).
-  const at=e.lurkerAt||e.walkPos,ground=new T.Vector3(at.x,Math.abs(at.y)>.1?at.y:enemyFloorHeight(at.x,at.z),at.z),pos=ground.clone().add(new T.Vector3(0,.9,0));
-  noise(.9,.4,420);tone(42,.9,.22,'sawtooth',22);tone(90,.35,.12,'square',30);
-  {const d=Math.hypot(pos.x-player.x,pos.z-player.z);if(d<16)padRumble(1-d/16,.9*(1-d/16),360);}
-  const s=sphere(pos.x,pos.y-.2,pos.z,.42,.42,.42,new T.MeshBasicMaterial({color:0x9dff4a,transparent:true,opacity:.8}));
-  effects.push({mesh:s,vel:new T.Vector3(),life:.4,max:.4,type:'blast'});
-  bloodBurst(pos,26);e.group.visible=false;if(e.ragdoll)e.ragdoll.life=Math.min(e.ragdoll.life,e.death+.05);
-  for(const o of zombies){
-    if(o===e||o.dead)continue;const d=Math.hypot(o.walkPos.x-at.x,o.walkPos.z-at.z),dmg=lurkerEnemyDamage(d);
-    if(dmg>0&&Math.abs(o.walkPos.y-e.walkPos.y)<2.2&&blastLine(pos,o.group.position.clone().add(new T.Vector3(0,.9,0))))
-      damageEnemy(o,dmg,false,{direction:o.group.position.clone().sub(ground),part:'torso',force:2.4*(1-d/12),source:'lurker'});
+// v196 (Dead Tide step 1): hits, kills, blasts, drops and pickups live in
+// enemy-combat.mjs. The mansion keeps its own rewards and extras: curse-rank and
+// world-event essence, Bella's bone chips, Sir Blackthorn, the Gravewarden's shield
+// and grave essence.
+const {damageEnemy,killZombie,bloodBurst,blastLine,explode,detonateRound,lurkerBurst,lurkerBursts,dropPickup,updatePickups}=createCombat({
+  level:mansionLevel,
+  run:{player,zombies,scene:world,rand,rng,tone,noise,notify,rumble:padRumble,sphere,effects,bloodPool,explosionFx,blastLight:BLAST_LIGHT,powerupAssets,pickups,enemyAssets,
+    get elapsed(){return elapsed;},get playing(){return mode==='playing';},
+    addPoints,addKill:()=>{kills++;},hurtPlayer,kick:()=>{recoil=.1;},
+    // v191: the LMG capstone mends on every kill it makes.
+    killHeal(impact){const heal=inventory[impact.source]?rankKillHeal(impact.source,inventory[impact.source].weaponRank):0;if(heal&&mode==='playing'&&health>0)health=Math.min(maxHealth,health+heal);},
+    hitFeedback(headshot,impact){hitTime=headshot?.22:.14;if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}},
+    collect(p){if(p.type==='essence'){const reward=addPoints(p.value);notify(`GRAVE ESSENCE +${reward}`);}else if(p.type==='bone')collectBoneChip();else grantPowerup(p.type);},
+    releasePickup:p=>eventVisuals.release(p)},
+  rules:{
+    killReward:base=>worldEvents.killReward(base),
+    onKill(e,impact){if(impact.source==='Bella'&&bella.rank<BELLA.maxRank)dropBoneChip(e);endWarCry(e);if(e.boss)defeatBlackthorn(e);else if(e.warden)addPoints(WARDEN.reward);},
+    bonusDrop:e=>eventVisuals.dropEssence(e.walkPos.x,e.walkPos.z,e.floorY,pickups),
+    hitAmount(e,amount,impact){if(e.warden&&impact.part==='shield'){amount*=WARDEN.shieldFactor;tone(900,.05,.02,'square',600);}return amount;}
   }
-  const pd=lurkerPlayerDamage(Math.hypot(player.x-at.x,player.z-at.z));
-  if(pd>0&&Math.abs(player.y-e.walkPos.y)<2.2&&blastLine(pos,player.clone().add(new T.Vector3(0,.9,0))))hurtPlayer(pd,pos);
-}
+});
 const spawns=ESTATE_SPAWNS;let upperSpawnSlot=0;const campWatch=createCampWatch();
 function spawnEnemy(){
   if(toSpawn<=0)return false;
@@ -491,16 +494,6 @@ function beginWaveFiveFinale(){
 }
 function unlockShed(){if(!shed.unlock())return false;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('A DOOR HAS BLOWN OPEN SOMEWHERE…',5);noise(.45,.16,350);tone(65,.65,.09,'sawtooth',28);return true;}
 function startWave(){wave++;frenzyWave=0;waveFiveFinale=null;upperSpawnSlot=wave>10?Math.floor(rng()*4):0;if(wave>=SHED.unlockWave)unlockShed();if(wave>MAUSOLEUM.unlockAfterWave)unlockMausoleum();if(wave===CELLAR.unlockWave){setCellarOpen(true);cellar.gate.disabled=true;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('NORTH GROUNDS · THE STORM CELLAR IS OPEN');}const cfg=curseWaveConfig(wave,curse.rank);toSpawn=cfg.count;spawned=0;spawnTimer=.7;waveDelay=0;announce(`WAVE ${String(wave).padStart(2,'0')}`,wave===10?'STORM CELLAR UNSEALED · NORTH GROUNDS':wave===11?'THE DEAD NOW RISE ON THE SECOND FLOOR':wave===1?'THE ESTATE HAS AWAKENED':wave===6?'ASHFANG HOUNDS JOIN THE HUNT':wave===7?'FERAL STALKERS JOIN THE HUNT':wave%5===0?'THE BRUTES HAVE RISEN':'THE DEAD GROW RESTLESS');tone(130,1,.1,'sawtooth',45);worldEvents.beginWave(wave);}
-function killZombie(e,headshot=false,impact={}){if(e.dead)return;e.dead=true;e.death=0;{const heal=inventory[impact.source]?rankKillHeal(impact.source,inventory[impact.source].weaponRank):0;if(heal&&mode==='playing'&&health>0)health=Math.min(maxHealth,health+heal);}if(impact.source==='Bella'&&bella.rank<BELLA.maxRank)dropBoneChip(e);endWarCry(e);if(e.boss)defeatBlackthorn(e);else if(e.warden)addPoints(WARDEN.reward);const massKill=impact.source==='nuke';if(massKill)e.hp=0;
-// v179: a lurker that reaches you bursts by itself (no essence); zombies its
-// blast kills pay 35% more.
-const selfBurst=impact.source==='lurkerSelf';if(e.lurker&&!e.lurkerBurst){e.lurkerBurst=true;e.lurkerAt=e.walkPos.clone();lurkerBursts.push(e);}
-const reward=selfBurst?0:addPoints(worldEvents.killReward(headshot?(e.brute?200:75):e.brute?110:50)*(impact.source==='lurker'?LURKER.essenceBonus:1));if(!selfBurst)kills++;if(e.bonusEssence)eventVisuals.dropEssence(e.walkPos.x,e.walkPos.z,e.floorY,pickups);const enraged=massKill?0:enrageNearby(e,zombies,Math.random,enemyAssets.enrage);if(!massKill&&!selfBurst){if(headshot){notify(`HEADSHOT +${reward}`);}else tone(280,.06,.025,'triangle');}if(!selfBurst&&Math.random()<.13)dropPickup(e.group.position.x,e.group.position.z,choosePowerup(Math.random()),e.floorY);bloodBurst(e.group.position.clone().add(new T.Vector3(0,e.dog?.55:1.4,0)),massKill?4:10);beginZombieDeath(e,{...impact,source:massKill?'grenade':impact.source,part:headshot?'head':impact.part},rng);
-if(enraged&&e.walkPos.distanceToSquared(player)<324)notify(`BLOOD RAGE · ${enraged} NEARBY ${enraged===1?'ENEMY':'ENEMIES'} ENRAGED`);
-const corpses=zombies.filter(z=>z.dead&&z.ragdoll.life>z.death);if(corpses.length>14){const oldest=corpses.reduce((a,b)=>a.death>b.death?a:b);oldest.ragdoll.life=oldest.death;}
-}
-function damageEnemy(e,amount,headshot=false,impact={}){if(e.dead||e.waking)return;if(e.warden&&impact.part==='shield'){amount*=WARDEN.shieldFactor;tone(900,.05,.02,'square',600);}e.hp-=amount;if(impact.part==='leg'&&!headshot&&noteLegDamage(e,amount,impact.side)){e.bodyHeight=CRAWL.height;tone(55,.18,.05,'sine',38);noise(.12,.05,260);}addPoints(10);hitTime=headshot?.22:.14;const reaction=headshot&&impact.part!=='head'?{...impact,part:'head'}:impact;if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}reactToHit(e,reaction);if(!e.elite)registerStagger(e,reaction);if(e.hp<=0)killZombie(e,headshot,reaction);}
-function bloodBurst(pos,count){for(let i=0;i<count;i++){const sx=rand(.01,.025),sy=rand(.01,.03),sz=rand(.01,.025),vx=rand(-1.4,1.4),vy=rand(.5,2),vz=rand(-1.4,1.4),effect=bloodPool.acquire();if(!effect)continue;effect.mesh.position.copy(pos);effect.mesh.scale.set(sx,sy,sz);effect.vel.set(vx,vy,vz);effect.life=effect.max=.6;effects.push(effect);}}
 const raycaster=new T.Raycaster();const dir=new T.Vector3();let shotId=0;
 function shoot(){if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||shotTimer>0)return;const inv=inventory[weapon],w=weapons[weapon];if(inv.ammo<=0){shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;shotTimer=w.rate/rankFireRate(weapon,inv.weaponRank);{const r=SHOT_RUMBLE[weapon];if(r)padRumble(...r);}const id=++shotId;if(weapon==='glock')gunGroups.glock.userData.slideTime=.12;if(dualOn())fireDualSide();flashTime=.045;if(weapon==='smg')suppressedReport();else{noise(weapon==='shotgun'?.22:.12,.18,weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);}const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
 camera.rotation.set(clamp(lookPitch+weaponRecoil.pitch,-1.3,1.3),lookYaw+weaponRecoil.yaw,0);camera.updateMatrixWorld();
@@ -509,7 +502,6 @@ weaponRecoil.fire(weapon,aiming,rankRecoil(weapon,inv.weaponRank));if(inv.ammo==
 function reload(){const inv=inventory[weapon],w=weapons[weapon];if(mode!=='playing'||grenadeThrow.active||reloadLeft>0||inv.ammo>=ammoCapacity().mag||inv.reserve<=0)return;reloadDuration=w.reload*forgeBonuses(inv.forgeRank).reloadMultiplier*rankReloadTime(weapon,inv.weaponRank)*(perkOwned.has('quick')?.5:1);reloadLeft=reloadDuration;updateReloadHud();tone(330,.12,.06,'square');}
 function finishReload(){const inv=inventory[weapon],needed=Math.max(0,ammoCapacity().mag-inv.ammo),n=Math.min(needed,inv.reserve);inv.ammo+=n;inv.reserve-=n;tone(500,.1,.05,'square');}
 
-function dropPickup(x,z,type,y=0){const m=powerupAssets.create(type);m.userData.lightingTransient=true;m.position.set(x,y+.85,z);world.add(m);pickups.push({mesh:m,type,y,life:20,phase:rand(0,6)});}
 // Include the missing magazine rounds in reserve, so a normal reload leaves
 // both compartments full. Repeated refills replace this allowance, not stack it.
 function restockTarget(k){const inv=inventory[k],capacity=ammoCapacity(k);return capacity.reserve+Math.max(0,capacity.mag-inv.ammo);}
@@ -589,37 +581,6 @@ function releaseGrenade(position,rotation,firstStep){
   const side=new T.Vector3(1,0,0).applyQuaternion(camera.quaternion);
   effects.push({mesh:spoon,vel:velocity.clone().multiplyScalar(.35).addScaledVector(side,1.6).add(new T.Vector3(0,2.6,0)),life:2.4,max:2.4,type:'spoon',spin:new T.Vector3(17,9,4),rest:.004});
   tone(2600,.05,.012,'triangle',3400);
-}
-function blastLine(from,to){const delta=to.clone().sub(from),len=delta.length();return new T.Raycaster(from,delta.normalize(),.05,Math.max(.05,len-.15)).intersectObjects(solidMeshes,true).length===0;}
-const GRENADE_BLAST_RADIUS=12,GRENADE_DAMAGE=450;
-// v184: Bella's cart launcher bursts like a grenade but never hurts the player.
-function explode(pos,{source='grenade',safe=false}={}){
-  noise(.6,.35,700);tone(65,.65,.2,'sine',25);
-  {const d=Math.hypot(pos.x-player.x,pos.z-player.z);if(d<14)padRumble(1-d/14,.8*(1-d/14),320);}
-  // v185: a pooled fireball, smoke, sparks, dust and scorch (explosion-fx.mjs).
-  // The blast effect itself only anchors the combat light's flash.
-  const support=supportBelow(pos.x,pos.z,pos.y+.3),fx=explosionFx.burst(pos,{floorY:pos.y-support<EXPLOSION_FX.groundReach?visibleFloor(pos.x,pos.z,support):support});
-  effects.push({mesh:fx.anchor,vel:new T.Vector3(),life:.35,max:.35,type:'blast',pool:BLAST_LIGHT,burst:fx});
-  for(const e of zombies){
-    const d=e.group.position.distanceTo(pos);
-    if(d<GRENADE_BLAST_RADIUS&&!e.dead&&blastLine(pos,e.group.position.clone().add(new T.Vector3(0,.9,0)))){
-      // Full damage through 75% of the radius; the outer quarter takes half.
-      const damage=GRENADE_DAMAGE*(d<=GRENADE_BLAST_RADIUS*.75?1:.5);
-      damageEnemy(e,damage,false,{direction:e.group.position.clone().sub(pos),part:'torso',force:2.7*(1-d/18),source,blast:true});
-    }
-  }
-  if(!safe&&player.distanceTo(pos)<3&&blastLine(pos,player.clone().add(new T.Vector3(0,.9,0))))hurtPlayer(25,pos);
-  recoil=.1;
-}
-// v191: the M4 capstone's detonating rounds. Each round bursts where it strikes:
-// a 5 m blast for 33% of a grenade (full through 75% of the radius, half beyond),
-// through the same line-of-blast check, never hurting the player.
-function detonateRound(pos,{radius,fraction},source){
-  explosionFx.pop(pos);noise(.07,.06,1400);tone(150,.09,.025,'sine',70);
-  for(const e of zombies){
-    if(e.dead)continue;const d=e.group.position.distanceTo(pos);
-    if(d<radius&&blastLine(pos,e.group.position.clone().add(new T.Vector3(0,.9,0))))damageEnemy(e,GRENADE_DAMAGE*fraction*(d<=radius*.75?1:.5),false,{direction:e.group.position.clone().sub(pos),part:'torso',force:1.2*(1-d/radius),source,blast:true});
-  }
 }
 function hurtPlayer(amount,source){padRumble(Math.min(1,.35+amount/60),.5,amount>=30?260:170);const absorbed=Math.min(armor,amount);armor-=absorbed;health-=amount-absorbed;lastHurt=runTime;damageFlash=absorbed===amount?.28:.75;combatHud.hurt(player,source,lookYaw+weaponRecoil.yaw,absorbed===amount);if(health<=0)gameOver();}
 function unlockMausoleum(){if(!graveyard.unlock())return false;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('EAST CEMETERY · THE MAUSOLEUM IS UNSEALED');tone(160,1,.09,'sine',70);return true;}
@@ -1293,9 +1254,6 @@ function bellaBite(enemy,damage,direction){if(!enemy.boss&&!enemy.elite)enemy.be
 const effectNext=new T.Vector3();
 function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'||e.type==='spoon'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+(e.rest??.12);if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;if(e.spin)e.spin.multiplyScalar(.5);}if(e.spin){e.mesh.rotation.x+=step*e.spin.x;e.mesh.rotation.y+=step*e.spin.y;e.mesh.rotation.z+=step*e.spin.z;}else e.mesh.rotation.x+=step*4;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else world.remove(e.mesh);effects.splice(i,1);}}}
 function grantPowerup(type){if(type==='ammo'){refillAmmo();notify('MAX AMMO · RESERVES RESTOCKED');}else if(type==='double'){doubleTime=POWERUPS.double.duration;notify('×2 · DOUBLE DAMAGE FOR 20s');}else if(type==='grenades'){grenadeTime=POWERUPS.grenades.duration;notify('INFINITE GRENADES · 12s · PRESS G');}}
-function updatePickups(dt){for(let i=pickups.length-1;i>=0;i--){const p=pickups[i];p.life-=dt;
-// v169: the last five seconds fade out and in, faster for the final two.
-{const fade=dropOpacity(p.life);if(fade<1&&p.life>0&&!p.fade)p.fade=fadeMaterials(p.mesh);if(p.fade)p.fade.set(fade);}if(p.mesh.userData.model)p.mesh.userData.model.rotation.y+=dt*.65;p.mesh.position.y=(p.y||0)+.8+Math.sin(elapsed*2+p.phase)*.15;if(p.eventPool)p.mesh.rotation.y+=dt*1.4;if(mode==='playing'&&p.life>0&&Math.abs((p.y||0)-player.y)<1.2&&Math.hypot(p.mesh.position.x-player.x,p.mesh.position.z-player.z)<1.2){if(p.type==='essence'){const reward=addPoints(p.value);notify(`GRAVE ESSENCE +${reward}`);}else if(p.type==='bone')collectBoneChip();else grantPowerup(p.type);tone(660,.4,.1,'triangle',1200);p.life=0;}if(p.life<=0){p.fade?.dispose();p.fade=null;if(p.eventPool)eventVisuals.release(p);else world.remove(p.mesh);pickups.splice(i,1);}}}
 const radar=$('radar'),rx=radar.getContext('2d');// v162: north-up minimap; see minimap.mjs.
 // v163: the canvas backing store follows the map's on-screen size (it grows
 // with the screen on PC), so the bigger map stays sharp.

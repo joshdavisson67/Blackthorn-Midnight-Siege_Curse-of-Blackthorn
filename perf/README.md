@@ -16,6 +16,8 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v194-siege.json` | v194 (step 1: shared enemy AI) | The mansion after moving enemy AI into `enemy-ai.mjs` |
 | `v194-siege-rerun.json` | v194 (main) | The mansion re-measured beside v195 |
 | `v195-siege.json` | v195 (step 1: shared enemy spawner) | The mansion after moving enemy creation and placement into `enemy-spawn.mjs` |
+| `v195-siege-rerun.json` | v195 (main) | The mansion re-measured beside v196 |
+| `v196-siege.json` | v196 (step 1: shared combat) | The mansion after moving hits, kills, blasts and drops into `enemy-combat.mjs` |
 
 ## Step 1 (v194) against main
 
@@ -89,6 +91,29 @@ Both builds were measured twice in full, back to back, and timed over seven alte
   The likely cause is timing, not the build. The game draws each room lamp's shadow once, the first time that lamp is needed, at one lamp per frame. With software rendering taking seconds per frame, whether one of those draws lands inside the measured frames depends on timing, so the hall count can shift by about a hundred draw calls.
 
 **Gameplay:** `scripts/golden-trace.mjs` (13 scenarios, now including every enemy's birth) produces byte-identical traces on main and v195.
+
+## Step 1, slice 3 (v196) against main
+
+Both builds were measured in full, back to back, and timed over six alternating load pairs (three with v196 first, three with main first).
+
+| Mansion | v195 (main) | v196 |
+|---|---:|---:|
+| Files loaded before playable | 93 | 94 (`enemy-combat.mjs`) |
+| Bytes loaded before playable | 8,939 KB | 8,941 KB |
+| Time to playable, mean of 6 alternating runs | 48.8 s (±0.7) | 48.3 s (±1.2) |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load (mean of 6) / after the fight | 236.9 / 243.9 MB | 237.2 / 243.8 MB |
+| Draw calls and triangles in the six views | as in step 0 | identical |
+| 32-zombie fight: draw calls / triangles | 2,942 / 2.73 M | identical |
+| 32-zombie fight: mean frame time (software rendering) | 3,011 ms | 2,922 ms |
+
+**Verdict:** no regression. Every rendering, shader and memory count is identical, and the timing differences fall within run-to-run noise.
+
+- **Time to playable:** across the six pairs, v196 averaged 0.5 s faster, with a standard error of 0.4 s. It was faster in four pairs and slower in two.
+- **The only measurable change** is one more file and 2 KB more source.
+
+**Gameplay:** `scripts/golden-trace.mjs` (17 scenarios) produces byte-identical traces on main and v196.
 
 ## Re-running
 
