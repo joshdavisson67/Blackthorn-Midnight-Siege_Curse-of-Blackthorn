@@ -27,6 +27,58 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## The player's run, shared (version 198)
+
+This is Dead Tide step 1, slice 5. The run's own values, and how the player walks, jumps, gets hurt and recovers, now live in a shared module. Nothing plays differently.
+
+- **The run's values:** 25 values that `game.js` kept as separate variables now live in one object, `runState`, made by `createRunState()` in `public/game/player.mjs`. They are:
+  - health, maximum health, armor, maximum armor, armor tier, the last hit and the run clock;
+  - essence, total score, kills and perks;
+  - the inventory, the held weapon, the reload, shot and shot-number timers;
+  - grenades, infinite-grenade and double-damage timers;
+  - walking phase, jump speed and footing.
+
+  Every mode starts a run from the same values, and the mansion's restart still resets each one for a fresh run. The weapon runtime reads and writes them through `runState`.
+- **How the code was changed:** a scope-aware rename (eslint-scope), not hand edits, rewrote the 262 places `game.js` used these values. It checked that nothing local shadowed them. `tests/harness.mjs` and the perf probe now read them through `runState`; the probe still works on older builds too.
+- **What moved:** `createPlayer({level,run,state})` returns `{walk,recover,hurtPlayer}`.
+  - **`walk(dt,x,z,{sprint,aiming,yaw})`:**
+    - walking at 3.6 m/s, sprinting at 5.6 and aiming at 2.1;
+    - Nightstride's 30%;
+    - diagonals and half-pushed sticks;
+    - footsteps;
+    - jumping, falling, stairs and landing.
+  - **`recover(dt,playing)`:** Nano Shield armor regrowing after its delay, and health returning 6 s after the last hit.
+  - **`hurtPlayer(amount,from)`:** armor soaks up a hit before health, and a fatal hit ends the run.
+
+  The code is unchanged.
+
+  | Part | Field | What the mode supplies |
+  |---|---|---|
+  | `level` | `colliders`, `supportBelow`, `move(pos,dx,dz,r)`, `updateHeight(pos,velocity,dt,grounded,height,radius,colliders)` | Its floors, collision, and how bodies rise and fall (the mansion's stairs, cellar and attic) |
+  | `run` | `player`, `tone`, `noise`, `rumble`, `gameOver` | The player's position, sounds, rumble and the end of a run |
+  | | `onHurt(from,shielded)` | The damage flash and the hit-direction marker |
+  | `state` | `runState` | The run's values |
+- **What stays with the mansion:**
+  - reading the keys, sticks and touch controls;
+  - the jump keys;
+  - the camera's bob and field of view;
+  - its wave director (wave, spawns, finales);
+  - the HUD.
+- **Proof that nothing changed:** the golden trace now has 21 scenarios. It also records health, armor and its tier, the last hit, the run clock, jump speed, footing, the camera's position and angle, and the perks owned.
+  - **New scenario:** walking, sprinting, aimed strafing, jumping, the hall stairs up and down, health coming back after a hit, Nightstride, and body armor soaking up hits and regrowing.
+  - **The result:** main and this version produce byte-identical traces.
+- **On flat ground with no mansion:** `tests/player-run.mjs` checks that `game.js` keeps none of the 25 values as variables, and that a fresh run starts as before. Then, on flat ground with plain gravity, it checks:
+  - every pace and Nightstride, diagonals and half-pushed sticks, and turning with the view;
+  - footstep timing;
+  - a jump landing;
+  - armor before health, and the fatal hit;
+  - both kinds of recovery.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading** is no slower, phase by phase, over 20 runs.
+  - **Frame logic:** the game's own per-frame work, timed without rendering by the new `scripts/frame-logic.mjs`, matches main within noise over 24 pairs (+0.03 ms a frame at the fastest).
+  - **The fight:** one 11% slower fight sample was noise; its repeats matched main.
+
 ## Shared weapon runtime (version 197)
 
 This is Dead Tide step 1, slice 4. Everything the player's guns and grenades do now lives in a shared module. Nothing plays differently.

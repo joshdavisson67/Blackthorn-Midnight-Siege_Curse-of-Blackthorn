@@ -364,3 +364,6 @@ await verifyEnemyCombat(qa);
 
 const {verifyWeaponRuntime}=await import('./weapon-runtime.mjs');
 await verifyWeaponRuntime(qa);
+
+const {verifyPlayerRun}=await import('./player-run.mjs');
+await verifyPlayerRun(qa);

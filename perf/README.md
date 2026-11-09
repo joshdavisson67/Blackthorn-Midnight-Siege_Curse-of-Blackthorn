@@ -21,6 +21,11 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v196-siege-rerun.json` | v196 (main) | The mansion re-measured beside v197 |
 | `v197-siege.json` | v197 (step 1: shared weapon runtime) | The mansion after moving the weapon runtime into `weapon-runtime.mjs` |
 | `v197-load-phases.jsonl` | v196 (main) and v197 | Twelve balanced runs of `scripts/load-phases.mjs` |
+| `v197-siege-rerun.json` | v197 (main) | The mansion re-measured beside v198 |
+| `v198-siege.json` | v198 (step 1: the player's run) | The mansion after moving the run's values, movement, hurt and recovery into `player.mjs` |
+| `v198-load-phases.jsonl` | v197 (main) and v198 | Twenty balanced runs of `scripts/load-phases.mjs` |
+| `v198-frame-logic.jsonl` | v197 (main) and v198 | Twelve alternating pairs of `scripts/frame-logic.mjs` |
+| `v198-fights.jsonl` | v197 (main) and v198 | Four more 32-zombie fight samples, alternating |
 
 ## Step 1 (v194) against main
 
@@ -145,6 +150,35 @@ Main was measured in full once and v197 twice. Loading was timed over 14 balance
 
 **Gameplay:** `scripts/golden-trace.mjs` (20 scenarios) produces byte-identical traces on main and v197.
 
+## Step 1, slice 5 (v198) against main
+
+Both builds were measured in full, back to back. Loading was then timed phase by phase over 20 balanced runs. The fight was sampled twice more on each build, and the game's own per-frame work was timed without rendering over 24 alternating pairs.
+
+| Mansion | v197 (main) | v198 |
+|---|---:|---:|
+| Files loaded before playable | 95 | 96 (`player.mjs`) |
+| Bytes loaded before playable | 8,945 KB | 8,950 KB |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load / after the fight | 237.2 / 243.8 MB | 237.3 / 243.8 MB |
+| Draw calls and triangles in the six views and the fight | as in step 0 | identical |
+| Load: modules fetched and run (20 balanced runs) | 0.33 s | 0.35 s |
+| Load: building the world | 11.47 s | 11.01 s |
+| Load: compiling shaders and drawing the first frame | 37.10 s | 36.88 s |
+| Load: total | 48.89 s | 48.24 s |
+| 32-zombie fight: mean frame time, three runs each (software rendering) | 3,089 · 3,333 · 2,982 ms | 3,432 · 2,967 · 2,960 ms |
+| The game's own work per frame in that fight, no rendering (24 pairs) | 2.12 ms fastest · 2.37 ms median | 2.15 ms fastest · 2.42 ms median |
+
+**Verdict:** no regression. Every rendering, shader and memory count is identical. Loading is no slower: modules take 27 ms longer (standard error 18 ms), and world building is 0.46 s faster (standard error 0.17 s).
+
+- **The fight:** the first v198 run read 11% slower than main. Its two repeats read 2,967 and 2,960 ms, and across the three runs each the builds average 3,135 ms (main) and 3,120 ms (v198).
+- **The game's own work per frame:** `scripts/frame-logic.mjs` times the per-frame JavaScript without rendering.
+  - **The first 12 pairs** hinted at about 0.06 ms a frame, so I ran 12 more.
+  - **Over all 24,** the difference is +0.03 ms at the fastest (standard error 0.03 ms; v198 slower in 12 of 24) and +0.06 ms at the median (standard error 0.07 ms). That's within noise.
+- **The one measurable change** is one more file and 5 KB more source.
+
+**Gameplay:** `scripts/golden-trace.mjs` (21 scenarios) produces byte-identical traces on main and v198.
+
 ## Re-running
 
 ```
@@ -153,4 +187,5 @@ node scripts/perf-measure.mjs --page modes.html --out perf/vNNN-modes.json
 node scripts/perf-measure.mjs --game <other checkout>/public/game --load-only
 node scripts/golden-trace.mjs > after.json   # then cmp it against a trace taken on main
 node scripts/load-phases.mjs --game <checkout>/public/game   # where loading time goes
+node scripts/frame-logic.mjs [<checkout>]                    # the game's own per-frame work, no rendering
 ```

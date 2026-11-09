@@ -16,7 +16,7 @@ let seed=0x5eed1;
 Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 let clock=1000;performance.now=()=>clock;Date.now=()=>1.7e12+clock;
 const {qa,frames,gameCanvas,listeners}=await import('../tests/harness.mjs');
-const {UPPER_Y,OLIVIA_ATTIC}=await import('../.qa/vertical.mjs');
+const {UPPER_Y,OLIVIA_ATTIC,STAIR}=await import('../.qa/vertical.mjs');
 const {EASTER_EGG}=await import('../.qa/olivia.mjs');
 const {BOSS}=await import('../.qa/blackthorn-boss.mjs');
 const T=await import('../.qa/three.module.js');
@@ -29,6 +29,7 @@ function snapshot(){const s=st();return {
   player:[s.player.x,s.player.y,s.player.z,s.health,s.armor,s.points,s.totalScore,s.kills,s.wave,s.weapon,s.inventory[s.weapon]?.ammo??null,s.inventory[s.weapon]?.reserve??null,s.grenades,s.doubleTime,s.grenadeTime,s.boneChips,s.effects.length].map(r),
   zombies:s.zombies.map(e=>[e.dead?1:0,e.brute?1:0,e.dog?1:0,e.feral?1:0,e.lurker?1:0,e.boss?1:0,e.warden?1:0,e.walkPos.x,e.walkPos.y,e.walkPos.z,e.hp,e.group.rotation.y,e.group.position.y,e.attackTime,e.stuck,e.crawling?1:0,e.crouch??0,e.warCry??0,e.bellaSwings??0,e.enraged?1:0,e.staggerLeft??0,e.death??0,e.group.visible?1:0].map(r)),
   pickups:s.pickups.map(p=>[p.type,p.mesh.position.x,p.mesh.position.y,p.mesh.position.z,p.life,p.value??0].map(r)),
+  run:[s.health,s.maxHealth,s.armor,s.armorMax,s.armorTier,s.runTime,s.lastHurt,s.jumpV,s.feetY,s.grounded?1:0,s.camera.position.x,s.camera.position.y,s.camera.position.z,s.camera.rotation.x,s.camera.rotation.y,[...s.perkOwned].join('+')].map(r),
   arms:[s.shotTimer,s.reloadLeft,s.reloadDuration,s.grenadeCooldown,s.aiming?1:0,s.mouseDown?1:0,s.weaponRecoil.pitch,s.weaponRecoil.yaw,s.weaponRecoil.back,s.weaponRecoil.lift,s.camera.fov,s.smgDual.visible?1:0,
     ...Object.values(s.inventory).flatMap(v=>[v.owned?1:0,v.ammo,v.reserve,v.weaponRank,v.forgeRank]),...Object.values(s.gunGroups).map(g=>g.visible?1:0)].map(r)
 };}
@@ -55,6 +56,16 @@ const actions={
   mixed:f=>f%20===0?()=>qa.shoot():f===300?()=>qa.setKeys(['KeyS']):f===480?()=>qa.setKeys([]):null,
   boss:f=>f===700?()=>{for(const w of st().zombies)if(w.warden&&!w.dead){note('warden shield hit');qa.damageEnemy(w,40,false,{part:'shield',direction:new T.Vector3(0,0,1),source:'glock'});}}:f%40===0?()=>qa.shoot():null,
   late:f=>f%15===0?()=>qa.shoot():null,
+  // Walking, sprinting, aimed strafing and jumping; the hall stairs up and down; health
+  // coming back after a hit; Nightstride; and body armor that soaks up and regrows.
+  moves:f=>{const key=code=>()=>listeners.keydown({code,key:code,preventDefault(){},repeat:false,target:{}});
+    const plan={1:()=>qa.setKeys(['KeyW']),60:()=>qa.setKeys(['KeyW','ShiftLeft']),120:()=>{qa.setKeys(['KeyD']);gameCanvas.events.mousedown({button:2});},180:()=>listeners.mouseup({button:2}),
+      190:()=>{qa.setKeys(['KeyW']);key('Space')();},230:key('Space'),260:()=>{qa.setKeys([]);qa.setPlayer(STAIR.x,STAIR.bottomZ+1.2);qa.setAim(0,0);qa.setKeys(['KeyW']);},
+      420:()=>{qa.setKeys([]);qa.setAim(Math.PI,0);qa.setKeys(['KeyW']);},560:()=>{qa.setKeys([]);qa.hurtPlayer(30,st().player.clone());},
+      700:()=>{qa.setPoints(1e6);const p=st().interactables.find(s=>s.type==='perk'&&s.name==='NIGHTSTRIDE'&&!(s.y>1));qa.setPlayer(p.x+Math.sin(p.rotation||0)*1.6,p.z+Math.cos(p.rotation||0)*1.6);frames(1);qa.interact();qa.setAim(0,0);qa.setKeys(['KeyA']);},
+      780:()=>{qa.setKeys([]);const a=st().interactables.find(s=>s.type==='armor'&&s.y>1);qa.setPlayer(a.x+Math.sin(a.rotation||0)*1.6,a.z+Math.cos(a.rotation||0)*1.6,a.y);frames(1);qa.interact();qa.interact();qa.interact();},
+      800:()=>qa.hurtPlayer(25,st().player.clone()),900:()=>qa.hurtPlayer(10,st().player.clone())};
+    return plan[f]||null;},
   // Every gun in turn: clicks for the semi-autos, held triggers for the automatics,
   // aiming down sights, empty magazines, reloads and a switch attempted mid-reload.
   arsenal:f=>{const down=b=>()=>gameCanvas.events.mousedown({button:b}),up=b=>()=>listeners.mouseup({button:b});
@@ -100,6 +111,7 @@ const watch={
   frenzy:()=>note('frenzy',st().frenzyWave===st().wave),
   surge:()=>note('surge event',st().worldEvents.active('surge')),
   finales:()=>{note('wave 5 finale',st().waveFiveFinale?.wave===5);note('stench finale',st().waveFiveFinale?.wave===10);},
+  moves:()=>{const s=st();note('airborne',!s.grounded);note('upstairs',s.player.y>4);note('on the hall stairs',s.player.y>.5&&s.player.y<4);note('health regrowing',s.health>40&&s.health<100);note('nightstride',s.perkOwned.has('stride'));note('armor tier 2+',s.armorTier>=2);note('armor regrowing',s.armorTier>=2&&s.armor>0&&s.armor<s.armorMax);},
   arsenal:()=>{const s=st();note('aimed',s.aiming);note('reloading',s.reloadLeft>0);note('held trigger',s.mouseDown&&s.weapon!=='glock');note(s.weapon+' out',true);},
   upgrades:()=>{const s=st();note('twin ravens',s.smgDual.visible);note('pistol rank 4',s.inventory.glock.weaponRank>=4);note('shotgun ranks',s.inventory.shotgun.weaponRank>0);note('bushmaster ranks',s.inventory.bushmaster.weaponRank>0);},
   throws:()=>{note('infinite grenades',st().grenadeTime>0);note('grenade cooldown',st().grenadeCooldown>0);},
@@ -164,6 +176,7 @@ const trace={
     for(let i=0;i<10;i++){const a=(i/10-.5)*1.2,e=qa.makeZombie(Math.sin(a)*9,24-Math.cos(a)*9,i%3===0);e.hp=e.maxHp=5e3;e.speed=.3;}},1000,25),
   upgrades:run('upgrades',()=>{qa.holdSpawns();qa.setHealth(1e6);for(let i=0;i<8;i++){const e=qa.makeZombie(-4+i,15);e.hp=e.maxHp=4e3;e.speed=.2;}},760,20),
   throws:run('throws',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setGrenades(3);qa.setPlayer(0,24);qa.setAim(0,-.25);ring(12,0,14,3);},700,25),
+  moves:run('moves',()=>{qa.holdSpawns();qa.setHealth(70);qa.setPlayer(0,9);qa.setAim(0,0);},1200,10),
 };
 process.stderr.write('golden-trace coverage: '+JSON.stringify(seen)+'\n');
 process.stdout.write(JSON.stringify(trace)+'\n');
