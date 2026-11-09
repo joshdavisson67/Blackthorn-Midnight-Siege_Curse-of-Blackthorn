@@ -89,6 +89,10 @@ This is Dead Tide step 1, slice 3. Hurting and killing enemies, explosions, and 
   - drops collected and expiring;
   - bonus drops;
   - the corpse limit.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Within noise:** time to playable (six alternating pairs) and frame times.
+  - **The only measurable change:** one more file and 2 KB more source.
 
 ## Shared enemy spawner (version 195)
 
