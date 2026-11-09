@@ -34,6 +34,11 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v200-siege.json` | v200 (step 1: the play session) | The mansion after moving the session, mouse capture, pause flow and controls into `controls.mjs` |
 | `v200-load-phases.jsonl` | v199 (main) and v200 | Twenty balanced runs of `scripts/load-phases.mjs` |
 | `v200-frame-logic.jsonl` | v199 (main) and v200 | Twelve balanced pairs of `scripts/frame-logic.mjs` |
+| `v200-siege-rerun.json` | v200 (main) | The mansion re-measured beside v201 |
+| `v201-siege.json` | v201 (step 1: the screen and the sound) | The mansion after moving the renderer, cameras, quality, resizing, frame drawing, shader warm-up and sound into `display.mjs` and `audio.mjs` |
+| `v200-siege-repeat.json`, `v201-siege-repeat.json` | v200 (main) and v201 | A second full pair, main first, to recheck the fight heap |
+| `v201-load-phases.jsonl` | v200 (main) and v201 | Twenty balanced runs of `scripts/load-phases.mjs` |
+| `v201-frame-logic.jsonl` | v200 (main) and v201 | Twelve balanced pairs of `scripts/frame-logic.mjs` |
 
 ## Step 1 (v194) against main
 
@@ -240,6 +245,34 @@ From v200 on, the probe reports the mouse as locked through the browser's own `p
 - **Size:** the one measurable change is one more file and 5 KB more source.
 
 **Gameplay and page:** `scripts/golden-trace.mjs` (22 scenarios, now including the pause, capture and menu flow) produces byte-identical traces on main and v200.
+
+## Step 1, slice 8 (v201) against main
+
+Both builds were measured in full twice, back to back: v201 first, then main first. Loading was timed phase by phase over 20 balanced runs, and the game's own per-frame work over 12 balanced pairs.
+
+| Mansion | v200 (main) | v201 |
+|---|---:|---:|
+| Files loaded before playable | 98 | 100 (`display.mjs`, `audio.mjs`) |
+| Bytes loaded before playable | 8,957 KB | 8,962 KB |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load (two runs) | 237.3, 236.9 MB | 236.1, 237.5 MB |
+| JS heap after the fight (two runs) | 243.8, 244.6 MB | 253.3, 243.9 MB |
+| Draw calls and triangles in the six views and the fight | as in step 0 | identical |
+| Load: modules / world / shaders (20 balanced runs) | 0.37 / 12.37 / 40.73 s | 0.37 / 12.55 / 40.80 s |
+| Load: total | 53.47 s | 53.73 s (+0.25 s, standard error 0.34 s) |
+| 32-zombie fight: mean frame time (software rendering, two runs) | 3,304 / 3,338 ms | 3,285 / 3,281 ms |
+| The game's own work per frame, no rendering (12 pairs) | 2.32 ms fastest · 2.84 ms median | 2.39 ms fastest · 2.75 ms median |
+
+**Verdict:** no regression.
+
+- **Counts:** every rendering, shader and memory count is identical. The first v201 run read the hall at 1,939 draw calls, the known lamp-shadow timing artefact; its repeat read 2,046, as main does.
+- **Fight heap:** the first v201 run read 253.3 MB. The repeat read 243.9 MB, beside main's 243.8 and 244.6, and every earlier record sits at 243.8–244.1 MB, so the first reading was collection timing, not memory the change keeps.
+- **Loading:** no phase changed beyond its run-to-run error. The single full runs (51.9 and 56.8 s for main, 57.2 and 54.6 s for v201) were noise.
+- **Frame logic:** the game's own per-frame work matches (median −0.03 ms, standard error 0.12 ms; fastest +0.07 ms, standard error 0.11 ms).
+- **Size:** the one measurable change is two more files and 5 KB more source.
+
+**Gameplay, page, sound and screen:** `scripts/golden-trace.mjs` (23 scenarios) now also records every Web Audio node, link, value and ramp and every renderer call, from the shader warm-up to the last frame. It produces byte-identical traces on main and v201.
 
 ## Re-running
 

@@ -25,9 +25,10 @@ async function loadPlaywright(){
 }
 // Stage a copy with three timestamps added; the source is untouched.
 const stage=mkdtempSync(join(tmpdir(),'blackthorn-phases-'));cpSync(dir,stage,{recursive:true});
-let game=readFileSync(join(stage,'game.js'),'utf8');const anchor='await prepareRendering();rendererPrepared=true;';
-if(!game.includes(anchor))throw new Error('game.js no longer ends its setup with prepareRendering()');
-game='window.__tTop=performance.now();\n'+game.replace(anchor,'window.__tWorld=performance.now();await prepareRendering();window.__tPrep=performance.now();rendererPrepared=true;');
+// v201 moved the prepared flag into display.mjs; every build still awaits prepareRendering() once.
+let game=readFileSync(join(stage,'game.js'),'utf8');const anchor='await prepareRendering();';
+if(game.split(anchor).length!==2)throw new Error('game.js no longer ends its setup with prepareRendering()');
+game='window.__tTop=performance.now();\n'+game.replace(anchor,'window.__tWorld=performance.now();await prepareRendering();window.__tPrep=performance.now();');
 writeFileSync(join(stage,'game.js'),game);
 const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.woff2':'font/woff2','.json':'application/json'};
 const server=http.createServer((q,r)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p==='/')p='/index.html';const f=join(stage,p);

@@ -49,7 +49,8 @@ if(mansion)appendFileSync(join(stage,'game.js'),`
  renderer.render=function(s,c){const p=window.__perfPhoto;if(p&&c===camera){gunRoot.visible=false;c.position.set(p.x,p.y,p.z);c.rotation.set(p.pitch,p.yaw,0,'YXZ');c.fov=62;c.updateProjectionMatrix();c.updateMatrixWorld(true);}
    const t=performance.now();const r=orig(s,c);cpu+=performance.now()-t;return r;};
  window.__perf={
-   fixRes(){renderScale.reset('high');renderScale.sample=()=>{};resize();},
+   // v201 moved dynamic resolution and resizing into display; older builds keep them as their own.
+   fixRes(){const d=typeof display==='object'?display:null,scale=d?d.renderScale:renderScale;scale.reset('high');scale.sample=()=>{};if(d)d.resize();else resize();},
    stats(){const i=renderer.info;return {calls:i.render.calls,triangles:i.render.triangles,cpu,programs:i.programs?.length??0,geometries:i.memory.geometries,textures:i.memory.textures};},
    pause(){__perfLock();resetRun({capture:false});spawnTimer=Infinity;toSpawn=0;for(const z of zombies)z.group.visible=false;__perfMode('paused');},
    view(eye,target){const dx=target[0]-eye[0],dy=target[1]-eye[1],dz=target[2]-eye[2];player.set(eye[0],eye[1]>3.5?4.3:0,eye[2]);window.__perfPhoto={x:eye[0],y:eye[1],z:eye[2],yaw:Math.atan2(-dx,-dz),pitch:Math.atan2(dy,Math.hypot(dx,dz))};},
