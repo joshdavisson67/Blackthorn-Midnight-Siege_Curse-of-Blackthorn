@@ -1,16 +1,16 @@
 import {BRUTE} from './brute.mjs?v=30';
-import {FERAL} from './feral.mjs?v=165';
-import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curseWaveConfig,curseReward,chooseCurseEnemyKind} from './curse.mjs?v=165';
-import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
+import {FERAL} from './feral.mjs?v=204';
+import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curseWaveConfig,curseReward,chooseCurseEnemyKind} from './curse.mjs?v=204';
+import {createCurseUI,curseSummary} from './curse-ui.mjs?v=204';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=203';
-import {createChangelog} from './changelog.mjs?v=203';
+import {createLeaderboard} from './leaderboard.mjs?v=204';
+import {createChangelog} from './changelog.mjs?v=204';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {createWeaponRecoil,staggerLimits,createCombatHud} from './combat-feedback.mjs?v=184';
-import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnMap} from './grounds.mjs?v=165';
+import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnMap} from './grounds.mjs?v=204';
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
-import {buildGraveyard} from './graveyard.mjs?v=190';
+import {buildGraveyard} from './graveyard.mjs?v=204';
 import {CELLAR,isCellarOpen,setCellarOpen,cellarStairHeight} from './cellar-layout.mjs?v=28';
 import {buildCellar,drawCellarMap} from './cellar.mjs?v=190';
 import {SHED,SHED_FRONT,inShed} from './shed-layout.mjs?v=76';
@@ -25,6 +25,8 @@ import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 import {createStationBuilder} from './station-models.mjs?v=190';
 import {createStations,PERKS,rackStation,shrineStation,ARMOR_STATION,forgeStation} from './stations.mjs?v=202';
 import {createFirstPerson} from './first-person.mjs?v=203';
+import {SHOT_RUMBLE} from './weapon-stats.mjs?v=204';
+import {batchStatic,batchArticulated} from './batching.mjs?v=204';
 import {drawMinimap} from './minimap.mjs?v=179';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
 import {nextRank,rankKillHeal} from './weapon-ranks.mjs?v=191';
@@ -36,14 +38,14 @@ import {createCombatLights} from './combat-lights.mjs?v=190';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
-import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
-import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=187';
-import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=192';
-import {BELLA,BELLA_PAW,createBellaCompanion,nextBellaRank} from './bella.mjs?v=185';
+import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=204';
+import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=204';
+import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=204';
+import {BELLA,BELLA_PAW,createBellaCompanion,nextBellaRank} from './bella.mjs?v=204';
 import {createExplosionFx} from './explosion-fx.mjs?v=191';
 import {tagZombie} from './zombies.mjs?v=183';
-import {addEstateDetail} from './estate-detail.mjs?v=187';
-import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=187';
+import {addEstateDetail} from './estate-detail.mjs?v=204';
+import {buildFacade,mansionRoofGeometry,PORTICO} from './facade.mjs?v=204';
 import {createReticleHud} from './reticles.mjs?v=167';
 import {createFurnishings} from './furnishings.mjs?v=187';
 import {createRugBuilder} from './rugs.mjs?v=59';
@@ -51,18 +53,18 @@ import {createSignage} from './signage.mjs?v=94';
 import {FORGE} from './soul-forge.mjs?v=118';
 import {loadEstateTextures,tiledBox,ambientEnvironment,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH} from './graphics.mjs?v=187';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
-import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=190';
+import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=204';
 import {buildRotundaBell,ROTUNDA_BELL} from './rotunda-bell.mjs?v=189';
-import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
+import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=204';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=170';
 import {createBlackout} from './blackout.mjs?v=135';
-import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-spawns.mjs?v=174';
-import {createEnemyAI} from './enemy-ai.mjs?v=194';
-import {createEnemySpawner} from './enemy-spawn.mjs?v=195';
-import {createCombat} from './enemy-combat.mjs?v=196';
-import {createWeaponRuntime} from './weapon-runtime.mjs?v=197';
+import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-spawns.mjs?v=204';
+import {createEnemyAI} from './enemy-ai.mjs?v=204';
+import {createEnemySpawner} from './enemy-spawn.mjs?v=204';
+import {createCombat} from './enemy-combat.mjs?v=204';
+import {createWeaponRuntime} from './weapon-runtime.mjs?v=204';
 import {createRunState,createPlayer} from './player.mjs?v=198';
-import {createHud} from './hud.mjs?v=199';
+import {createHud} from './hud.mjs?v=204';
 import {createSession,createControls,WEAPON_CYCLE} from './controls.mjs?v=200';
 import {resetBuild} from './zombie-build.mjs?v=177';
 import {LURKER} from './lurker.mjs?v=179';
@@ -317,7 +319,7 @@ const bossFx=createBossEffects(world),curseLadder=createCurseLadder();
 let boss={stage:'dormant',enemy:null,clock:0,summons:0,lance:0,cry:0,cast:null,victories:0};
 prepareLightingMaterials(enemyAssets.injuries.group);prepareLightingMaterials(enemyAssets.faces.group);for(const rig of enemyAssets.templates){prepareLightingMaterials(rig.group);const rage=rig.group.clone(true);enemyAssets.enrage({group:rage});prepareLightingMaterials(rage);}
 const powerupAssets=createPowerupAssets();
-const {weapons,weaponAimFov,waveConfig,isBlocked,indexColliders}=await import('./core.mjs?v=165');indexColliders(colliders);let nav=makeNavigation();
+const {weapons,weaponAimFov,waveConfig,isBlocked,indexColliders}=await import('./core.mjs?v=204');indexColliders(colliders);let nav=makeNavigation();
 function makeNavigation(){
   const navigation=buildVerticalNavigation(colliders),brutes=buildVerticalNavigation(colliders,{radius:BRUTE.radius,groundHeight:BRUTE.height,upperHeight:BRUTE.crouchHeight}),rebuild=navigation.rebuild;
   bella.setNavigation(bella.unlocked?buildVerticalNavigation(colliders,{radius:BELLA.bodyRadius,groundHeight:BELLA.height,upperHeight:BELLA.height}):null);
@@ -469,7 +471,7 @@ function lurkerDice(w,slot){let h=(seed^Math.imul(w,0x9E3779B1)^Math.imul(slot+1
 // enemy-combat.mjs. The mansion keeps its own rewards and extras: curse-rank and
 // world-event essence, Bella's bone chips, Sir Blackthorn, the Gravewarden's shield
 // and grave essence.
-const {damageEnemy,killZombie,bloodBurst,blastLine,explode,detonateRound,lurkerBurst,lurkerBursts,dropPickup,updatePickups}=createCombat({
+const {damageEnemy,killZombie,bloodBurst,blastLine,explode,detonateRound,lurkerBurst,lurkerBursts,dropPickup,updatePickups,updateEffects}=createCombat({
   level:mansionLevel,
   run:{player,zombies,scene:world,rand,rng,tone,noise,notify,rumble:padRumble,sphere,effects,bloodPool,explosionFx,blastLight:BLAST_LIGHT,powerupAssets,pickups,enemyAssets,
     get elapsed(){return elapsed;},get playing(){return session.mode==='playing';},
@@ -927,7 +929,6 @@ function applyRumbleSetting(){$('rumbleToggle').setAttribute('aria-checked',Stri
 $('rumbleToggle').onclick=()=>{rumbleOn=!rumbleOn;try{localStorage.setItem(RUMBLE_KEY,rumbleOn?'on':'off');}catch{}applyRumbleSetting();if(rumbleOn)padRumble(.5,.3,140);};
 applyRumbleSetting();
 function padRumble(strong,weak,ms){if(rumbleOn&&padPlay())gamepad.rumble(strong,weak,ms);}
-const SHOT_RUMBLE={glock:[.08,.32,55],shotgun:[.75,.5,120],smg:[.05,.22,40],lmg:[.2,.35,55],bushmaster:[.45,.4,80],rifle:[.12,.3,50]};
 let shownController='';
 function updateControllerStatus(){
   const status=$('controllerStatus'),pad=gamepad?.connected?gamepad.name.replace(/\s*\((?:STANDARD GAMEPAD|Vendor:)[^)]*\)/gi,'').replace(/\s*\(.*\)\s*$/,'').trim()||'Controller':'';
@@ -1017,8 +1018,6 @@ const {updateEnemies,hasClearPath}=createEnemyAI({
 // v158: a zombie Bella bites turns on her and fights her until it dies.
 // Bosses and elite guardians ignore her and keep hunting the player.
 function bellaBite(enemy,damage,direction){if(!enemy.boss&&!enemy.elite)enemy.bellaAggro=true;damageEnemy(enemy,damage,false,{direction:direction.clone(),part:enemy.dog?'head':'leg',force:.45,source:'Bella'});tone(460,.08,.018,'triangle',620);}
-const effectNext=new T.Vector3();
-function updateEffects(dt){for(let i=effects.length-1;i>=0;i--){const e=effects[i],step=e.firstStep??dt;delete e.firstStep;e.life-=step;if(e.type==='particle'||e.type==='grenade'||e.type==='spoon'){e.vel.y-=9*step;const previousY=e.mesh.position.y,next=effectNext.copy(e.mesh.position).addScaledVector(e.vel,step);if(e.type==='grenade'&&isBlocked(next.x,next.z,.1,colliders,undefined,next.y-.1,.2)){e.vel.x*=-.5;e.vel.z*=-.5;}else{e.mesh.position.x=next.x;e.mesh.position.z=next.z;}e.mesh.position.y=next.y;const floor=supportBelow(next.x,next.z,previousY+.05)+(e.rest??.12);if(next.y<floor){e.mesh.position.y=floor;e.vel.y=Math.abs(e.vel.y)*.3;e.vel.x*=.9;e.vel.z*=.9;if(e.spin)e.spin.multiplyScalar(.5);}if(e.spin){e.mesh.rotation.x+=step*e.spin.x;e.mesh.rotation.y+=step*e.spin.y;e.mesh.rotation.z+=step*e.spin.z;}else e.mesh.rotation.x+=step*4;}if(e.type==='light')e.mesh.intensity=25*e.life/e.max;if(e.life<=0){if(e.type==='grenade')explode(e.mesh.position.clone());if(e.pool)e.pool.release(e);else world.remove(e.mesh);effects.splice(i,1);}}}
 const radar=$('radar'),rx=radar.getContext('2d');// v162: north-up minimap; see minimap.mjs.
 // v163: the canvas backing store follows the map's on-screen size (it grows
 // with the screen on PC), so the bigger map stays sharp.
@@ -1078,7 +1077,5 @@ async function prepareRendering(){
 display.restoreQuality();
 await prepareRendering();lastTime=performance.now();$('loading').classList.add('hidden');window.Blackthorn?.ready(startFromMenu);requestAnimationFrame(tick);
 // Batch static geometry and each articulated body section to limit draw calls.
-function combineMeshes(list,parent){if(list.length<2)return;const inverse=new T.Matrix4().copy(parent.matrixWorld).invert(),positions=[],normals=[],uvs=[],colors=[],rageColors=[],finishes=[],hasColors=list.some(m=>m.geometry.hasAttribute('color')),hasRageColors=list.some(m=>m.geometry.hasAttribute('rageColor')),hasFinishes=list.some(m=>m.geometry.hasAttribute('surfaceFinish'));for(const m of list){const geo=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();geo.applyMatrix4(new T.Matrix4().multiplyMatrices(inverse,m.matrixWorld));positions.push(geo.attributes.position.array);normals.push(geo.attributes.normal.array);uvs.push(geo.attributes.uv.array);if(hasColors)colors.push(geo.attributes.color?.array||new Float32Array(geo.attributes.position.count*3).fill(1));if(hasRageColors)rageColors.push(geo.attributes.rageColor?.array||geo.attributes.color?.array||new Float32Array(geo.attributes.position.count*3).fill(1));if(hasFinishes)finishes.push(geo.attributes.surfaceFinish.array);geo.dispose();}function concat(arrays){const dst=new Float32Array(arrays.reduce((n,a)=>n+a.length,0));let at=0;for(const a of arrays){dst.set(a,at);at+=a.length;}return dst;}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(concat(positions),3));geo.setAttribute('normal',new T.BufferAttribute(concat(normals),3));geo.setAttribute('uv',new T.BufferAttribute(concat(uvs),2));if(hasColors)geo.setAttribute('color',new T.BufferAttribute(concat(colors),3));if(hasRageColors)geo.setAttribute('rageColor',new T.BufferAttribute(concat(rageColors),3));if(hasFinishes)geo.setAttribute('surfaceFinish',new T.BufferAttribute(concat(finishes),2));geo.computeBoundingSphere();const merged=new T.Mesh(geo,list[0].material);merged.castShadow=list.some(m=>m.castShadow);merged.receiveShadow=true;parent.add(merged);for(const m of list)m.parent.remove(m);}
-function batchStaticWorld(){scene.updateMatrixWorld(true);const buckets=new Map();world.traverse(m=>{if(!m.isMesh||m.isInstancedMesh||m.userData.dynamic||m===fire)return;const p=m.getWorldPosition(new T.Vector3());let k=m.material.uuid+":"+Math.floor(p.x/24)+":"+Math.floor(p.z/24)+":"+m.castShadow;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);});for(const list of buckets.values())combineMeshes(list,world);}
-function batchArticulated(group){group.updateMatrixWorld(true);const groups=[];group.traverse(o=>{if(o.isGroup)groups.push(o);});for(const g of groups){const buckets=new Map();for(const m of [...g.children]){if(!m.isMesh)continue;const k=m.material.uuid;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);}for(const list of buckets.values())combineMeshes(list,g);}}
-
+// v204: batching lives in batching.mjs; the hearth fire flickers, so it stays apart.
+function batchStaticWorld(){batchStatic(scene,world,m=>m===fire);}

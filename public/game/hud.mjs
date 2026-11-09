@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {weapons} from './core.mjs?v=165';
+import {weapons} from './weapon-stats.mjs?v=204';
 import {rankInfo} from './weapon-ranks.mjs?v=191';
 import {armorRank} from './armor.mjs?v=94';
 import {POWERUPS,powerupIcon} from './powerups.mjs?v=190';

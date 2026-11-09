@@ -11,9 +11,9 @@ export async function verifyHud(){
   const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),game=resolve(root,'public/game'),read=f=>readFileSync(resolve(game,f),'utf8');
   // ---- Isolation ------------------------------------------------------------------------
   const imports=f=>[...read(f).matchAll(/^import[^'"]*['"]\.\/([\w.-]+?)(?:\?v=\d+)?['"]/gm)].map(m=>m[1]);
-  assert.deepEqual(imports('hud.mjs'),['three.module.js','core.mjs','weapon-ranks.mjs','armor.mjs','powerups.mjs'],'The HUD imports only shared modules');
+  assert.deepEqual(imports('hud.mjs'),['three.module.js','weapon-stats.mjs','weapon-ranks.mjs','armor.mjs','powerups.mjs'],'The HUD imports only shared modules');
   const closure=new Set(),walk=f=>{if(closure.has(f))return;closure.add(f);for(const g of imports(f))walk(g);};walk('hud.mjs');
-  const mansion=['vertical.mjs','cellar-layout.mjs','cellar.mjs','graveyard.mjs','mansion-expansion.mjs','second-floor.mjs','facade.mjs','furnishings.mjs','grounds.mjs','estate-detail.mjs','shed.mjs','shed-layout.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','rotunda-bell.mjs','world-events.mjs','world-event-visuals.mjs','curse.mjs','curse-ui.mjs','camp-spawns.mjs','upper-shell.mjs','exterior-stairs.mjs','lighting.mjs'];
+  const mansion=['core.mjs','estate-layout.mjs','graveyard-layout.mjs','vertical.mjs','cellar-layout.mjs','cellar.mjs','graveyard.mjs','mansion-expansion.mjs','second-floor.mjs','facade.mjs','furnishings.mjs','grounds.mjs','estate-detail.mjs','shed.mjs','shed-layout.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','rotunda-bell.mjs','world-events.mjs','world-event-visuals.mjs','curse.mjs','curse-ui.mjs','camp-spawns.mjs','upper-shell.mjs','exterior-stairs.mjs','lighting.mjs'];
   assert.deepEqual([...closure].filter(f=>mansion.includes(f)),[],'Nothing the HUD loads builds or holds the mansion');
   const src=read('game.js');
   for(const name of ['notify','announce','updateReloadHud'])assert(!new RegExp(`function ${name}\\(`).test(src),`game.js no longer keeps its own ${name}`);

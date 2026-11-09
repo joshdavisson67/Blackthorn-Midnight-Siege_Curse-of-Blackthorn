@@ -7,6 +7,7 @@
 //
 //   node scripts/perf-measure.mjs                      # the mansion (index.html)
 //   node scripts/perf-measure.mjs --page modes.html    # the mode picker
+//   node scripts/perf-measure.mjs --page tide.html     # Dead Tide (v204): its island, on its own page
 //   node scripts/perf-measure.mjs --out perf/v193-siege.json --label v193
 //   node scripts/perf-measure.mjs --game ../old-checkout/public/game   # another build
 //   node scripts/perf-measure.mjs --load-only                          # time to playable only
@@ -25,7 +26,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const arg=(name,fallback)=>{const i=process.argv.indexOf(`--${name}`);return i>0?process.argv[i+1]:fallback;};
 const page=arg('page','index.html'),label=arg('label',''),out=arg('out',''),gameDir=resolve(arg('game',join(root,'public/game')));
 const log=m=>process.stderr.write(`[perf ${((Date.now()-started)/1000).toFixed(0)}s] ${m}\n`),started=Date.now();
-const mansion=page==='index.html';
+const mansion=page==='index.html',tide=page==='tide.html';
 
 async function loadPlaywright(){
   for(const spec of [process.env.PLAYWRIGHT_MODULE,'playwright','/opt/npm-tools/node_modules/playwright/index.mjs'].filter(Boolean)){
@@ -62,6 +63,22 @@ if(mansion)appendFileSync(join(stage,'game.js'),`
        makeZombie(Math.sin(a)*r,22+Math.cos(a)*r*.55,k==='brute',k==='dog'||k==='ash',k==='ash',0,k==='feral');}
      return zombies.filter(e=>!e.dead).length;},
    alive(){return zombies.filter(e=>!e.dead).length;}
+ };}
+`);
+
+if(tide)appendFileSync(join(stage,'tide.mjs'),`
+// ---- perf-measure hook (staged copy only) ----
+{const orig=renderer.render.bind(renderer);let cpu=0;
+ renderer.info.autoReset=false;
+ renderer.render=function(s,c){const t=performance.now();const r=orig(s,c);cpu+=performance.now()-t;return r;};
+ window.__perf={
+   fixRes(){display.renderScale.reset('high');display.renderScale.sample=()=>{};display.resize();},
+   stats(){const i=renderer.info;return {calls:i.render.calls,triangles:i.render.triangles,cpu,programs:i.programs?.length??0,geometries:i.memory.geometries,textures:i.memory.textures};},
+   // Dead Tide marks when its modules have loaded, its island is built and its shaders are compiled.
+   phases(){const at=n=>performance.getEntriesByName(n)[0]?.startTime??null;return {modules:at('tide:modules'),world:at('tide:world'),shaders:at('tide:shaders')};},
+   view(x,z,yaw,pitch){Object.defineProperty(document,'pointerLockElement',{configurable:true,get:()=>canvas});session.mode='playing';session.pointer=true;keys.clear();
+     $('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');player.set(x,groundHeight(x,z),z);runState.grounded=true;runState.jumpV=0;session.lookYaw=yaw;session.lookPitch=pitch;},
+   blast(x,z){combat.explode(new T.Vector3(x,groundHeight(x,z)+.3,z));}
  };}
 `);
 
@@ -112,6 +129,24 @@ if(mansion){
   const a=await q(()=>window.__perf.stats()),d=await frames(FIGHT_FRAMES),b=await q(()=>window.__perf.stats());
   result.fight={enemies:alive,stillAlive:await q(()=>window.__perf.alive()),firstFramesMaxMs:+Math.max(...hitch).toFixed(2),drawCalls:Math.round((b.calls-a.calls)/FIGHT_FRAMES),trianglesK:Math.round((b.triangles-a.triangles)/FIGHT_FRAMES/1000),renderCpuMs:+((b.cpu-a.cpu)/FIGHT_FRAMES).toFixed(2),...summary(d),heapMB:await heap()};log(`fight: ${JSON.stringify(result.fight)}`);
   const s1=await q(()=>window.__perf.stats());result.gpu.shaderProgramsAfterFight=s1.programs;
+}else if(tide){
+  await tab.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:900000});
+  const playable=Date.now()-t0;log(`playable after ${(playable/1000).toFixed(1)}s`);await new Promise(r=>setTimeout(r,1500));
+  const err=await q(()=>document.getElementById('errorDetails')?.textContent||'');if(err)throw new Error('Load error: '+err);
+  const files=served.filter(s=>s.status===200).map(s=>s.path),ph=await q(()=>window.__perf.phases());
+  result.load={timeToPlayableMs:playable,untilPlayable:bytesUpTo(playable),total:bytesUpTo(Date.now()-t0),heapMB:await heap(),
+    phases:{modulesMs:Math.round(ph.modules),worldMs:Math.round(ph.world-ph.modules),shadersMs:Math.round(ph.shaders-ph.world)},files,
+    mansionFiles:files.filter(f=>/^\/(index\.html|boot\.js|game\.js|core\.mjs|estate-layout|graveyard|cellar|shed|vertical|second-floor|upper-shell|exterior-stairs|mansion-expansion|facade|furnishings|rugs|signage|grounds|estate-detail|rotunda-bell|olivia|bella|blackthorn-boss|curse|world-event|blackout|camp-spawns|lighting|environment-lights|combat-lights|leaderboard|changelog)/.test(f))};
+  await q(()=>window.__perf.fixRes());
+  const s0=await q(()=>window.__perf.stats());result.gpu={shaderPrograms:s0.programs,geometries:s0.geometries,textures:s0.textures};
+  const measure=async name=>{await frames(3);const a=await q(()=>window.__perf.stats()),d=await frames(VIEW_FRAMES),b=await q(()=>window.__perf.stats());
+    result.views[name]={drawCalls:Math.round((b.calls-a.calls)/VIEW_FRAMES),trianglesK:Math.round((b.triangles-a.triangles)/VIEW_FRAMES/1000),renderCpuMs:+((b.cpu-a.cpu)/VIEW_FRAMES).toFixed(2),...summary(d)};log(`view ${name}: ${JSON.stringify(result.views[name])}`);};
+  result.views={};await measure('title');
+  const views=[['spawn',0,46.5,.073,-.02],['summit',-3,-8,1.2,-.1],['wreck',40,36,-2.2,0],['sea',-40,30,2.2,-.05],['shack',-.5,-1.2,0,-.05]];
+  for(const [name,x,z,yaw,pitch] of views){await q(v=>window.__perf.view(...v),[x,z,yaw,pitch]);await measure(name);}
+  // A grenade blast in view: its effects were compiled under the loading screen, so no new shaders now.
+  await q(()=>{window.__perf.view(0,46.5,.073,-.1);window.__perf.blast(0,40);});await measure('blast');
+  const s1=await q(()=>window.__perf.stats());result.gpu.shaderProgramsAfterPlay=s1.programs;result.heapAfterPlayMB=await heap();
 }else{
   const loaded=Date.now()-t0;await new Promise(r=>setTimeout(r,800));
   result.load={timeToInteractiveMs:loaded,total:bytesUpTo(Date.now()-t0),heapMB:await heap(),files:served.filter(s=>s.status===200).map(s=>s.path)};
