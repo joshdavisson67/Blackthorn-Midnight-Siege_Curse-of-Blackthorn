@@ -72,7 +72,12 @@ This is Dead Tide step 1, slice 9, the last slice of step 1. What the shared sta
   - reach, including floors, locked, spent and hidden stations;
   - the prompt, and every kind of purchase above;
   - a kind of station the module has never seen (a katana), added entirely through the rules.
-- **Mansion performance:** PERF_PLACEHOLDER
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading:** across 40 balanced runs, no load phase changed beyond its run-to-run error. A slower shader phase in the first 20 did not repeat.
+  - **Frame logic:** the game's own per-frame work matches.
+  - **The only measurable change:** one more file and 4 KB more source.
+- **Step 1 is complete:** enemy AI, spawning, combat, the weapon runtime, the player's run, the HUD, the play session, the screen and sound, and now the stations are all shared. Dead Tide step 2 (the grey-box island) can build on them.
 
 ## The screen and the sound, shared (version 201)
 
