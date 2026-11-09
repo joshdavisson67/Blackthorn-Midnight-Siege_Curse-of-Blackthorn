@@ -152,7 +152,7 @@ Main was measured in full once and v197 twice. Loading was timed over 14 balance
 
 ## Step 1, slice 5 (v198) against main
 
-Both builds were measured in full, back to back. Loading was then timed phase by phase over 20 balanced runs. The fight was sampled twice more on each build, and the game's own per-frame work was timed without rendering over 12 alternating pairs.
+Both builds were measured in full, back to back. Loading was then timed phase by phase over 20 balanced runs. The fight was sampled twice more on each build, and the game's own per-frame work was timed without rendering over 24 alternating pairs.
 
 | Mansion | v197 (main) | v198 |
 |---|---:|---:|
@@ -167,12 +167,14 @@ Both builds were measured in full, back to back. Loading was then timed phase by
 | Load: compiling shaders and drawing the first frame | 37.10 s | 36.88 s |
 | Load: total | 48.89 s | 48.24 s |
 | 32-zombie fight: mean frame time, three runs each (software rendering) | 3,089 · 3,333 · 2,982 ms | 3,432 · 2,967 · 2,960 ms |
-| The game's own work per frame in that fight, no rendering (12 pairs) | 2.10 ms fastest · 2.40 ms median | 2.15 ms fastest · 2.54 ms median |
+| The game's own work per frame in that fight, no rendering (24 pairs) | 2.12 ms fastest · 2.37 ms median | 2.15 ms fastest · 2.42 ms median |
 
 **Verdict:** no regression. Every rendering, shader and memory count is identical. Loading is no slower: modules take 27 ms longer (standard error 18 ms), and world building is 0.46 s faster (standard error 0.17 s).
 
 - **The fight:** the first v198 run read 11% slower than main. Its two repeats read 2,967 and 2,960 ms, and across the three runs each the builds average 3,135 ms (main) and 3,120 ms (v198).
-- **The game's own work per frame:** `scripts/frame-logic.mjs` times the per-frame JavaScript without rendering. The difference is 0.04 ms a frame at the fastest (standard error 0.04 ms) and 0.14 ms at the median (standard error 0.16 ms). That's within noise, and too small to show in a frame that takes seconds to render here.
+- **The game's own work per frame:** `scripts/frame-logic.mjs` times the per-frame JavaScript without rendering.
+  - **The first 12 pairs** hinted at about 0.06 ms a frame, so I ran 12 more.
+  - **Over all 24,** the difference is +0.03 ms at the fastest (standard error 0.03 ms; v198 slower in 12 of 24) and +0.06 ms at the median (standard error 0.07 ms). That's within noise.
 - **The one measurable change** is one more file and 5 KB more source.
 
 **Gameplay:** `scripts/golden-trace.mjs` (21 scenarios) produces byte-identical traces on main and v198.
