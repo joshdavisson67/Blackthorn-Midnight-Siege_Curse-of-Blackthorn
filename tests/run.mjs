@@ -382,3 +382,6 @@ await verifyDisplay();
 
 const {verifySharedStations}=await import('./shared-stations.mjs');
 await verifySharedStations();
+
+const {verifyFirstPerson}=await import('./first-person.mjs');
+await verifyFirstPerson();

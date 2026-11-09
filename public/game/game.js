@@ -4,8 +4,8 @@ import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curs
 import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=202';
-import {createChangelog} from './changelog.mjs?v=202';
+import {createLeaderboard} from './leaderboard.mjs?v=203';
+import {createChangelog} from './changelog.mjs?v=203';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {createWeaponRecoil,staggerLimits,createCombatHud} from './combat-feedback.mjs?v=184';
 import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnMap} from './grounds.mjs?v=165';
@@ -20,12 +20,11 @@ import {createDisplay} from './display.mjs?v=201';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createAudio} from './audio.mjs?v=201';
-import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 import {createStationBuilder} from './station-models.mjs?v=190';
 import {createStations,PERKS,rackStation,shrineStation,ARMOR_STATION,forgeStation} from './stations.mjs?v=202';
-import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=187';
+import {createFirstPerson} from './first-person.mjs?v=203';
 import {drawMinimap} from './minimap.mjs?v=179';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
 import {nextRank,rankKillHeal} from './weapon-ranks.mjs?v=191';
@@ -50,7 +49,7 @@ import {createFurnishings} from './furnishings.mjs?v=187';
 import {createRugBuilder} from './rugs.mjs?v=59';
 import {createSignage} from './signage.mjs?v=94';
 import {FORGE} from './soul-forge.mjs?v=118';
-import {loadEstateTextures,tiledBox,ambientEnvironment,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=187';
+import {loadEstateTextures,tiledBox,ambientEnvironment,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH} from './graphics.mjs?v=187';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
 import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=190';
 import {buildRotundaBell,ROTUNDA_BELL} from './rotunda-bell.mjs?v=189';
@@ -75,7 +74,7 @@ const reticleHud=createReticleHud($('crosshair'));
 // setting, dynamic resolution, resizing and the shader warm-up live in display.mjs.
 // The mansion keeps its sky, fog, lights and world.
 const canvas=$('game');const display=createDisplay({canvas,onFailure(message){$('loading').classList.add('hidden');$('error').classList.remove('hidden');$('error').textContent=message;}});
-const {renderer,scene,camera,viewCamera}=display;scene.background=new T.Color(0x09131e);scene.fog=new T.FogExp2(0x101c26,.014);let weaponViewFov=75;
+const {renderer,scene,camera,viewCamera}=display;scene.background=new T.Color(0x09131e);scene.fog=new T.FogExp2(0x101c26,.014);
 const world=new T.Group();scene.add(world);const colliders=[],solidMeshes=[],interactables=[],lamps=[],zombies=[],effects=[],pickups=[],portraits=[];
 // Keep room entrances explicit so layout checks cover the full approach to
 // each opening, including the library entrance beside the stair flight.
@@ -227,36 +226,9 @@ powerStation(-41.21,0,'double',0,Math.PI/2);powerStation(41.24,0,'grenades',0,-M
 const rainGeo=new T.BufferGeometry();const rainPos=new Float32Array(1600*3);for(let i=0;i<rainPos.length;i+=3){rainPos[i]=rand(-22,22);rainPos[i+1]=rand(0,18);rainPos[i+2]=rand(-2,42);}rainGeo.setAttribute('position',new T.BufferAttribute(rainPos,3));const rain=new T.Points(rainGeo,new T.PointsMaterial({color:0x90aebd,size:.033,transparent:true,opacity:.35}));scene.add(rain);
 const mistCanvas=document.createElement('canvas');mistCanvas.width=mistCanvas.height=128;const mx=mistCanvas.getContext('2d');const mg=mx.createRadialGradient(64,64,2,64,64,62);mg.addColorStop(0,'rgba(160,190,190,.24)');mg.addColorStop(1,'rgba(160,190,190,0)');mx.fillStyle=mg;mx.fillRect(0,0,128,128);const mistTex=new T.CanvasTexture(mistCanvas);const mist=[];for(let i=0;i<26;i++){const s=new T.Sprite(new T.SpriteMaterial({map:mistTex,transparent:true,depthWrite:false,opacity:.1}));s.position.set(rand(-40,40),rand(.1,.6),rand(17,27));s.scale.set(rand(8,15),rand(1,2),1);scene.add(s);mist.push(s);}
 // Floating view model: a detailed receiver, rail, sight, stock and barrel.
-const gunRoot=new T.Group();camera.add(gunRoot);gunRoot.position.set(.28,-.26,-.48);const gunGroups={};
-function buildGun(type,options={}){
-  const g=createWeaponModel(type,{hands:false,...options});gunRoot.add(g);
-  if(g.userData.optic)batchArticulated(g.userData.optic.housing);
-  if(g.userData.optic?.magnification){
-    // A single opaque annulus frames the magnified view without another world
-    // render target. The rack keeps the complete, unmasked scope model.
-    const sight=g.userData.optic,mask=new T.Mesh(new T.RingGeometry(sight.maskRadius??.023,.9,64),new T.MeshBasicMaterial({color:0x05090c,side:T.DoubleSide}));
-    mask.position.set(0,0,sight.maskZ??.094);mask.name='Scope peripheral mask';mask.visible=false;sight.group.add(mask);sight.mask=mask;
-  }
-  // Batch the fixed gun by finish; the clear optic and reticle remain separate.
-  batchArticulated(g.userData.body);
-  const viewMats=new Map();g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;if(!viewMats.has(o.material)){const vm=o.material.clone();vm.depthTest=true;vm.depthWrite=!vm.transparent&&!o.userData.reticle;viewMats.set(o.material,vm);}o.material=viewMats.get(o.material);o.renderOrder=o.userData.reticle?4:o.material.transparent?2:0;}});
-  return g;
-}
-for(const k of ['glock','rifle','shotgun','smg','lmg','bushmaster'])gunGroups[k]=buildGun(k);
-// Blood Moon (v165, Bushmaster Rank I): the same rifle with a red dot on a
-// riser instead of the 10x scope. It replaces the scoped model while held.
-const bushDot=buildGun('bushmaster',{dotSight:true});bushDot.visible=false;
-// Twin Ravens (v161, SMG capstone): an MP5 in each hand, without optics,
-// toed in slightly. They fire alternately; each kicks back on its own shot.
-const smgDual=new T.Group();smgDual.name='Twin Ravens';smgDual.visible=false;gunRoot.add(smgDual);
-const dualGuns=[1,-1].map(side=>{const g=buildGun('smg',{optic:false});smgDual.add(g);g.position.set(side*.25,0,0);g.rotation.y=side*.04;g.visible=true;return {g,side,kick:0,muzzle:new T.Vector3()};});
-let dualSide=0;const dualMuzzle=new T.Vector3();
-// How far ahead of the eye each gun sits when aimed. The shotgun's iron sights
-// (v153) bring the eye in to a cheek weld just behind the rear aperture, so the
-// stock stays out of the sight picture; the ring stays beyond the .09 near plane
-// even at full recoil.
-const ADS_DEPTH={glock:-.39,shotgun:-.20};
-const scopedGuns=Object.entries(gunGroups).filter(([,g])=>g.userData.optic?.mask).map(([type,g])=>({type,sight:g.userData.optic}));
+// v203 (Dead Tide step 2): the guns in hand, the muzzle flash, the view's lights,
+// the flashlight and how the view moves live in first-person.mjs.
+const firstPerson=createFirstPerson({camera,batchArticulated}),{gunRoot,gunGroups,bushDot,smgDual,dualGuns,dualMuzzle,scopedGuns}=firstPerson;
 const explosionFx=createExplosionFx(world),BLAST_LIGHT={release(){}};
 // v185: scorch marks sit on the visible floor (paving, porch boards, rugs),
 // which can be a few centimetres above the walkable support height. Static
@@ -278,13 +250,7 @@ function visibleFloor(x,z,support){
   const hit=floorRay.intersectObjects(near,false)[0];return hit?hit.point.y:support;
 }
 const grenadeAssets=createGrenadeAssets(batchArticulated),grenadeThrow=createGrenadeThrow(grenadeAssets,batchArticulated);camera.add(grenadeThrow.root);
-const flashMat=new T.MeshBasicMaterial({color:0xffd37a,transparent:true,opacity:1,depthWrite:false});const flash=mesh(new T.ConeGeometry(.1,.32,8),flashMat,[0,0,-.9],null,gunRoot,false);flash.rotation.x=-Math.PI/2;flash.renderOrder=3;flash.material.depthTest=true;flash.visible=false;const muzzleLight=new T.PointLight(0xffc278,0,6);gunRoot.add(muzzleLight);muzzleLight.position.set(0,0,-.7);
-gunRoot.traverse(o=>o.layers.set(1));muzzleLight.layers.enable(1);const viewFill=new T.HemisphereLight(0xcbd9df,0x4d5544,2.2);viewFill.layers.set(1);scene.add(viewFill);const viewKey=new T.DirectionalLight(0xe6d0af,2.3);viewKey.layers.set(1);viewKey.position.set(-1,3,2);viewKey.target=gunRoot;camera.add(viewKey);
-// A shaped torch beam: wider cone, soft rim, and a core that no longer clips the floor to white.
-// v182: 25% brighter, reaching 25% further and 15% wider than before (22, 28 m, 0.5 rad).
-const FLASHLIGHT=Object.freeze({intensity:22*1.25,distance:28*1.25,angle:.5*1.15,penumbra:.35,decay:1.1});
-const FLASHLIGHT_INTENSITY=FLASHLIGHT.intensity;
-const flashlight=new T.SpotLight(0xe2eddd,FLASHLIGHT_INTENSITY,FLASHLIGHT.distance,FLASHLIGHT.angle,FLASHLIGHT.penumbra,FLASHLIGHT.decay);flashlight.map=flashlightBeamTexture();flashlight.position.set(.18,-.1,0);camera.add(flashlight);camera.add(flashlight.target);flashlight.target.position.set(0,0,-15);flashlight.visible=true;let flashlightOn=true;
+const {flash,muzzleLight,viewFill,viewKey,flashlight}=firstPerson.addLights(scene),{toggleFlashlight}=firstPerson;
 // Clear each frame and resolve with spatial antialiasing; preserve the 15% brightness boost.
 display.addFilm();
 // The night sky uses layered clouds instead of a flat backdrop.
@@ -363,7 +329,7 @@ function makeNavigation(){
 // trigger and aim) live in one object from controls.mjs.
 const session=createSession();
 let frenzyWave=0,waveFiveFinale=null;
-let elapsed=0,lastTime=performance.now(),recoil=0,reloadDrop=0,flashTime=0,waveDelay=7,spawnTimer=0,toSpawn=0,spawned=0,navTimer=0,wave=0;const keys=new Set(),player=new T.Vector3(0,0,20);
+let elapsed=0,lastTime=performance.now(),waveDelay=7,spawnTimer=0,toSpawn=0,spawned=0,navTimer=0,wave=0;const keys=new Set(),player=new T.Vector3(0,0,20);
 // v198 (Dead Tide step 1): the run's own values live in one object from player.mjs,
 // shared with the weapon runtime. Walking, jumping, getting hurt and recovering are
 // player.mjs's too; the mansion hands over its floors, stairs and collision.
@@ -426,10 +392,11 @@ const {ammoCapacity,freshInventory,restockTarget,restockWeapon,ammoFull,refillAm
     get points(){return runState.points;},set points(v){runState.points=v;},get reloadLeft(){return runState.reloadLeft;},set reloadLeft(v){runState.reloadLeft=v;},get reloadDuration(){return runState.reloadDuration;},set reloadDuration(v){runState.reloadDuration=v;},
     get shotTimer(){return runState.shotTimer;},set shotTimer(v){runState.shotTimer=v;},get grenades(){return runState.grenades;},set grenades(v){runState.grenades=v;},get grenadeTime(){return runState.grenadeTime;},set grenadeTime(v){runState.grenadeTime=v;},
     get grenadeCooldown(){return runState.grenadeCooldown;},set grenadeCooldown(v){runState.grenadeCooldown=v;},get doubleTime(){return runState.doubleTime;},set doubleTime(v){runState.doubleTime=v;},
-    get flashTime(){return flashTime;},set flashTime(v){flashTime=v;},get recoil(){return recoil;},set recoil(v){recoil=v;},get dualSide(){return dualSide;},set dualSide(v){dualSide=v;},
-    get weaponViewFov(){return weaponViewFov;},set weaponViewFov(v){weaponViewFov=v;},get shotId(){return runState.shotId;},set shotId(v){runState.shotId=v;}},
+    get flashTime(){return firstPerson.flashTime;},set flashTime(v){firstPerson.flashTime=v;},get recoil(){return firstPerson.recoil;},set recoil(v){firstPerson.recoil=v;},get dualSide(){return firstPerson.dualSide;},set dualSide(v){firstPerson.dualSide=v;},
+    get weaponViewFov(){return firstPerson.viewFov;},set weaponViewFov(v){firstPerson.viewFov=v;},get shotId(){return runState.shotId;},set shotId(v){runState.shotId=v;}},
   combat:{get damageEnemy(){return damageEnemy;},get bloodBurst(){return bloodBurst;},get detonateRound(){return detonateRound;}}
 });
+firstPerson.bind({player,state:runState,session,weaponRecoil,grenadeThrow,arms:{aimFovOf,zoomOf,dualOn,aimHeight,viewGun}});
 // The mansion's stations: shared ones from stations.mjs, plus its own kinds (Bella's
 // kennel, Olivia, Sir Blackthorn's grave, the shed, cellar and tomb doors, the shed's
 // M4 and the Warden LMG), which go through the rules below.
@@ -506,7 +473,7 @@ const {damageEnemy,killZombie,bloodBurst,blastLine,explode,detonateRound,lurkerB
   level:mansionLevel,
   run:{player,zombies,scene:world,rand,rng,tone,noise,notify,rumble:padRumble,sphere,effects,bloodPool,explosionFx,blastLight:BLAST_LIGHT,powerupAssets,pickups,enemyAssets,
     get elapsed(){return elapsed;},get playing(){return session.mode==='playing';},
-    addPoints,addKill:()=>{runState.kills++;},hurtPlayer,kick:()=>{recoil=.1;},
+    addPoints,addKill:()=>{runState.kills++;},hurtPlayer,kick:()=>{firstPerson.recoil=.1;},
     // v191: the LMG capstone mends on every kill it makes.
     killHeal(impact){const heal=runState.inventory[impact.source]?rankKillHeal(impact.source,runState.inventory[impact.source].weaponRank):0;if(heal&&session.mode==='playing'&&runState.health>0)runState.health=Math.min(runState.maxHealth,runState.health+heal);},
     hitFeedback(headshot,impact){markHit(headshot);if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}},
@@ -859,7 +826,7 @@ function updateHud(){
   $('frenzyHud').classList.toggle('hidden',frenzyWave!==wave||!frenzyWave);$('wave').textContent=String(Math.max(wave,1)).padStart(2,'0');$('waveState').textContent=boss.stage==='active'?'SIR BLACKTHORN · THE DEAD WAIT ON HIM':waveDelay>0?`NEXT WAVE IN ${Math.ceil(waveDelay)}s`:finale?`FRENZIED FINALE · ${remaining} UNDEAD REMAIN`:`${frenzyWave===wave&&wave?'FRENZY · ':''}${remaining} UNDEAD REMAIN`;updateVitals();}
 const changelog=createChangelog({document,onOpen:pauseGame});
 const leaderboard=createLeaderboard({document,onOpen:()=>{if(session.mode==='playing')pauseGame();},onNewRun:()=>resetRun()});
-function resetRun({capture=true}={}){applyFormFactor();boneChips=boneChipsFound=0;atticState={opening:false,time:0,open:false};oliviaCheer=0;setAtticOpen(false);attic.setProgress(0);lighting.setBlockerState('closed:closed',cellar.progress>0||graveyard.progress>0||shed.progress>0);releaseMouse();grenadeThrow.cancel();worldEvents.reset();eventVisuals.reset();curse.setRank(curseLadder.selected);resetBlackthorn();leaderboard.startRun();runState.armor=runState.armorMax=runState.armorTier=frenzyWave=0;waveFiveFinale=null;setCellarOpen(false);cellar.reset();campWatch.reset();bella.reset();stationBuilder.reset();graveyard.reset();shed.reset();nav=makeNavigation();$('estateMap').classList.add('hidden');mapWasPlaying=false;for(const e of zombies){world.remove(e.group);disposeEnemy(e);}zombies.length=0;for(const e of effects){world.remove(e.mesh);if(e.type==='blast')e.mesh.material?.dispose();}effects.length=0;explosionFx.clear();bloodPool.reset();markPool.reset();for(const p of pickups){p.fade?.dispose();p.fade=null;world.remove(p.mesh);}pickups.length=0;combatLights.reset();player.set(0,0,20);session.lookYaw=0;session.lookPitch=0;camera.fov=weaponViewFov=75;camera.updateProjectionMatrix();runState.health=runState.maxHealth=100;runState.points=500;runState.totalScore=0;runState.kills=0;wave=0;waveDelay=7;toSpawn=0;runState.runTime=0;runState.lastHurt=-20;runState.perkOwned.clear();runState.grenades=3;runState.doubleTime=0;runState.grenadeTime=0;runState.grenadeCooldown=0;runState.inventory=freshInventory();applyWeaponRanks();runState.reloadLeft=0;runState.shotTimer=0;runState.feetY=0;runState.jumpV=0;runState.grounded=true;clearFlashes();runState.shotId=0;weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();gunGroups.glock.userData.slideTime=0;updatePistolSlide(gunGroups.glock,0,runState.inventory.glock.ammo);selectWeapon('glock');session.mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');if(capture)requestPointer();else{$('pauseTitle').textContent='The estate is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}announce('BLACKTHORN ESTATE','BUY PERKS. WATCH YOUR AMMO. SURVIVE.');nav.rebuild(player.x,player.z,player.y);updateHud();}
+function resetRun({capture=true}={}){applyFormFactor();boneChips=boneChipsFound=0;atticState={opening:false,time:0,open:false};oliviaCheer=0;setAtticOpen(false);attic.setProgress(0);lighting.setBlockerState('closed:closed',cellar.progress>0||graveyard.progress>0||shed.progress>0);releaseMouse();grenadeThrow.cancel();worldEvents.reset();eventVisuals.reset();curse.setRank(curseLadder.selected);resetBlackthorn();leaderboard.startRun();runState.armor=runState.armorMax=runState.armorTier=frenzyWave=0;waveFiveFinale=null;setCellarOpen(false);cellar.reset();campWatch.reset();bella.reset();stationBuilder.reset();graveyard.reset();shed.reset();nav=makeNavigation();$('estateMap').classList.add('hidden');mapWasPlaying=false;for(const e of zombies){world.remove(e.group);disposeEnemy(e);}zombies.length=0;for(const e of effects){world.remove(e.mesh);if(e.type==='blast')e.mesh.material?.dispose();}effects.length=0;explosionFx.clear();bloodPool.reset();markPool.reset();for(const p of pickups){p.fade?.dispose();p.fade=null;world.remove(p.mesh);}pickups.length=0;combatLights.reset();player.set(0,0,20);session.lookYaw=0;session.lookPitch=0;camera.fov=firstPerson.viewFov=75;camera.updateProjectionMatrix();runState.health=runState.maxHealth=100;runState.points=500;runState.totalScore=0;runState.kills=0;wave=0;waveDelay=7;toSpawn=0;runState.runTime=0;runState.lastHurt=-20;runState.perkOwned.clear();runState.grenades=3;runState.doubleTime=0;runState.grenadeTime=0;runState.grenadeCooldown=0;runState.inventory=freshInventory();applyWeaponRanks();runState.reloadLeft=0;runState.shotTimer=0;runState.feetY=0;runState.jumpV=0;runState.grounded=true;clearFlashes();runState.shotId=0;weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');session.mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');if(capture)requestPointer();else{$('pauseTitle').textContent='The estate is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}announce('BLACKTHORN ESTATE','BUY PERKS. WATCH YOUR AMMO. SURVIVE.');nav.rebuild(player.x,player.z,player.y);updateHud();}
 let touchControls=null;
 // Main Menu (v143): abandon the run, clear the estate as a new run would, and
 // return to the title screen with Enter the Estate ready again.
@@ -915,7 +882,6 @@ $('sensitivity').oninput=$('sensitivity').onchange=()=>{showSensitivity();try{lo
 $('sound').onchange=()=>{gameAudio.syncAmbience();showSound();try{localStorage.setItem(SOUND_KEY,soundOn()?'1':'0');}catch{}};
 showSensitivity();showSound();
 configureMinimap({radar:$('radar'),navigation:$('hudNavigation'),vitals:$('hudVitals'),toggle:$('minimapToggle')});
-function toggleFlashlight(){flashlightOn=!flashlightOn;flashlight.intensity=flashlightOn?FLASHLIGHT_INTENSITY:0;}
 // Phones start on touch controls and computers on mouse and keyboard; a pause-
 // menu change is remembered per kind of device. Controllers are detected, but
 // take over only once gamepad play exists (controllerSupported).
@@ -1064,27 +1030,23 @@ function tick(now){requestAnimationFrame(tick);gamepad.poll(Math.min(Math.max(0,
 if(session.mode==='curse')runState.runTime+=dt;
 if(session.mode==='playing'){weaponRecoil.update(dt);cellar.update(dt);graveyard.update(dt);shed.update(dt);runState.runTime+=dt;runState.shotTimer=Math.max(0,runState.shotTimer-dt);runState.grenadeCooldown=Math.max(0,runState.grenadeCooldown-dt);if(session.mouseDown&&holdToFire())shoot();if(runState.reloadLeft>0){runState.reloadLeft-=dt;if(runState.reloadLeft<=0){runState.reloadLeft=0;finishReload();}}
 const stick=touchControls?.active?touchControls.move:padPlay()&&gamepad.connected?gamepad.move:null,moving=keys.has('KeyW')||keys.has('KeyS')||keys.has('KeyA')||keys.has('KeyD')||!!(stick&&(stick.x||stick.z));const aimingWeapon=session.aiming&&!grenadeThrow.active&&runState.reloadLeft===0;const sprint=(keys.has('ShiftLeft')||keys.has('ShiftRight')||!!touchControls?.sprint||(padPlay()&&gamepad.sprint))&&!aimingWeapon&&!session.mouseDown;let x=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),z=(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0);if(stick&&!x&&!z){x=stick.x;z=stick.z;}walk(dt,x,z,{sprint,aiming:aimingWeapon,yaw:session.lookYaw});
-camera.position.set(player.x,1.68+player.y+(moving&&runState.grounded?Math.sin(runState.walkPhase)*.025:0),player.z);camera.rotation.set(clamp(session.lookPitch+weaponRecoil.pitch+grenadeThrow.sway.pitch,-1.3,1.3),session.lookYaw+weaponRecoil.yaw+grenadeThrow.sway.yaw,grenadeThrow.sway.roll);camera.fov=T.MathUtils.lerp(camera.fov,aimingWeapon?aimFovOf(runState.weapon):sprint?81:75,dt*9);camera.updateProjectionMatrix();weaponViewFov=zoomOf(runState.weapon)?T.MathUtils.lerp(weaponViewFov,aimingWeapon?(gunGroups[runState.weapon].userData.optic.viewFov??16):sprint?81:75,dt*9):camera.fov;navTimer-=dt;if(navTimer<=0){nav.rebuild(player.x,player.z,player.y);navTimer=.6;}worldEvents.update(dt);eventVisuals.update(worldEvents);if(atticState.opening)updateAtticOpening(dt);oliviaCheer=Math.max(0,oliviaCheer-dt);attic.update(dt,{player,celebrate:oliviaCheer>0});if(boss.stage==='waking')updateWaking(dt);updateEnemies(dt);bossFx.update(dt,{hit:lanceHit,blocked:lanceBlocked});updateBossHud();if(session.mode==='playing'){bella.update(dt,{player,yaw:session.lookYaw,enemies:zombies,onBite:bellaBite,onBreath:bellaBreath,onShot:bellaShot,onBlast:bellaBlast,canSee:blastLine,climb:(pos,goal)=>atticRoute(pos.x,pos.z,pos.y,goal.y>OLIVIA_ATTIC.y-.3&&inAttic(goal.x,goal.z)),visualFloor:enemyFloorHeight});grenadeThrow.update(dt,releaseGrenade,grenadeCue);}updateEffects(dt);explosionFx.update(dt);updatePickups(dt);
+firstPerson.pose(dt,{moving,sprint,aiming:aimingWeapon});navTimer-=dt;if(navTimer<=0){nav.rebuild(player.x,player.z,player.y);navTimer=.6;}worldEvents.update(dt);eventVisuals.update(worldEvents);if(atticState.opening)updateAtticOpening(dt);oliviaCheer=Math.max(0,oliviaCheer-dt);attic.update(dt,{player,celebrate:oliviaCheer>0});if(boss.stage==='waking')updateWaking(dt);updateEnemies(dt);bossFx.update(dt,{hit:lanceHit,blocked:lanceBlocked});updateBossHud();if(session.mode==='playing'){bella.update(dt,{player,yaw:session.lookYaw,enemies:zombies,onBite:bellaBite,onBreath:bellaBreath,onShot:bellaShot,onBlast:bellaBlast,canSee:blastLine,climb:(pos,goal)=>atticRoute(pos.x,pos.z,pos.y,goal.y>OLIVIA_ATTIC.y-.3&&inAttic(goal.x,goal.z)),visualFloor:enemyFloorHeight});grenadeThrow.update(dt,releaseGrenade,grenadeCue);}updateEffects(dt);explosionFx.update(dt);updatePickups(dt);
 recover(dt,session.mode==='playing');
 runState.doubleTime=Math.max(0,runState.doubleTime-dt);runState.grenadeTime=Math.max(0,runState.grenadeTime-dt);
 if(session.mode==='playing'){campWatch.update(dt,player);if(waveDelay>0){waveDelay-=dt;if(waveDelay<=1e-9)startWave();}else{spawnTimer-=dt;if(toSpawn>0&&spawnTimer<=0&&!blackthornHoldsSpawns()&&zombies.filter(e=>!e.dead).length<CURSE_RULES.aliveLimit){spawnEnemy();spawnTimer=waveConfig(wave).interval*(frenzyWave===wave?.4:1);}if(toSpawn===0&&worldEvents.pendingSpawns===0&&boss.stage!=='waking'&&!zombies.some(e=>!e.dead)){if(wave===5&&!waveFiveFinale){beginWaveFiveFinale();}else if(wave===LURKER.finale.wave&&!waveFiveFinale){beginStenchFinale();}else{completeWave();}}}}
-const s=stationKit.closest(),interaction=s?stationKit.prompt(s,padPlay()?'B':touchControls?.enabled?'USE':'E'):'';setMarkup('interaction',interaction);touchControls?.update({playing:true,aiming:session.aiming,canInteract:!!s,flashlight:flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
+const s=stationKit.closest(),interaction=s?stationKit.prompt(s,padPlay()?'B':touchControls?.enabled?'USE':'E'):'';setMarkup('interaction',interaction);touchControls?.update({playing:true,aiming:session.aiming,canInteract:!!s,flashlight:firstPerson.flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
 const indoors=player.y<-.3||inMausoleum(player.x,player.z)||inShed(player.x,player.z)||!!roomAt(player.x,player.z);const flight=stairAt(player.x,player.z);const location=inShed(player.x,player.z)&&player.y>-.3?'GROUNDSKEEPER’S SHED':player.y<-.3?'STORM CELLAR / UNDERGROUND ARMORY':flight?.side?upperLocation(player.x,player.z):player.y>2.15?'2ND FLOOR / '+upperLocation(player.x,player.z):flight?'GRAND STAIRCASE':estateLocation(player.x,player.z);const locationMarkup=`BLACKTHORN ESTATE <span> / ${location}</span>`;setMarkup('location',locationMarkup);rain.visible=!indoors;gunRoot.visible=true;
 scene.fog.density=baseFogDensity+(indoors?0:worldEvents.fogStrength()*(inGraveyard(player.x,player.z)?.049:.038));setOpacity('eventPulse',worldEvents.active('surge')?Math.max(0,1-worldEvents.age/1.4)*.24:0);
-updatePistolSlide(gunGroups.glock,dt,runState.inventory.glock.ammo);
-const dual=dualOn(),ads=session.aiming&&!grenadeThrow.active&&runState.reloadLeft===0&&!dual?1:0;gunRoot.position.y+=reloadDrop;gunRoot.position.x=T.MathUtils.lerp(gunRoot.position.x,ads||dual?0:.28,dt*14);if(dual)for(const d of dualGuns){d.kick=Math.max(0,d.kick-dt*14);d.g.position.z=d.kick*.045;d.g.rotation.x=d.kick*.06;}gunRoot.position.y=T.MathUtils.lerp(gunRoot.position.y,(ads?-aimHeight(runState.weapon):-.26)-grenadeThrow.lower*.43,dt*14);gunRoot.position.z=T.MathUtils.lerp(gunRoot.position.z,(ads?(ADS_DEPTH[runState.weapon]??-.34):-.48)+weaponRecoil.back*(ads?.6:1),dt*14)+recoil*dt*4;gunRoot.rotation.set((ads?0:weaponRecoil.lift+recoil*1.2)+grenadeThrow.lower*.25,0,zoomOf(runState.weapon)&&ads?0:Math.sin(runState.walkPhase*.5)*(moving?(ads?.001:.012):.001));{const pose=reloadPose(runState.reloadLeft>0&&runState.reloadDuration>0?1-runState.reloadLeft/runState.reloadDuration:0);reloadDrop=pose.drop;gunRoot.position.y-=pose.drop;gunRoot.rotation.z+=pose.roll;gunRoot.rotation.x+=pose.pitch;}if(sprint&&moving)gunRoot.rotation.z=-.25;for(const {type,sight} of scopedGuns){sight.mask.visible=runState.weapon===type&&ads>0&&weaponViewFov<(sight.viewFov??16)+1;
-// v167: once the mask covers the screen, only the lens window shows, so the
-// rifle and scope body are hidden; the tube interior and mounts can't intrude.
-gunGroups[type].userData.body.visible=sight.housing.visible=!sight.mask.visible;}
+const ads=firstPerson.updateGun(dt,{moving,sprint});
 // v168: the black scope surround swallows the dark minimap disc, so the map
 // switches to a lit, higher-contrast style while a scope is up.
 {const scoped=scopedGuns.some(({sight})=>sight.mask.visible);if(scoped!==radarScoped){radarScoped=scoped;radar.classList.toggle('scoped',scoped);drawRadar();}}setOpacity('crosshair',ads?0:1);
 hudTick-=dt;if(hudTick<=0){updateHud();drawRadar();hudTick=.1;}}
 else if(session.mode==='menu'){camera.position.set(11.8,2.1,24);camera.lookAt(-1,3.3,0);camera.position.x+=Math.sin(elapsed*.12)*.3;gunRoot.visible=false;rain.visible=true;}
-updateReloadHud();combatHud.update(dt,player,session.lookYaw+weaponRecoil.yaw);recoil=Math.max(0,recoil-dt*.4);flashTime=Math.max(0,flashTime-dt);flash.visible=flashTime>0;muzzleLight.position.copy(dualOn()?dualMuzzle:viewGun(runState.weapon).userData.muzzle);muzzleLight.intensity=flashTime>0?(runState.weapon==='smg'?5:15):0;fadeHud(dt,session.mode==='playing');
+updateReloadHud();combatHud.update(dt,player,session.lookYaw+weaponRecoil.yaw);firstPerson.updateFlash(dt);fadeHud(dt,session.mode==='playing');
 for(const l of lamps)l.light.intensity=l.base*(.95+Math.sin(elapsed*4+l.phase)*.04+Math.sin(elapsed*7.1+l.phase)*.015);fire.scale.y=.55+Math.sin(elapsed*8)*.08;stationBuilder.update(elapsed);for(const m of mist){m.position.x+=dt*.025;if(m.position.x>43)m.position.x=-43;}
 for(let i=0;i<rainPos.length;i+=3){rainPos[i+1]-=dt*9;if(rainPos[i+1]<0)rainPos[i+1]=18;if(rainPos[i]<player.x-22)rainPos[i]+=44;if(rainPos[i]>player.x+22)rainPos[i]-=44;if(rainPos[i+2]<player.z-22)rainPos[i+2]+=44;if(rainPos[i+2]>player.z+22)rainPos[i+2]-=44;}rainGeo.attributes.position.needsUpdate=true;
-lighting.setBlockerState((cellar.progress===1?'open':'closed')+':'+(graveyard.progress===1?'open':'closed')+(shed.progress===1?':shed-open':''));bloodPool.sync();markPool.sync();combatLights.update(effects,pickups,player);estateDetail.update(elapsed,dt);blackout.apply(worldEvents.darkness());environmentLights.update(camera.position,elapsed,player.y);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;lighting.prepare(elapsed);display.render(gunRoot.visible||grenadeThrow.root.visible,world,weaponViewFov);}
+lighting.setBlockerState((cellar.progress===1?'open':'closed')+':'+(graveyard.progress===1?'open':'closed')+(shed.progress===1?':shed-open':''));bloodPool.sync();markPool.sync();combatLights.update(effects,pickups,player);estateDetail.update(elapsed,dt);blackout.apply(worldEvents.darkness());environmentLights.update(camera.position,elapsed,player.y);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;lighting.prepare(elapsed);display.render(gunRoot.visible||grenadeThrow.root.visible,world,firstPerson.viewFov);}
 window.addEventListener('resize',display.resize);display.resize();
 // What the mansion warms before play: every gun and the grenade in hand, scope masks,
 // event visuals, power-ups and drops (and their fading copies), the enemy builds and

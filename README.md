@@ -27,6 +27,43 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## The first-person view, shared (version 203)
+
+This is Dead Tide step 2, slice 1. The guns in hand and how the view moves now live in a shared module, so Dead Tide's island can carry the same guns without a copy. Nothing looks or plays differently.
+
+- **What moved:** `createFirstPerson({camera,batchArticulated})` in `public/game/first-person.mjs` builds and runs:
+  - **The guns in hand:** all six, with masks on the magnified sights, the Blood Moon dot-sight Bushmaster and the Twin Ravens. None of them casts a shadow.
+  - **Their light:** the muzzle flash and its light, the two lights that show the guns, and the flashlight (`addLights`). These are made after the mansion's grenade and blast effects, as before, so every object keeps its place in creation order.
+  - **The eye (`pose`):**
+    - 1.68 m up, with a walking bob only on the ground;
+    - look with recoil and throwing sway, stopped at the vertical limit;
+    - the field of view for aiming, sprinting and magnified sights.
+  - **The guns' motion (`updateGun`):**
+    - at the hip, or aimed at each gun's sight height and depth;
+    - sway, recoil and the reload pose;
+    - the sprint tilt, and each Raven's own kick;
+    - only the lens showing through a magnified sight.
+  - **After each frame (`updateFlash`):** the muzzle flash going out and the kick settling.
+  - **Also:** the flashlight switch, and racking the pistol slide for a new run.
+
+  The view's own values (its field of view, the kick, the flash time, the next Raven, the reload drop) live in the module too. The code is unchanged.
+- **What stays with the mansion:**
+  - when the guns show (play or the title screen);
+  - the crosshair, and the minimap's scope style;
+  - the menu camera;
+  - its grenade and blast effects.
+- **Proof that nothing changed:** the golden trace now has 25 scenarios.
+  - **Every sample** records the pose of every part of the guns in hand (slide, Raven kicks, scope masks and bodies). It also records the camera, both fields of view, the muzzle flash and light, and the flashlight.
+  - **New scenario:** aiming, firing, reloading and sprinting with every gun, then the Twin Ravens, the dot sight, a grenade and the flashlight.
+  - **The result:** main and this version produce byte-identical traces.
+- **On its own:** `tests/first-person.mjs` runs the view with a camera, a run and weapons of its own. It checks the guns and their lights, the eye and both fields of view, every gun pose, the muzzle flash and the flashlight.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading:** across 40 balanced runs, no load phase changed beyond its run-to-run error.
+  - **Frame logic:** the game's own per-frame work matches.
+  - **The only measurable change:** one more file and 3 KB more source.
+- **Next:** Dead Tide's own page and a grey-box island, built on these shared pieces.
+
 ## Stations, shared (version 202)
 
 This is Dead Tide step 1, slice 9, the last slice of step 1. What the shared stations sell, how they look, and the interaction around every station now live in a shared module. Nothing plays differently.
