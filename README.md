@@ -80,6 +80,11 @@ This is Dead Tide step 1, slice 4. Everything the player's guns and grenades do 
   - detonating rounds;
   - counted and infinite grenades;
   - every power-up.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Load-time check:** 14 load pairs suggested v197 was 0.8 s slower, so I timed the phases. Fetching the modules and building the world take the same time in both builds; all the variation is in shader compiling, which is identical work.
+  - **The only measurable change:** one more file and 4 KB more source.
+  - **New tool:** `scripts/load-phases.mjs` times the three load phases for any build.
 
 ## Shared combat: hits, kills, blasts and drops (version 196)
 

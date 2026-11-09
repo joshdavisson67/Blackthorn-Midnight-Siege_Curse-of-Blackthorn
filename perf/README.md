@@ -18,6 +18,9 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v195-siege.json` | v195 (step 1: shared enemy spawner) | The mansion after moving enemy creation and placement into `enemy-spawn.mjs` |
 | `v195-siege-rerun.json` | v195 (main) | The mansion re-measured beside v196 |
 | `v196-siege.json` | v196 (step 1: shared combat) | The mansion after moving hits, kills, blasts and drops into `enemy-combat.mjs` |
+| `v196-siege-rerun.json` | v196 (main) | The mansion re-measured beside v197 |
+| `v197-siege.json` | v197 (step 1: shared weapon runtime) | The mansion after moving the weapon runtime into `weapon-runtime.mjs` |
+| `v197-load-phases.jsonl` | v196 (main) and v197 | Twelve balanced runs of `scripts/load-phases.mjs` |
 
 ## Step 1 (v194) against main
 
@@ -115,6 +118,33 @@ Both builds were measured in full, back to back, and timed over six alternating 
 
 **Gameplay:** `scripts/golden-trace.mjs` (17 scenarios) produces byte-identical traces on main and v196.
 
+## Step 1, slice 4 (v197) against main
+
+Main was measured in full once and v197 twice. Loading was timed over 14 balanced pairs, and then phase by phase over 12 more balanced runs.
+
+| Mansion | v196 (main) | v197 |
+|---|---:|---:|
+| Files loaded before playable | 94 | 95 (`weapon-runtime.mjs`) |
+| Bytes loaded before playable | 8,941 KB | 8,945 KB |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load / after the fight | 237.1 / 243.8 MB | 236.9 / 243.8 MB |
+| Draw calls and triangles in the six views | as in step 0 | identical (see the hall note) |
+| 32-zombie fight: draw calls / triangles | 2,942 / 2.73 M | identical |
+| Load: modules fetched and run (12 balanced runs) | 0.40 s | 0.37 s |
+| Load: building the world | 12.77 s | 12.67 s |
+| Load: compiling shaders and drawing the first frame | 41.98 s | 41.68 s |
+
+**Verdict:** no regression. Every rendering, shader and memory count is identical, and the JavaScript load phases match within noise.
+
+- **Time to playable in the 14 load pairs:** v197 averaged 0.84 s slower (standard error 0.46 s) and was slower in 12 of the pairs, so I timed the phases to see where the gap came from.
+  - **What the phases showed:** the two phases this change could affect, fetching and running the modules and building the world, take the same time in both builds. All the variation is in shader compiling and the first frame. That work is identical in both builds (the same 89 shader programs) and swings by 2 to 3 s between runs.
+  - **Across the 12 phase runs,** v197 loaded 0.4 s faster (standard error 1.0 s).
+- **The hall view (one-off):** the first full v197 run read 1,939 draw calls there, as one v195 run did. The repeat, in `v197-siege.json`, read 2,046, like main. This is the lamp-shadow timing artefact described under step 1, slice 2.
+- **The one measurable change** is one more file and 4 KB more source.
+
+**Gameplay:** `scripts/golden-trace.mjs` (20 scenarios) produces byte-identical traces on main and v197.
+
 ## Re-running
 
 ```
@@ -122,4 +152,5 @@ node scripts/perf-measure.mjs --label vNNN --out perf/vNNN-siege.json
 node scripts/perf-measure.mjs --page modes.html --out perf/vNNN-modes.json
 node scripts/perf-measure.mjs --game <other checkout>/public/game --load-only
 node scripts/golden-trace.mjs > after.json   # then cmp it against a trace taken on main
+node scripts/load-phases.mjs --game <checkout>/public/game   # where loading time goes
 ```
