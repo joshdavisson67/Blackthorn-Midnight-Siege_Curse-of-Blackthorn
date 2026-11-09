@@ -367,3 +367,6 @@ await verifyWeaponRuntime(qa);
 
 const {verifyPlayerRun}=await import('./player-run.mjs');
 await verifyPlayerRun(qa);
+
+const {verifyHud}=await import('./hud.mjs');
+await verifyHud();
