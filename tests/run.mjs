@@ -379,3 +379,6 @@ await verifyAudio();
 
 const {verifyDisplay}=await import('./display.mjs');
 await verifyDisplay();
+
+const {verifySharedStations}=await import('./shared-stations.mjs');
+await verifySharedStations();

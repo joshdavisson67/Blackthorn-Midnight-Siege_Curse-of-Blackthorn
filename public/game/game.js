@@ -4,11 +4,10 @@ import {CURSE_RULES,MAX_CURSE_RANK,createCurse,createCurseLadder,curseTitle,curs
 import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=201';
-import {createChangelog} from './changelog.mjs?v=201';
+import {createLeaderboard} from './leaderboard.mjs?v=202';
+import {createChangelog} from './changelog.mjs?v=202';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {createWeaponRecoil,staggerLimits,createCombatHud} from './combat-feedback.mjs?v=184';
-import {ARMOR,armorRank} from './armor.mjs?v=94';
 import {createGrassMaterial,alignGrassPatch,ESTATE_PATHS,ESTATE_PAVING,bakeLawnMap} from './grounds.mjs?v=165';
 import {MAUSOLEUM,SARCOPHAGUS,GRAVE_PLOTS,inMausoleum,inGraveyard} from './graveyard-layout.mjs?v=28';
 import {buildGraveyard} from './graveyard.mjs?v=190';
@@ -25,6 +24,7 @@ import {reloadPose} from './reload-pose.mjs?v=151';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {columnSurfaceGeometry} from './column-surfaces.mjs?v=93';
 import {createStationBuilder} from './station-models.mjs?v=190';
+import {createStations,PERKS,rackStation,shrineStation,ARMOR_STATION,forgeStation} from './stations.mjs?v=202';
 import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=187';
 import {drawMinimap} from './minimap.mjs?v=179';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
@@ -49,7 +49,7 @@ import {createReticleHud} from './reticles.mjs?v=167';
 import {createFurnishings} from './furnishings.mjs?v=187';
 import {createRugBuilder} from './rugs.mjs?v=59';
 import {createSignage} from './signage.mjs?v=94';
-import {FORGE,forgeBonuses} from './soul-forge.mjs?v=118';
+import {FORGE} from './soul-forge.mjs?v=118';
 import {loadEstateTextures,tiledBox,ambientEnvironment,freezeStaticTransforms,finishMapFrom,OAK_FINISH,FLAGSTONE_FINISH,WET_STONE_FINISH,flashlightBeamTexture} from './graphics.mjs?v=187';
 import {ESTATE_SPAWNS,roomAt,estateLocation} from './estate-layout.mjs?v=28';
 import {buildMansionExpansion,drawEstateMap} from './mansion-expansion.mjs?v=190';
@@ -204,20 +204,23 @@ for(let x of [-10,10])for(let k=0;k<2;k++){const board=box(x,3+k*.8,12.44,1.8,.1
 // (0.62 m out from the wall face, like the music-salon spot Quickhands now takes):
 // Ironheart on the infirmary's west wall, Quickhands in the music salon, Nightstride
 // on the ballroom's north wall and Deadeye on the observatory's west wall.
-const perkDefs=[{id:'iron',name:'IRONHEART',icon:'♥',price:2500,color:0xd54337,hex:'#ef7969',desc:'Double maximum health',x:14.86,z:-42,rotation:Math.PI/2},{id:'quick',name:'QUICKHANDS',icon:'ϟ',price:1500,color:0x46bea1,hex:'#66dcb7',desc:'Reload twice as fast',x:20,z:-12.86,rotation:Math.PI},{id:'eye',name:'DEADEYE',icon:'◎',price:2000,color:0xc79435,hex:'#e6bf61',desc:'Increase weapon damage 50%',x:-13.14,z:-77,rotation:Math.PI/2},{id:'stride',name:'NIGHTSTRIDE',icon:'»',price:1500,color:0x4d88c7,hex:'#7aaff0',desc:'Move and sprint 30% faster',x:-16.4,z:-11.14,rotation:0}];
+// v202 (Dead Tide step 1): what the shared stations sell and how they look come
+// from stations.mjs; the mansion places them.
+const PERK_SPOTS={iron:{x:14.86,z:-42,rotation:Math.PI/2},quick:{x:20,z:-12.86,rotation:Math.PI},eye:{x:-13.14,z:-77,rotation:Math.PI/2},stride:{x:-16.4,z:-11.14,rotation:0}};
+const perkDefs=PERKS.map(p=>({...p,...PERK_SPOTS[p.id]}));
 const stationBuilder=createStationBuilder({world,colliders,solidMeshes,interactables,label});
 function perkStation(def,x=def.x,z=def.z,y=0){return stationBuilder.add({...def,x,z,y,type:'perk',modelCaption:def.desc});}
 for(const def of perkDefs)perkStation(def);
-function station(x,z,name,type,price,y=0,rotation=0){return stationBuilder.add({x,z,y,rotation,name,type,price,hex:type==='smg'?'#7aaff0':type==='ammo'?'#67efbb':type==='glock'?'#ef7969':'#e6bf61',modelCaption:type==='ammo'?'RESTOCK · ALL WEAPONS':type==='glock'?'.45 SIDEARM · FOUR UPGRADE RANKS · THEN PISTOL AMMO':type==='shotgun'?'M12 · CLOSE-RANGE STOPPING POWER':type==='bushmaster'?'15 ROUNDS · SEMI-AUTO · 10× SCOPE':'RAVEN · RAPID FIRE · UPGRADE RANKS ONCE OWNED'});}
-function powerStation(x,z,power,y=0,rotation=0){const def=POWERUPS[power];return stationBuilder.add({x,z,y,rotation,type:'powerup',power,name:def.name,price:power==='double'?800:900,hex:def.hex,modelCaption:power==='double'?'THE TWOFOLD RELIC · 20 SECONDS':'THE ENDLESS ARSENAL · 12 SECONDS'});}
+function station(x,z,name,type,price,y=0,rotation=0){return stationBuilder.add({x,z,y,rotation,...rackStation(type,name,price)});}
+function powerStation(x,z,power,y=0,rotation=0){return stationBuilder.add({x,z,y,rotation,...shrineStation(power)});}
 station(-7,13.2,'AMMUNITION','ammo',350);
 // The pistol bench mirrors the courtyard ammunition crate across the front door (v152).
-const pistolBench=station(7,13.2,'GLOCK 21 PISTOL','glock',250).station;
+station(7,13.2,'GLOCK 21 PISTOL','glock',250);
 station(-6.315,-8,'M12 SHOTGUN','shotgun',1200,0,-Math.PI/2);
 station(6.31,-5.3,'RAVEN SMG','smg',1500,0,Math.PI/2);
 // v188: the ground-floor forge stands on its charred oak block in the middle of
 // the Great Rotunda, under the bell, facing the grand hall.
-stationBuilder.add({x:ROTUNDA_BELL.x,z:ROTUNDA_BELL.z,name:'THE SOUL FORGE',type:'upgrade',price:FORGE.prices[0],hex:'#c1a1ff',modelCaption:'2× BASE DAMAGE · +25% AMMO · 25% FASTER RELOAD'});point(ROTUNDA_BELL.x,2.6,ROTUNDA_BELL.z,0xa474ff,8,8);
+stationBuilder.add({x:ROTUNDA_BELL.x,z:ROTUNDA_BELL.z,...forgeStation('THE SOUL FORGE')});point(ROTUNDA_BELL.x,2.6,ROTUNDA_BELL.z,0xa474ff,8,8);
 // The ballroom shrine sits in the clear outer-wall bay between its windows.
 powerStation(-41.21,0,'double',0,Math.PI/2);powerStation(41.24,0,'grenades',0,-Math.PI/2);
 // Rain and low courtyard mist.
@@ -319,9 +322,9 @@ station(-41.21,4.2,'M12 SHOTGUN','shotgun',1200,UPPER_Y,Math.PI/2);
 station(41.21,4.2,'RAVEN SMG','smg',1500,UPPER_Y,-Math.PI/2);
 station(27.3675,-5.2,'AR-15 / .450 BUSHMASTER','bushmaster',2500,UPPER_Y,-Math.PI/2);
 powerStation(-18,2.5825,'double',UPPER_Y);powerStation(18,2.5825,'grenades',UPPER_Y);
-stationBuilder.add({x:16.8,z:-11.2775,y:UPPER_Y,name:'AEGIS / BODY ARMOR',type:'armor',price:2500,hex:'#8ee0df',modelCaption:'2,500 ESSENCE · HEALTH SHIELD'});
+stationBuilder.add({x:16.8,z:-11.2775,y:UPPER_Y,...ARMOR_STATION});
 const cellar=buildCellar({world,M,box,mesh,cylinder,label,colliders,solidMeshes,interactables,batchArticulated});
-stationBuilder.add({x:CELLAR.x,z:CELLAR.z+CELLAR.d/2-.95,y:CELLAR.y,rotation:Math.PI,name:'THE CELLAR SOUL FORGE',type:'upgrade',price:FORGE.prices[0],hex:'#c1a1ff',modelCaption:'2× BASE DAMAGE · +25% AMMO · 25% FASTER RELOAD'});
+stationBuilder.add({x:CELLAR.x,z:CELLAR.z+CELLAR.d/2-.95,y:CELLAR.y,rotation:Math.PI,...forgeStation('THE CELLAR SOUL FORGE')});
 const cellarEntrance={type:'cellarDoor',x:CELLAR.x,z:CELLAR.topZ-.5,y:0,price:0,name:'STORM CELLAR',hex:'#8ee0df'};interactables.push(cellarEntrance);
 const graveyard=buildGraveyard({world,M,earth,box,mesh,cylinder,label,colliders,solidMeshes,interactables,batchArticulated});
 const bella=createBellaCompanion({world,colliders,solidMeshes,interactables,batchArticulated});
@@ -411,7 +414,6 @@ function spawnGraveEnemy({grave,slot}){
 let bestWave=0,bestKills=0;try{const b=JSON.parse(localStorage.getItem('blackthorn-best')||'{}');bestWave=b.wave||0;bestKills=b.kills||0;}catch{}
 $('best').textContent=bestWave?`PERSONAL BEST / WAVE ${bestWave} · ${bestKills} KILLS`:'';
 function addPoints(n){const earned=curseReward(n,curse.rank);runState.points+=earned;runState.totalScore+=earned;return earned;}
-function updateForgeStations(){for(const s of forgeStations)if(s.forgeRank!==runState.inventory[runState.weapon].forgeRank)s.setForgeRank(runState.inventory[runState.weapon].forgeRank);}
 // v197 (Dead Tide step 1): firing, reloading, ammunition, weapon ranks, the gun on
 // screen, grenades and power-ups live in weapon-runtime.mjs. The run's values stay
 // here for now and are handed over as `state`.
@@ -428,6 +430,35 @@ const {ammoCapacity,freshInventory,restockTarget,restockWeapon,ammoFull,refillAm
     get weaponViewFov(){return weaponViewFov;},set weaponViewFov(v){weaponViewFov=v;},get shotId(){return runState.shotId;},set shotId(v){runState.shotId=v;}},
   combat:{get damageEnemy(){return damageEnemy;},get bloodBurst(){return bloodBurst;},get detonateRound(){return detonateRound;}}
 });
+// The mansion's stations: shared ones from stations.mjs, plus its own kinds (Bella's
+// kennel, Olivia, Sir Blackthorn's grave, the shed, cellar and tomb doors, the shed's
+// M4 and the Warden LMG), which go through the rules below.
+const stationKit=createStations({stations:interactables,player,state:runState,isPlaying:()=>session.mode==='playing',
+  arms:{selectWeapon,buyWeaponRank,ammoFull,restockWeapon,refillAmmo,grantPowerup},hud:{notify,updateHud},sound:{tone},
+  rules:{
+    // Bella's kennel keeps selling her ranks; the Warden's exhibit keeps selling the LMG's.
+    stillOpen:s=>(s.type==='kennel'&&bella.unlocked&&bella.rank<BELLA.maxRank)||(s.type==='lmg'&&runState.inventory.lmg.owned&&nextRank('lmg',runState.inventory.lmg.weaponRank)),
+    // The M4 only from inside the shed, the grave only inside the tomb, the cellar only once open.
+    hidden:s=>(s.shedWeapon&&!inShed(player.x,player.z))||(s.type==='sarcophagus'&&!inMausoleum(player.x,player.z))||(s.y<0&&!isCellarOpen()),
+    label:s=>s.type==='olivia'?(bella.dragon?'RAT DRAGON':bella.unlocked?`BELLA RANK ${['I','II','III','IV'][bella.rank-1]}`:'BELLA IS LOCKED UP'):s.type==='kennel'&&bella.unlocked?`RANK ${nextBellaRank(bella.rank).numeral} · ${nextBellaRank(bella.rank).chips} BONE CHIPS`:s.type==='bell'?'DORMANT':s.type==='mausoleumDoor'?(graveyard.open?'OPEN':'CLEAR WAVE 20'):s.type==='cellarDoor'?(isCellarOpen()?'OPEN':'WAVE 10'):s.type==='shedDoor'?(shed.open?'OPEN':'WAVE 7'):s.shedWeapon&&s.purchased&&!stationKit.ranksAtRack(s)?'OWNED':undefined,
+    describe(s){if(s.type==='sarcophagus')return 'Speak to the grave to wake Sir Blackthorn · Once per run';if(s.type==='olivia')return bella.dragon?'Bella is a rat dragon now · Olivia is very proud':bella.unlocked?'Olivia adores Bella · Spend bone chips from Bella’s kills at her kennel to rank her up':'Free Bella from her kennel first';if(s.type==='kennel'){const next=bella.unlocked&&nextBellaRank(bella.rank);return next?`RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.chips} bone chips from Bella’s kills`:'BELLA · White Maltipoo · Immortal companion · Follows you and bites undead within 15 yards of you · Bitten undead turn and fight her · Rank her up here with bone chips';}if(s.shedWeapon)return s.purchased?'M4 PURCHASED · PRESS 6 TO EQUIP':'30-ROUND FULL-AUTO · Includes full magazine and reserve · Keeps Soul Forge ranks';if(s.type==='shedDoor')return shed.open?'OPEN · Explore the groundskeeper’s workshop':'SEALED · Opens automatically at wave 7';if(s.type==='nuke')return s.used?'DEVICE SPENT':'ONE USE · Destroys all active undead across the estate · Wakes Sir Blackthorn';if(s.type==='mausoleumDoor')return graveyard.open?'OPEN · Enter the Blackthorn family tomb':'SEALED · Clear wave 20 to unlock';if(s.type==='cellarDoor')return isCellarOpen()?'OPEN · Descend to the underground armory':'LOCKED · Opens automatically at wave 10';if(s.type==='lmg')return '100-round belt · 3× combat scope · Taking it triggers frenzy for the rest of this wave';},
+    use(s){
+      if(s.type==='lmg'&&!runState.inventory.lmg.owned&&waveDelay>0){notify('THE WARDEN AWAKENS DURING A WAVE · WAIT FOR THE COUNTDOWN');return true;}
+      if(s.type==='sarcophagus'){speakToGrave();return true;}
+      if(s.type==='olivia'){talkToOlivia();return true;}
+      if(s.type==='kennel'&&bella.unlocked){buyBellaRank();return true;}
+      if(s.type==='cellarDoor'||s.type==='mausoleumDoor'||s.type==='shedDoor'){notify(stationKit.describe(s));return true;}
+    },
+    equip(s){
+      if(s.shedWeapon&&s.purchased){selectWeapon('rifle');return true;}
+    },
+    buy(s){
+      if(s.type==='kennel'){bella.unlock();nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('BELLA IS FREE · RANK I · 15-YARD GUARD RADIUS · HER KILLS DROP BONE CHIPS FOR RANKS II–IV',5);tone(740,.12,.045,'triangle',1000);tone(940,.18,.035,'triangle',680);updateHud();return true;}
+      if(s.shedWeapon){const capacity=ammoCapacity('rifle');runState.inventory.rifle.owned=true;runState.inventory.rifle.ammo=capacity.mag;runState.inventory.rifle.reserve=capacity.reserve;runState.reloadLeft=0;s.purchased=true;selectWeapon('rifle');notify('M4 ASSAULT RIFLE ACQUIRED');tone(440,.3,.09,'triangle',880);updateHud();return true;}
+      if(s.type==='lmg'){s.used=true;s.model.visible=false;runState.inventory.lmg.owned=true;runState.reloadLeft=0;selectWeapon('lmg');triggerFrenzy();updateHud();return true;}
+    }
+  }});
+const {interact}=stationKit;
 runState.inventory=freshInventory();
 selectWeapon('glock');
 // v200 (Dead Tide step 1): capturing the mouse, pausing, the settings page, the
@@ -542,14 +573,6 @@ function startWave(){wave++;frenzyWave=0;waveFiveFinale=null;upperSpawnSlot=wave
 const raycaster=new T.Raycaster();
 
 // ---- Weapon upgrade ranks (v159) ----------------------------------------
-// The pistol bench sells the Glock's ranks in order, then restocks its ammo.
-// The bench's price always reflects the next rank (or the 250 restock once all are earned).
-Object.defineProperty(pistolBench,'price',{get(){const next=nextRank('glock',runState.inventory.glock.weaponRank);return next?next.price:250;}});
-// Weapon racks that sell their weapon's ranks once it is owned (v161 SMG, v164 shotgun, v165 Bushmaster,
-// v191 the M4 at the tool shed and the Warden LMG at its cellar exhibit). Values are the equip keys.
-const RANK_RACKS={smg:3,shotgun:2,bushmaster:5,rifle:6,lmg:4};
-const ranksAtRack=s=>s.type in RANK_RACKS&&runState.inventory[s.type].owned;
-function buyPistolRank(){return buyWeaponRank('glock');}
 function unlockMausoleum(){if(!graveyard.unlock())return false;nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('EAST CEMETERY · THE MAUSOLEUM IS UNSEALED');tone(160,1,.09,'sine',70);return true;}
 // v190: speak to the grave in the sarcophagus to wake Sir Blackthorn. It costs
 // nothing and works once per run, after the tomb opens upon clearing wave 20.
@@ -823,56 +846,9 @@ function completeWave(){
   updateHud();
 }
 function triggerFrenzy(){if(waveDelay>0||waveFiveFinale?.wave===wave)return;frenzyWave=wave;waveDelay=0;toSpawn+=Math.max(12,Math.ceil(curseWaveConfig(wave,curse.rank).count*.5));spawnTimer=.1;announce('THE WARDEN HAS AWAKENED','FRENZY · FASTER UNDEAD + REINFORCEMENTS UNTIL THIS WAVE ENDS');tone(65,1.5,.16,'sawtooth',160);}
-function closestStation(){let nearest=null,min=2.3;for(const s of interactables){if((s.used&&s.type!=='armor'&&!(s.type==='kennel'&&bella.unlocked&&bella.rank<BELLA.maxRank)&&!(s.type==='lmg'&&runState.inventory.lmg.owned&&nextRank('lmg',runState.inventory.lmg.weaponRank)))||s.locked||(s.shedWeapon&&!inShed(player.x,player.z))||(s.type==='sarcophagus'&&!inMausoleum(player.x,player.z))||(s.y<0&&!isCellarOpen()))continue;const d=Math.hypot(s.x-player.x,s.z-player.z);if(Math.abs((s.y||0)-player.y)<1.2&&d<min){nearest=s;min=d;}}return nearest;}
-function armorStationDescription(){
-  if(runState.armorTier===0)return `Absorbs ${runState.maxHealth} damage before health · Unlocks Nano Shield Rank 1 at both stations`;
-  const maximum=ARMOR.nanoRanks.length+1,rank=armorRank(Math.min(runState.armorTier+1,maximum));
-  const recharge=rank.regenDelay?`Regenerates ${rank.regenRate} shield/s after ${rank.regenDelay}s without a hit`:`Regenerates ${rank.regenRate} shield/s continuously · No hit delay`;
-  return `${runState.armorTier===maximum?'ACTIVE':'UPGRADE'} · ${recharge}${runState.armorTier<maximum?' · Keeps current shield':''}`;
-}
-function stationDescription(s){if(ranksAtRack(s)){const next=nextRank(s.type,runState.inventory[s.type].weaponRank);return next?`RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.flavor}`:`ALL RANKS EARNED · WEAPON OWNED · PRESS ${RANK_RACKS[s.type]} TO EQUIP`;}if(s.type==='sarcophagus')return 'Speak to the grave to wake Sir Blackthorn · Once per run';if(s.type==='olivia')return bella.dragon?'Bella is a rat dragon now · Olivia is very proud':bella.unlocked?'Olivia adores Bella · Spend bone chips from Bella’s kills at her kennel to rank her up':'Free Bella from her kennel first';if(s.type==='kennel'){const next=bella.unlocked&&nextBellaRank(bella.rank);return next?`RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.chips} bone chips from Bella’s kills`:'BELLA · White Maltipoo · Immortal companion · Follows you and bites undead within 15 yards of you · Bitten undead turn and fight her · Rank her up here with bone chips';}if(s.shedWeapon)return s.purchased?'M4 PURCHASED · PRESS 6 TO EQUIP':'30-ROUND FULL-AUTO · Includes full magazine and reserve · Keeps Soul Forge ranks';if(s.type==='shedDoor')return shed.open?'OPEN · Explore the groundskeeper’s workshop':'SEALED · Opens automatically at wave 7';if(s.type==='nuke')return s.used?'DEVICE SPENT':'ONE USE · Destroys all active undead across the estate · Wakes Sir Blackthorn';if(s.type==='mausoleumDoor')return graveyard.open?'OPEN · Enter the Blackthorn family tomb':'SEALED · Clear wave 20 to unlock';if(s.type==='cellarDoor')return isCellarOpen()?'OPEN · Descend to the underground armory':'LOCKED · Opens automatically at wave 10';if(s.type==='bushmaster'&&!ranksAtRack(s))return '8-round semi-auto · 2× M4 damage · 10× precision scope';if(s.type==='lmg')return '100-round belt · 3× combat scope · Taking it triggers frenzy for the rest of this wave';if(s.type==='armor')return armorStationDescription();if(s.type==='powerup')return s.power==='double'?'Double bullet damage for 20 seconds':'Unlimited throws for 12 seconds · 0.5s recovery after each throw';if(s.type==='perk')return runState.perkOwned.has(s.id)?'PERK ACTIVE':s.desc;if(s.type==='ammo')return 'Restock every owned weapon · Reload to fill magazines · +1 grenade';
-  if(s.type==='glock'){const next=nextRank('glock',runState.inventory.glock.weaponRank);if(next)return `RANK ${next.numeral} · ${next.name.toUpperCase()} · ${next.effect} · ${next.flavor}`;return ammoFull('glock')?'ALL RANKS EARNED · PISTOL AMMO FULL · PRESS 1 TO EQUIP':'ALL RANKS EARNED · Restock the Glock 21 · Reload to fill the magazine';}if(s.type==='upgrade')return s.forgeMaximum?'FORGED 3/3 · '+forgeBonuses(FORGE.maxRank).damageMultiplier+'× base damage · Maximum rank · Switch weapons to forge another':'RANK '+(runState.inventory[runState.weapon].forgeRank+1)+' OF 3 · '+forgeBonuses(runState.inventory[runState.weapon].forgeRank+1).damageMultiplier+'× base damage · 25% faster reload · +25% magazine and reserve capacity';return runState.inventory[s.type].owned?'WEAPON OWNED · USE NUMBER KEYS':'Unlock a new weapon for this run';}
-function interact(){
-  if(session.mode!=='playing')return;
-  updateForgeStations();const s=closestStation();if(!s)return;
-  if(s.type==='lmg'&&!runState.inventory.lmg.owned&&waveDelay>0){notify('THE WARDEN AWAKENS DURING A WAVE · WAIT FOR THE COUNTDOWN');return;}
-  if(s.type==='sarcophagus'){speakToGrave();return;}
-  if(s.type==='olivia'){talkToOlivia();return;}
-  if(s.type==='kennel'&&bella.unlocked){buyBellaRank();return;}
-  if(s.type==='cellarDoor'||s.type==='mausoleumDoor'||s.type==='shedDoor'){notify(stationDescription(s));return;}
-  if(s.type==='perk'&&runState.perkOwned.has(s.id)){notify('THIS PERK IS ALREADY ACTIVE');return;}
-  if(s.type==='armor'&&s.used){notify(`${armorRank(runState.armorTier).name} IS ALREADY ACTIVE`);return;}
-  if(s.type==='upgrade'&&s.forgeMaximum){notify('SOUL FORGE RANK 3 · THIS WEAPON IS FULLY FORGED');return;}
-  if(ranksAtRack(s)&&nextRank(s.type,runState.inventory[s.type].weaponRank)){
-    // Short of the next rank: the rack still hands you the weapon (v165).
-    if(runState.points<nextRank(s.type,runState.inventory[s.type].weaponRank).price)selectWeapon(s.type);
-    buyWeaponRank(s.type);return;}
-  if((s.type==='shotgun'||s.type==='smg'||s.type==='bushmaster')&&runState.inventory[s.type].owned){selectWeapon(s.type);return;}
-  if(s.shedWeapon&&s.purchased){selectWeapon('rifle');return;}
-  if(s.type==='glock'&&nextRank('glock',runState.inventory.glock.weaponRank)){buyPistolRank();return;}
-  if(s.type==='glock'&&ammoFull('glock')){selectWeapon('glock');notify('PISTOL AMMUNITION IS FULL');return;}
-  if(runState.points<s.price){notify(`NEED ${s.price-runState.points} MORE ESSENCE`);tone(110,.2,.03,'square');return;}
-  runState.points-=s.price;
-  if(s.type==='kennel'){bella.unlock();nav=makeNavigation();nav.rebuild(player.x,player.z,player.y);notify('BELLA IS FREE · RANK I · 15-YARD GUARD RADIUS · HER KILLS DROP BONE CHIPS FOR RANKS II–IV',5);tone(740,.12,.045,'triangle',1000);tone(940,.18,.035,'triangle',680);updateHud();return;}
-  if(s.shedWeapon){const capacity=ammoCapacity('rifle');runState.inventory.rifle.owned=true;runState.inventory.rifle.ammo=capacity.mag;runState.inventory.rifle.reserve=capacity.reserve;runState.reloadLeft=0;s.purchased=true;selectWeapon('rifle');notify('M4 ASSAULT RIFLE ACQUIRED');tone(440,.3,.09,'triangle',880);updateHud();return;}
-  if(s.type==='lmg'){s.used=true;s.model.visible=false;runState.inventory.lmg.owned=true;runState.reloadLeft=0;selectWeapon('lmg');triggerFrenzy();updateHud();return;}
-  if(s.type==='armor'){
-    if(runState.armorTier===0){runState.armorTier=1;runState.armor=runState.armorMax=runState.maxHealth;notify(`AEGIS BODY ARMOR · +${runState.armorMax} SHIELD · NANO SHIELD RANK 1 UNLOCKED`);}
-    else{runState.armorTier++;const rank=armorRank(runState.armorTier),next=ARMOR.nanoRanks[rank.rank];notify(`${rank.name} ONLINE · ${rank.regenRate} SHIELD/S ${rank.regenDelay?`AFTER ${rank.regenDelay}S WITHOUT A HIT`:'CONTINUOUS REGENERATION'}${next?` · RANK ${next.rank} UNLOCKED`:''}`);}
-    for(const station of armorStations)station.setArmorTier(runState.armorTier);
-    tone(620,.4,.1,'triangle',1000);updateHud();return;
-  }
-  if(s.type==='perk'){runState.perkOwned.add(s.id);if(s.id==='iron'){if(runState.armorMax>0){runState.armor*=200/runState.maxHealth;runState.armorMax=200;}runState.maxHealth=200;runState.health=200;}notify(`${s.name} ACQUIRED`);}
-  else if(s.type==='powerup'){grantPowerup(s.power);}
-  else if(s.type==='ammo'){refillAmmo();notify('AMMUNITION RESTOCKED');}
-  else if(s.type==='glock'){restockWeapon('glock');selectWeapon('glock');notify('GLOCK 21 AMMUNITION RESTOCKED');}
-  else if(s.type==='upgrade'){runState.inventory[runState.weapon].forgeRank++;if(runState.reloadLeft>0){runState.reloadLeft*=FORGE.reloadMultiplier;runState.reloadDuration*=FORGE.reloadMultiplier;}notify(`SOUL FORGE RANK ${runState.inventory[runState.weapon].forgeRank}/3 · ${forgeBonuses(runState.inventory[runState.weapon].forgeRank).damageMultiplier}× DAMAGE · +25% AMMO · 25% FASTER RELOAD`);}
-  else {runState.inventory[s.type].owned=true;runState.reloadLeft=0;selectWeapon(s.type);notify(`${s.name} ACQUIRED`);}
-  tone(440,.3,.09,'triangle',880);updateHud();
-}
 function updateHud(){
   updateReloadHud();
-  updateForgeStations();curseUI.update(session.mode);
+  stationKit.updateForges();curseUI.update(session.mode);
   const finale=waveFiveFinale?.wave===wave&&waveDelay===0;
   {const next=nextBellaRank(bella.rank),chips=boneChips>0&&!!next&&bella.unlocked,text=chips?`BONE CHIPS · ${boneChips}/${next.chips}${atticState.open?' · THE ATTIC IS OPEN':''}`:'';$('boneHud').classList.toggle('hidden',!chips);if($('boneHud').textContent!==text)$('boneHud').textContent=text;}
   const remaining=toSpawn+worldEvents.pendingSpawns+zombies.filter(e=>!e.dead).length;
@@ -1092,7 +1068,7 @@ camera.position.set(player.x,1.68+player.y+(moving&&runState.grounded?Math.sin(r
 recover(dt,session.mode==='playing');
 runState.doubleTime=Math.max(0,runState.doubleTime-dt);runState.grenadeTime=Math.max(0,runState.grenadeTime-dt);
 if(session.mode==='playing'){campWatch.update(dt,player);if(waveDelay>0){waveDelay-=dt;if(waveDelay<=1e-9)startWave();}else{spawnTimer-=dt;if(toSpawn>0&&spawnTimer<=0&&!blackthornHoldsSpawns()&&zombies.filter(e=>!e.dead).length<CURSE_RULES.aliveLimit){spawnEnemy();spawnTimer=waveConfig(wave).interval*(frenzyWave===wave?.4:1);}if(toSpawn===0&&worldEvents.pendingSpawns===0&&boss.stage!=='waking'&&!zombies.some(e=>!e.dead)){if(wave===5&&!waveFiveFinale){beginWaveFiveFinale();}else if(wave===LURKER.finale.wave&&!waveFiveFinale){beginStenchFinale();}else{completeWave();}}}}
-const s=closestStation(),interaction=s?`<strong>${padPlay()?'B':touchControls?.enabled?'USE':'E'}</strong> ${s.name} <span style="color:#d4b77a">${s.type==='olivia'?(bella.dragon?'RAT DRAGON':bella.unlocked?`BELLA RANK ${['I','II','III','IV'][bella.rank-1]}`:'BELLA IS LOCKED UP'):s.type==='kennel'&&bella.unlocked?`RANK ${nextBellaRank(bella.rank).numeral} · ${nextBellaRank(bella.rank).chips} BONE CHIPS`:s.type==='bell'?'DORMANT':s.type==='mausoleumDoor'?(graveyard.open?'OPEN':'CLEAR WAVE 20'):s.type==='cellarDoor'?(isCellarOpen()?'OPEN':'WAVE 10'):s.type==='shedDoor'?(shed.open?'OPEN':'WAVE 7'):s.shedWeapon&&s.purchased&&!ranksAtRack(s)?'OWNED':ranksAtRack(s)?(nextRank(s.type,runState.inventory[s.type].weaponRank)?nextRank(s.type,runState.inventory[s.type].weaponRank).price.toLocaleString()+' ESSENCE':'ALL RANKS'):s.type==='glock'&&!nextRank('glock',runState.inventory.glock.weaponRank)&&ammoFull('glock')?'FULL':s.type==='upgrade'&&s.forgeMaximum?'MAX RANK':(s.type==='perk'&&runState.perkOwned.has(s.id))||(s.type==='armor'&&s.used)?'ACTIVE':s.price===0?'FREE':s.price.toLocaleString()+' ESSENCE'}</span><small>${stationDescription(s)}</small>`:'';setMarkup('interaction',interaction);touchControls?.update({playing:true,aiming:session.aiming,canInteract:!!s,flashlight:flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
+const s=stationKit.closest(),interaction=s?stationKit.prompt(s,padPlay()?'B':touchControls?.enabled?'USE':'E'):'';setMarkup('interaction',interaction);touchControls?.update({playing:true,aiming:session.aiming,canInteract:!!s,flashlight:flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
 const indoors=player.y<-.3||inMausoleum(player.x,player.z)||inShed(player.x,player.z)||!!roomAt(player.x,player.z);const flight=stairAt(player.x,player.z);const location=inShed(player.x,player.z)&&player.y>-.3?'GROUNDSKEEPER’S SHED':player.y<-.3?'STORM CELLAR / UNDERGROUND ARMORY':flight?.side?upperLocation(player.x,player.z):player.y>2.15?'2ND FLOOR / '+upperLocation(player.x,player.z):flight?'GRAND STAIRCASE':estateLocation(player.x,player.z);const locationMarkup=`BLACKTHORN ESTATE <span> / ${location}</span>`;setMarkup('location',locationMarkup);rain.visible=!indoors;gunRoot.visible=true;
 scene.fog.density=baseFogDensity+(indoors?0:worldEvents.fogStrength()*(inGraveyard(player.x,player.z)?.049:.038));setOpacity('eventPulse',worldEvents.active('surge')?Math.max(0,1-worldEvents.age/1.4)*.24:0);
 updatePistolSlide(gunGroups.glock,dt,runState.inventory.glock.ammo);
