@@ -370,3 +370,6 @@ await verifyPlayerRun(qa);
 
 const {verifyHud}=await import('./hud.mjs');
 await verifyHud();
+
+const {verifyControls}=await import('./controls.mjs');
+await verifyControls();

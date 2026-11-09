@@ -40,17 +40,22 @@ cpSync(gameDir,stage,{recursive:true});
 if(mansion)appendFileSync(join(stage,'game.js'),`
 // ---- perf-measure hook (staged copy only) ----
 {const orig=renderer.render.bind(renderer);let cpu=0;
+ // v200: report the mouse as locked through the browser's own property, which every
+ // build reads (older builds could also have hasMouseLock replaced; v200 cannot).
+ const __perfLock=()=>{try{Object.defineProperty(document,'pointerLockElement',{configurable:true,get:()=>canvas});}catch{}};
+ // v200 moved the session's values into session; older builds keep them as variables.
+ const __perfMode=m=>{if(typeof session==='object')session.mode=m;else mode=m;};
  renderer.info.autoReset=false;
  renderer.render=function(s,c){const p=window.__perfPhoto;if(p&&c===camera){gunRoot.visible=false;c.position.set(p.x,p.y,p.z);c.rotation.set(p.pitch,p.yaw,0,'YXZ');c.fov=62;c.updateProjectionMatrix();c.updateMatrixWorld(true);}
    const t=performance.now();const r=orig(s,c);cpu+=performance.now()-t;return r;};
  window.__perf={
    fixRes(){renderScale.reset('high');renderScale.sample=()=>{};resize();},
    stats(){const i=renderer.info;return {calls:i.render.calls,triangles:i.render.triangles,cpu,programs:i.programs?.length??0,geometries:i.memory.geometries,textures:i.memory.textures};},
-   pause(){hasMouseLock=()=>true;resetRun({capture:false});spawnTimer=Infinity;toSpawn=0;for(const z of zombies)z.group.visible=false;mode='paused';},
+   pause(){__perfLock();resetRun({capture:false});spawnTimer=Infinity;toSpawn=0;for(const z of zombies)z.group.visible=false;__perfMode('paused');},
    view(eye,target){const dx=target[0]-eye[0],dy=target[1]-eye[1],dz=target[2]-eye[2];player.set(eye[0],eye[1]>3.5?4.3:0,eye[2]);window.__perfPhoto={x:eye[0],y:eye[1],z:eye[2],yaw:Math.atan2(-dx,-dz),pitch:Math.atan2(dy,Math.hypot(dx,dz))};},
-   fight(n){window.__perfPhoto=null;hasMouseLock=()=>true;resetRun({capture:false});mode='playing';spawnTimer=Infinity;toSpawn=0;
+   fight(n){window.__perfPhoto=null;__perfLock();resetRun({capture:false});__perfMode('playing');spawnTimer=Infinity;toSpawn=0;
      // v198 moved the run's values into runState; older builds keep them as variables.
-     player.set(0,0,22);if(typeof runState==='object'){runState.feetY=0;runState.health=runState.maxHealth=1e9;}else{feetY=0;health=maxHealth=1e9;}lookYaw=0;lookPitch=-.05;
+     player.set(0,0,22);if(typeof runState==='object'){runState.feetY=0;runState.health=runState.maxHealth=1e9;}else{feetY=0;health=maxHealth=1e9;}if(typeof session==='object'){session.lookYaw=0;session.lookPitch=-.05;}else{lookYaw=0;lookPitch=-.05;}
      const kinds=['walker','walker','walker','brute','walker','feral','walker','dog','walker','walker','ash','walker','feral','walker','brute','walker'];
      for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=9+(i%4)*1.6,k=kinds[i%kinds.length];
        makeZombie(Math.sin(a)*r,22+Math.cos(a)*r*.55,k==='brute',k==='dog'||k==='ash',k==='ash',0,k==='feral');}
