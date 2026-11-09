@@ -18,6 +18,12 @@
 // renderer stand-in logs every call (targets, sizes, both camera passes, shader
 // compiles and texture uploads). Both are hashed per sample; GOLDEN_LOGS=1 writes
 // them out in full.
+//
+// v202: a station tour. Every station on the estate is visited in turn, early in a run
+// and again after wave 21 (shed, cellar, tomb and attic open): the prompt the player sees,
+// then E with no essence, with plenty, and once more, recording the message shown,
+// the run (essence, health, armor, perks, every weapon's ranks, Forge and ammo) and
+// the station itself after each.
 let seed=0x5eed1;
 Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 let clock=1000;performance.now=()=>clock;Date.now=()=>1.7e12+clock;
@@ -199,6 +205,21 @@ const watch={
 };
 const at=type=>{const list=st().interactables.filter(s=>s.type===type),s=list.find(s=>!(s.y>1))||list[0];qa.setPlayer(s.x+Math.sin(s.rotation||0)*1.6,s.z+Math.cos(s.rotation||0)*1.6,s.y||0);frames(1);};
 const ring=(n,cx,cz,rad,y=0)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2;qa.makeZombie(cx+Math.sin(a)*rad,cz+Math.cos(a)*rad,i%5===3,i%7===5,false,y,i%6===4);}};
+const tour=[];
+const stationState=s=>[s.used??'-',s.purchased??'-',s.locked??'-',s.forgeRank??'-',s.forgeMaximum??'-',s.armorTier??'-',s.price??'-'].map(r);
+const runDigest=()=>{const s=st();return [s.points,s.health,s.maxHealth,s.armor,s.armorMax,s.armorTier,s.weapon,[...s.perkOwned].join('+'),s.grenades,s.doubleTime,s.grenadeTime,s.reloadLeft,s.bella.unlocked?1:0,s.bella.rank,s.frenzyWave,s.wave,s.waveDelay,
+  ...Object.entries(s.inventory).flatMap(([k,v])=>[k,v.owned?1:0,v.ammo,v.reserve,v.weaponRank,v.forgeRank])].map(r);};
+function visitStations(label){
+  for(const [i,s] of st().interactables.entries()){
+    const turn=s.rotation||0;qa.setPlayer(s.x+Math.sin(turn)*1.6,s.z+Math.cos(turn)*1.6,s.y||0);frames(1);
+    const seen=()=>{const prompt=elements.get('interaction').innerHTML;if(prompt.includes(s.name))note('tour: '+(s.shedWeapon?'shed weapon':s.type));return [prompt,elements.get('toast').textContent,...runDigest(),...stationState(s)];};
+    const row=[label,i,s.type,s.name,...seen()];
+    qa.setPoints(0);qa.interact();frames(1);row.push('broke',...seen());
+    const before=st().points;qa.setPoints(1e6);qa.interact();frames(1);row.push('paid',...seen());note('tour: spent essence',st().points<1e6);
+    qa.interact();frames(1);row.push('again',...seen());
+    tour.push(row);
+  }
+}
 const trace={
   brawl:run('brawl',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,20);qa.setAim(0,-.08);
     for(const [x,z,b,d,a,f] of [[-4,12,0,0,0,0],[3,11,0,0,0,0],[6,14,0,0,0,0],[-7,15,0,0,0,0],[0,9,1,0,0,0],[-9,10,1,0,0,0],[8,9,0,0,0,1],[-2,7,0,0,0,1],[5,6,0,1,0,0],[-5,5,0,1,1,0]])qa.makeZombie(x,z,!!b,!!d,!!a,0,!!f);
@@ -253,9 +274,15 @@ const trace={
   upgrades:run('upgrades',()=>{qa.holdSpawns();qa.setHealth(1e6);for(let i=0;i<8;i++){const e=qa.makeZombie(-4+i,15);e.hp=e.maxHp=4e3;e.speed=.2;}},760,20),
   throws:run('throws',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setGrenades(3);qa.setPlayer(0,24);qa.setAim(0,-.25);ring(12,0,14,3);},700,25),
   moves:run('moves',()=>{qa.holdSpawns();qa.setHealth(70);qa.setPlayer(0,9);qa.setAim(0,0);},1200,10),
+  // The station tour, early and late in a run (see visitStations).
+  stations:run('stations',()=>{qa.holdSpawns();qa.setHealth(1e9);visitStations('early');
+    for(let i=0;i<21;i++){qa.startWave();for(const e of st().zombies)if(!e.dead)qa.damageEnemy(e,1e9);}qa.holdSpawns();frames(900);
+    qa.openAttic();frames(Math.ceil(EASTER_EGG.openTime*60)+10);
+    for(const e of st().zombies)if(!e.dead)qa.damageEnemy(e,1e9);qa.setHealth(1e9);visitStations('late');},60,30),
   screen:run('screen',()=>{globalThis.devicePixelRatio=2;qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,22);qa.setAim(0,-.05);for(let i=0;i<6;i++){const e=qa.makeZombie(-5+i*2,12);e.hp=e.maxHp=4e3;e.speed=.25;}},600,15),
   shell:run('shell',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,20);qa.setAim(0,0);for(const k of ['shotgun','smg'])st().inventory[k].owned=true;st().inventory.glock.weaponRank=0;},900,10),
 };
+trace.stationTour=tour;
 trace.boot={render:fullLogs?bootLog.join('\n'):fnv(bootLog.join('\n')),calls:bootLog.length,compiles:bootLog.filter(l=>l.startsWith('compileAsync')).length,uploads:bootLog.filter(l=>l.startsWith('initTexture')).length};
 process.stderr.write('golden-trace coverage: '+JSON.stringify(seen)+'\n');
 process.stdout.write(JSON.stringify(trace)+'\n');

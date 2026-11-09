@@ -27,6 +27,53 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Stations, shared (version 202)
+
+This is Dead Tide step 1, slice 9, the last slice of step 1. What the shared stations sell, how they look, and the interaction around every station now live in a shared module. Nothing plays differently.
+
+- **What the shared stations are:** `public/game/stations.mjs` holds their names, prices, colours and captions:
+  - the four perks (`PERKS`);
+  - ammunition crates, the pistol bench and the weapon racks (`rackStation`);
+  - the Double Damage and Infinite Grenades shrines (`shrineStation`);
+  - Aegis body armor (`ARMOR_STATION`) and the Soul Forge (`forgeStation`);
+  - the racks that sell ranks, and their equip keys (`RANK_RACKS`).
+
+  A mode only says where each one stands. The models still come from `station-models.mjs`.
+- **What moved:** `createStations({stations,player,state,isPlaying,arms,hud,sound,rules})` now holds:
+  - **Reach:** the nearest station within 2.3 m on the same floor, skipping locked and spent ones.
+  - **The prompt:** the key, the name, the price tag and what the station does.
+  - **Pressing E:** charging essence, or saying how much more is needed. It covers:
+    - perks, once each, with Ironheart doubling health and armor;
+    - ammunition, and the pistol bench's four ranks, then 250-essence restocks;
+    - each rack's weapon, then its ranks (short of a rank, the rack still hands the weapon over);
+    - Aegis and the three Nano Shield ranks, shown at both armor stations;
+    - three Forge ranks on the held weapon, shown at every forge;
+    - the timed shrines.
+
+  The code is unchanged.
+- **What stays with the mansion:**
+  - where every station stands;
+  - its own kinds of station: Bella's kennel, Olivia, Sir Blackthorn's grave, the shed, cellar and tomb doors, the shed's M4, and the Warden LMG (which wakes a frenzy);
+  - when those can be reached: the M4 only from inside the shed, the grave only inside the tomb, the cellar only once open.
+- **How a mode adds a kind of station:** each rule is optional, and a new kind (Dead Tide's katana, later) needs no change to the shared code:
+
+  | Rule | When it runs | What the mode decides |
+  |---|---|---|
+  | `stillOpen(s)` | Finding the nearest station | A spent station that still sells (Bella's kennel, the Warden's exhibit) |
+  | `hidden(s)` | Finding the nearest station | A station out of reach for now |
+  | `label(s)`, `describe(s)` | The prompt | Its own kinds' price tag and description |
+  | `use(s)` | E, before anything is charged | Its own kinds that cost nothing or have conditions |
+  | `equip(s)` | E, once its own weapon is bought | Handing it over again |
+  | `buy(s)` | E, after the price is paid | Its own purchases |
+- **Proof that nothing changed:** the golden trace now has 24 scenarios.
+  - **New scenario:** a station tour that visits all 37 stations early in a run, then again after wave 21 with the shed, cellar, tomb and attic open. At each it records the prompt, then presses E with no essence, with plenty, and once more, recording the message, the whole run (essence, health, armor, perks, every weapon's ranks, Forge and ammunition) and the station.
+  - **The result:** main and this version produce byte-identical traces.
+- **On its own:** `tests/shared-stations.mjs` runs the stations with a run, a player and stations of its own. It checks:
+  - reach, including floors, locked, spent and hidden stations;
+  - the prompt, and every kind of purchase above;
+  - a kind of station the module has never seen (a katana), added entirely through the rules.
+- **Mansion performance:** PERF_PLACEHOLDER
+
 ## The screen and the sound, shared (version 201)
 
 This is Dead Tide step 1, slice 8. The renderer, the cameras, the quality setting, resizing, drawing a frame, the shader warm-up and the game's sound now live in two shared modules. Nothing looks or sounds different.
