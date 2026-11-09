@@ -9,8 +9,9 @@
 //   cmp before.json after.json
 //
 // Randomness (Math.random and the game's own generator) is seeded and the clock is
-// fixed before the game loads; every scenario starts from a fresh run. A coverage
-// line on stderr confirms each scenario reached the behaviour it is there to test.
+// fixed before the game loads; every scenario starts from a fresh run. Every enemy's
+// birth is recorded too: where it appeared and everything it was rolled with. A
+// coverage line on stderr confirms each scenario reached the behaviour it tests.
 let seed=0x5eed1;
 Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 let clock=1000;performance.now=()=>clock;Date.now=()=>1.7e12+clock;
@@ -19,28 +20,40 @@ const {UPPER_Y,OLIVIA_ATTIC}=await import('../.qa/vertical.mjs');
 const {EASTER_EGG}=await import('../.qa/olivia.mjs');
 const {BOSS}=await import('../.qa/blackthorn-boss.mjs');
 const T=await import('../.qa/three.module.js');
+const {CELLAR}=await import('../.qa/cellar-layout.mjs');
+const {CAMP_RULES}=await import('../.qa/camp-spawns.mjs');
 const st=()=>qa.get();
 const r=v=>Number.isFinite(v)?v:String(v);
-const seen={};const note=(k,v=true)=>{if(v)seen[k]=(seen[k]||0)+1;};
+const seen={};const note=(k,v=true)=>{if(v===true)seen[k]=(seen[k]||0)+1;};
 function snapshot(){const s=st();return {
   player:[s.player.x,s.player.y,s.player.z,s.health,s.armor,s.points,s.kills,s.wave,s.inventory[s.weapon]?.ammo??null].map(r),
   zombies:s.zombies.map(e=>[e.dead?1:0,e.brute?1:0,e.dog?1:0,e.feral?1:0,e.lurker?1:0,e.boss?1:0,e.warden?1:0,e.walkPos.x,e.walkPos.y,e.walkPos.z,e.hp,e.group.rotation.y,e.group.position.y,e.attackTime,e.stuck,e.crawling?1:0,e.crouch??0,e.warCry??0,e.bellaSwings??0].map(r))
 };}
+// Everything an enemy is rolled with when it is made and placed.
+const birth=e=>[e.walkPos.x,e.walkPos.y,e.walkPos.z,e.group.position.y,e.hp,e.maxHp,e.speed,e.radius,e.bodyHeight,e.crouch,e.brute?1:0,e.dog?1:0,e.rareDog?1:0,e.feral?1:0,e.lurker?1:0,e.elite?1:0,e.crawling?1:0,
+  e.templateIndex,e.routeSide,e.flank,e.attack,e.groan,e.navigation?.seed,e.life?.type,e.life?.vigor,e.vigor,e.injury?.major,e.injury?.legless?1:0,e.injury?.props?.length,e.campBorn,e.graveBorn?1:0,e.emergeLeft,e.group.scale.x,e.face?.variant,e.build?.k,e.style].map(r);
 function run(name,setup,steps,every=30){
   seed=0x5eed1+name.length*977;clock=1000;qa.setSeed(7123);qa.setEventRandom(()=>1);
-  qa.start();setup();const out=[snapshot()];
+  const known=new WeakSet(),births=[];let last=0;
+  const born=()=>{const z=st().zombies;if(z.length<last)note('corpses removed');last=z.length;for(const e of z)if(!known.has(e)){known.add(e);births.push(birth(e));track(e);}};
+  qa.start();setup();born();const out=[snapshot()];
   for(let f=1;f<=steps;f++){
     const act=actions[name]?.(f);if(act)act();
-    frames(1);clock+=16.6667;if(f%every===0)out.push(snapshot());
+    frames(1);clock+=16.6667;born();if(f%every===0)out.push(snapshot());
     watch[name]?.();
   }
-  qa.setKeys([]);return out;
+  qa.setKeys([]);return {frames:out,births};
 }
+function track(e){note('births');note('upper births',e.walkPos.y>4);note('lurker births',!!e.lurker);note('ashfang births',!!e.rareDog);note('feral births',!!e.feral);note('brute births',!!e.brute&&!e.elite);
+  note('injured births',!!e.injury?.major||!!e.injury?.props?.length);note('crawler births',!!e.crawling);note('camp births',!!e.campBorn);note('grave births',!!e.graveBorn);note('elite births',!!e.elite);}
 const actions={
   brawl:f=>f%18===0?()=>qa.shoot():f===240?()=>qa.setKeys(['KeyA']):f===420?()=>qa.setKeys(['KeyD']):f===600?()=>qa.setKeys([]):null,
   waves:f=>f%25===0?()=>qa.shoot():null,
   mixed:f=>f%20===0?()=>qa.shoot():f===300?()=>qa.setKeys(['KeyS']):f===480?()=>qa.setKeys([]):null,
   boss:f=>f%40===0?()=>qa.shoot():null,
+  late:f=>f%15===0?()=>qa.shoot():null,
+  // Clear wave 5 to start its finale, then jump to wave 10 and clear it for the stench finale.
+  finales:f=>f===1||f===901?()=>{if(f===901)while(st().wave<10)qa.startWave();qa.clearQueuedSpawns();for(const e of st().zombies)if(!e.dead)qa.damageEnemy(e,1e9);}:f%30===0?()=>qa.shoot():null,
 };
 const watch={
   stairs:()=>note('on stairs',st().zombies.some(e=>!e.dead&&e.walkPos.y>.3&&e.walkPos.y<UPPER_Y-.3)),
@@ -48,6 +61,7 @@ const watch={
   attic:()=>note('climbing to attic',st().zombies.some(e=>!e.dead&&e.walkPos.y>UPPER_Y+.3)),
   frenzy:()=>note('frenzy',st().frenzyWave===st().wave),
   surge:()=>note('surge event',st().worldEvents.active('surge')),
+  finales:()=>{note('wave 5 finale',st().waveFiveFinale?.wave===5);note('stench finale',st().waveFiveFinale?.wave===10);},
   boss:()=>{note('boss active',st().boss.stage==='active');note('war cry',st().zombies.some(e=>e.warCry>0));note('player hurt',st().health<1e6);},
 };
 const ring=(n,cx,cz,rad,y=0)=>{for(let i=0;i<n;i++){const a=i/n*Math.PI*2;qa.makeZombie(cx+Math.sin(a)*rad,cz+Math.cos(a)*rad,i%5===3,i%7===5,false,y,i%6===4);}};
@@ -80,6 +94,17 @@ const trace={
     frames(Math.ceil((BOSS.wakeDelay+BOSS.lidTime+BOSS.riseTime+BOSS.stepTime+.1)*60)+6);qa.holdSpawns();
     const boss=st().boss.enemy;qa.setHealth(1e6);qa.setPlayer(boss.walkPos.x+3,boss.walkPos.z+5);qa.setAim(Math.PI,-.05);
     qa.makeZombie(boss.walkPos.x+3,boss.walkPos.z+2);qa.makeZombie(boss.walkPos.x-2,boss.walkPos.z+3);},1500,50),
+  // Waves 12 and up: upstairs spawns, Grotesque Lurkers, Ashfangs and ferals.
+  late:run('late',()=>{qa.setHealth(1e6);qa.setPlayer(0,22);qa.setAim(0,-.05);for(let i=0;i<12;i++)qa.startWave();},1800,60),
+  finales:run('finales',()=>{qa.setHealth(1e6);qa.setPlayer(0,22);qa.setAim(0,-.05);for(let i=0;i<5;i++)qa.startWave();},1800,60),
+  // Camping in the storm cellar: one wave spawn in three claws up through its floor.
+  camp:run('camp',()=>{while(st().wave<CELLAR.unlockWave)qa.startWave();qa.holdSpawns();st().cellar.update(2);qa.setHealth(1e9);
+    for(const e of st().zombies)if(!e.dead)qa.damageEnemy(e,1e7);frames(2);
+    const x=CELLAR.x,z=CELLAR.entryZ+2.5;qa.setPlayer(x,z,CELLAR.y);st().nav.rebuild(x,z,CELLAR.y);frames(Math.ceil(CAMP_RULES.grace*60)+70);
+    for(let i=0;i<6;i++){st().toSpawn=Math.max(st().toSpawn,5);qa.spawnEnemy();}},600),
+  // The Awakening event: the dead rise from marked graves.
+  awakening:run('awakening',()=>{qa.setHealth(1e6);qa.setPlayer(0,23);for(let i=0;i<2;i++)qa.startWave();
+    let k=0;const roll=[0,.6,0,0,.4,.8];qa.setEventRandom(()=>roll[Math.min(k++,roll.length-1)]);qa.startWave();qa.holdSpawns();},1800,60),
 };
 process.stderr.write('golden-trace coverage: '+JSON.stringify(seen)+'\n');
 process.stdout.write(JSON.stringify(trace)+'\n');

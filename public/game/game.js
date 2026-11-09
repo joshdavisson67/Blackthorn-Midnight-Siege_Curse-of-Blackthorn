@@ -5,8 +5,8 @@ import {createCurseUI,curseSummary} from './curse-ui.mjs?v=165';
 import {BOSS,WARDEN,bossPhase,dueSummons,lanceVolley,cooldownScale,segmentDistance,wakeStep,dressKnight,dressWarden,createBossEffects} from './blackthorn-boss.mjs?v=190';
 import {enrageNearby} from './enrage.mjs?v=130';
 import {createCrowd,enemyBody,PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {createLeaderboard} from './leaderboard.mjs?v=194';
-import {createChangelog} from './changelog.mjs?v=194';
+import {createLeaderboard} from './leaderboard.mjs?v=195';
+import {createChangelog} from './changelog.mjs?v=195';
 import {configureMinimap} from './minimap-settings.mjs?v=79';
 import {COMBAT,createWeaponRecoil,staggerLimits,registerStagger,createCombatHud} from './combat-feedback.mjs?v=184';
 import {ARMOR,armorRank} from './armor.mjs?v=94';
@@ -38,7 +38,6 @@ import {createCombatLights} from './combat-lights.mjs?v=190';
 import {createLighting,prepareLightingMaterials,patchLightingMaterial} from './lighting.mjs?v=120';
 import {createEnvironmentLights} from './environment-lights.mjs?v=135';
 import {createEffectPool} from './effect-pool.mjs?v=47';
-import {DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';
 import {UPPER_Y,UPPER_CEILING,UPPER_SPAWNS,hasUpperFloor,STAIR,EXTERIOR_STAIRS,supportBelow,stairHeight,stairAt,moveActor,updateActorHeight,buildVerticalNavigation,upperLocation,OLIVIA_ATTIC,setAtticOpen,isAtticOpen,inAttic} from './vertical.mjs?v=165';
 import {EASTER_EGG,buildOliviaAttic,boneChipModel} from './olivia.mjs?v=187';
 import {buildSecondFloor,drawUpperMap} from './second-floor.mjs?v=192';
@@ -60,12 +59,12 @@ import {UPPER_SLAB_BOTTOM} from './upper-shell.mjs?v=165';
 import {EVENT_RULES,WORLD_EVENTS,createWorldEvents} from './world-events.mjs?v=170';
 import {createBlackout} from './blackout.mjs?v=135';
 import {CAMP_RULES,campKindAllowed,campCandidates,createCampWatch} from './camp-spawns.mjs?v=174';
-import {createLife} from './zombie-life.mjs?v=176';
 import {createEnemyAI} from './enemy-ai.mjs?v=194';
-import {BUILD,rollBuild,applyBuild,resetBuild} from './zombie-build.mjs?v=177';
-import {INJURY,rollInjury,applyInjury} from './zombie-injuries.mjs?v=178';
-import {LURKER,lurkerPlayerDamage,lurkerEnemyDamage,setupLurkerGlow,disposeLurkerGlow} from './lurker.mjs?v=179';
-import {rollFace,applyFace,resetFaceGeometry,clearFace,disposeFace} from './zombie-faces.mjs?v=183';
+import {createEnemySpawner} from './enemy-spawn.mjs?v=195';
+import {resetBuild} from './zombie-build.mjs?v=177';
+import {INJURY} from './zombie-injuries.mjs?v=178';
+import {LURKER,lurkerPlayerDamage,lurkerEnemyDamage} from './lurker.mjs?v=179';
+import {clearFace} from './zombie-faces.mjs?v=183';
 import {createWorldEventVisuals} from './world-event-visuals.mjs?v=170';
 const domCache=new Map();const $=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);}, hudMarkup=new Map(),hudOpacity=new Map(),setMarkup=(id,markup)=>{if(hudMarkup.get(id)!==markup){hudMarkup.set(id,markup);$(id).innerHTML=markup;}},setOpacity=(id,value)=>{if(hudOpacity.get(id)!==value){hudOpacity.set(id,value);$(id).style.opacity=value;}}, rand=(a,b)=>a+rng()*(b-a), clamp=T.MathUtils.clamp;
 const reticleHud=createReticleHud($('crosshair'));
@@ -410,50 +409,19 @@ const playerCanOccupy=(x,z,y)=>crowd.canOccupy(x,z,y,PLAYER_RADIUS,1.8,null,play
 function bruteCrouchAt(x,z,y){
   return y>UPPER_Y-2||(y>-.3&&Math.abs(x-MAUSOLEUM.x)<MAUSOLEUM.w/2+1&&z>MAUSOLEUM.z-MAUSOLEUM.d/2-1&&z<MAUSOLEUM.frontZ+2);
 }
-function makeZombie(x,z,brute=false,dog=false,rareDog=false,y=0,feral=false,asset={}){
-  if(feral){dog=rareDog=brute=false;}else if(rareDog){dog=true;brute=false;}
-  const rig=enemyAssets.instantiate({rng,brute,dog,rareDog,feral,...asset}),cfg=curseWaveConfig(wave,curse.rank),hp=cfg.health*(dog?.85:brute?BRUTE.healthMultiplier:1)*(rareDog?2:1);
-  const e={...rig,walkPos:new T.Vector3(x,y,z),floorY:y,hp,maxHp:hp,speed:cfg.speed*(feral?FERAL.speedMultiplier:rareDog?RARE_DOG_SPEED_MULTIPLIER:dog?DOG_SPEED_MULTIPLIER:brute?.77:rand(...BUILD.speed)),attack:rand(.2,1),enraged:false,dead:false,death:0,groan:rand(4,12),pathTimer:0,clearPath:false};
-  const body=enemyBody(e);e.radius=body.radius;
-  e.staggerProfile=staggerLimits(e);e.staggerMeter=e.staggerLeft=e.staggerCooldown=0;e.staggerShotId=-1;e.staggerShotStrength=0;
-  e.crouch=e.brute&&bruteCrouchAt(x,z,y)?1:0;e.bodyHeight=e.crouch?BRUTE.crouchHeight:body.height;
-  e.routeSide=rng()<.5?-1:1;e.flank=rand(.25,1)*e.routeSide;e.stuck=0;e.waypoint=null;
-  e.navigation={seed:Math.floor(rng()*2147483647),crowding:(x,z,y)=>crowd.density(x,z,y,e)};
-  e.canOccupy=(x,z,y)=>crowd.canOccupy(x,z,y,e.radius,e.bodyHeight,e,e.walkPos);
-  // v175: a temperament of its own (lurch, surges, weave, stumbles, lunges).
-  if(!dog){e.life=createLife(e.navigation.seed,{feral,brute});e.vigor=e.life.vigor;}
-  // v177: and a build of its own: how it stands, holds its arms and carries its head.
-  if(!dog)applyBuild(e,rollBuild(e.navigation.seed,{feral,brute}));
-  // v183: and a face of its own: one of its body's heads, proportions, jaw hang and eye glow.
-  if(!dog)applyFace(e,rollFace(e.navigation.seed,enemyAssets.faces.count(e.templateIndex)),enemyAssets.faces);
-  world.add(e.group);e.group.position.set(x,Math.abs(y)>.1?y-.02:enemyFloorHeight(x,z)-.02,z);tagZombie(e,e);zombies.push(e);return e;
-}
-// v178: natural spawns may arrive battle-worn (missing arm or jaw, crushed
-// skull, legless and crawling, something driven through them).
-function injure(e){
-  if(e.dog||e.elite)return e;
-  const injury=rollInjury(e.navigation.seed,{brute:e.brute,feral:e.feral});
-  if(!injury.major&&!injury.legless&&!injury.props.length)return e;
-  // A crushed skull is made from the body's own head shape.
-  if(injury.major==='skull')resetFaceGeometry(e);
-  applyInjury(e,injury,enemyAssets.injuries);
-  if(injury.legless){e.crawling=true;e.crawl=1;e.crawlDrop=0;e.bodyHeight=CRAWL.height;}
-  return e;
-}
-// v179: the Grotesque Lurker. Hunched, boil-covered, belly stitched over a
-// blinking glow; lurches at 125% speed, charges at double that from 12 yards
-// and bursts on reaching you or when killed.
+// v195 (Dead Tide step 1): the mansion as the shared enemy modules see it. The
+// spawner (enemy-spawn.mjs) and the AI (enemy-ai.mjs) both take this map.
+const mansionLevel={colliders,isBlocked,supportBelow,floorHeight:enemyFloorHeight,rampHeight:(x,z)=>cellarStairHeight(x,z)??stairHeight(x,z),move:moveWithCollision,crouchAt:bruteCrouchAt,
+  canStand:(x,z,y,r)=>y!==UPPER_Y||hasUpperFloor(x,z,r),get nav(){return nav;},crowd};
+// Making and placing enemies lives in enemy-spawn.mjs; when and what to spawn
+// (waves, finales, curse ranks, camping, the upper floor) stays here.
+const {makeZombie,makeLurker,injure,spawnKind,placement,choosePoint,disposeEnemy}=createEnemySpawner({
+  level:mansionLevel,
+  run:{player,zombies,scene:world,enemyAssets,rng,rand,sharedResources:()=>({geometries:new Set([boxGeo,sphereGeo,cylGeo]),materials:new Set(Object.values(M))})},
+  rules:{enemyStats:()=>curseWaveConfig(wave,curse.rank)}
+});
+// v179: whether a wave spawn is a Grotesque Lurker comes from dice of its own.
 function lurkerDice(w,slot){let h=(seed^Math.imul(w,0x9E3779B1)^Math.imul(slot+1,0x85EBCA77))>>>0;h=Math.imul(h^h>>>16,0x45d9f3b)>>>0;h=Math.imul(h^h>>>16,0x45d9f3b)>>>0;return ((h^h>>>16)>>>0)/4294967296;}
-function makeLurker(x,z,y=0){
-  const e=makeZombie(x,z,false,false,false,y,false,{lurker:true}),cfg=curseWaveConfig(wave,curse.rank);
-  e.lurker=true;e.style='grotesque lurker';e.speed=cfg.speed*LURKER.speed;e.hp=e.maxHp=e.maxHp*LURKER.health;
-  // Bent double, arms hanging, every step a heavy lurch.
-  e.gait={...e.gait,hunch:.34,arms:'dangle',bob:1.35,sway:1.4,attack:'grabber'};e.limp=.3;
-  if(e.build)e.build={...e.build,kneeBend:.3,headJut:-.32,spineBend:e.build.spineBend*.5};
-  if(e.life){Object.assign(e.life,{type:'lurker',rhythm:.36,lungeChance:0,stumbleIn:1e9,stumbleEvery:[1e9,1e9],weave:e.life.weave*.4});e.life.norm=1+.26*(e.life.rhythm**2+e.life.surge**2);e.vigor=e.life.vigor=1.5;}
-  e.attack=1e9;e.lurkerCharging=false;e.lurkerFuse=0;setupLurkerGlow(e);
-  return e;
-}
 const lurkerBursts=[];
 // A lurker bursts: everything within 4 m with a clear line takes the blast.
 function lurkerBurst(e){
@@ -478,22 +446,14 @@ function spawnEnemy(){
   const finale=waveFiveFinale?.wave===wave;
   const rolled=finale?waveFiveFinale.kinds[waveFiveFinale.enemies.length]:chooseCurseEnemyKind(wave,spawned,rng(),curse.rank);
   // v179: from wave 11, one spawn in twenty is a Grotesque Lurker (its own dice).
-  const kind=!finale&&wave>=LURKER.fromWave&&lurkerDice(wave,spawned)<LURKER.spawnChance?'lurker':rolled,body=enemyBody({brute:kind==='brute',dog:kind==='dog'||kind==='ashfang',rareDog:kind==='ashfang'}),routes=kind==='brute'?nav.brutes:nav;
-  function valid([x,z,y=0],near=10){
-    const radius=Math.max(.48,body.radius),height=kind==='brute'&&bruteCrouchAt(x,z,y)?BRUTE.crouchHeight:body.height;
-    if(isBlocked(x,z,radius,colliders,undefined,y,height)||Math.abs(supportBelow(x,z,y)-y)>.01)return false;
-    if(y===UPPER_Y&&!hasUpperFloor(x,z,radius))return false;
-    if(Math.hypot(x-player.x,z-player.z)<=near||!nav.direction(x,z,y)?.reachable||!routes.direction(x,z,y)?.reachable)return false;
-    if(!crowd.canOccupy(x,z,y,body.radius+.18,height))return false;
-    return true;
-  }
+  const kind=!finale&&wave>=LURKER.fromWave&&lurkerDice(wave,spawned)<LURKER.spawnChance?'lurker':rolled,place=placement(kind),{valid}=place;
   // v174: camping in the storm cellar or Olivia's room makes the floor give way.
   const camp=campWatch.area;
   if(camp&&campKindAllowed(camp,kind)&&campWatch.take()&&zombies.filter(e=>!e.dead&&e.campBorn===camp.id).length<camp.cap){
     const far=[];for(const c of campCandidates(camp,player)){if(valid(c,CAMP_RULES.minDistance))far.push(c);if(far.length>=6)break;}
     if(far.length){
       const [x,z,y]=far[Math.floor(rng()*far.length)];
-      const enemy=kind==='lurker'?makeLurker(x,z,y):injure(makeZombie(x,z,kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral'));
+      const enemy=spawnKind(kind,x,z,y);
       enemy.campBorn=camp.id;enemy.emergeLeft=enemy.emergeTime=CAMP_RULES.emergeTime;enemy.emergeDepth=CAMP_RULES.emergeDepth;enemy.group.position.y-=CAMP_RULES.emergeDepth;
       noise(.35,.09,320);tone(46,.7,.06,'sawtooth',28);
       if(campWatch.warn())notify(`${camp.name} · THE DEAD CLAW UP THROUGH THE FLOOR`,3);
@@ -506,14 +466,8 @@ function spawnEnemy(){
   // upper rooms fall back to clear ground positions rather than losing enemies.
   const upper=wave>10?UPPER_SPAWNS.filter(p=>valid(p)):[];
   const reachable=wave>10&&spawned%4===upperSpawnSlot&&upper.length?upper:ground.length?ground:upper;
-  let options=reachable.filter(([x,z,y=0])=>routes.direction(x,z,y).distance<42);
-  if(!options.length)options=reachable.filter(([x,z,y=0])=>routes.direction(x,z,y).distance<80);
-  if(!options.length)options=reachable;
-  if(!options.length)return false;
-  const point=options[Math.floor(rng()*options.length)],y=point[2]||0;
-  let candidate=[point[0]+rand(-.2,.2),point[1]+rand(-.2,.2),y];
-  if(!valid(candidate))candidate=point;
-  const enemy=kind==='lurker'?makeLurker(candidate[0],candidate[1],y):injure(makeZombie(candidate[0],candidate[1],kind==='brute',kind==='dog'||kind==='ashfang',kind==='ashfang',y,kind==='feral'));
+  const at=choosePoint(reachable,place);if(!at)return false;
+  const enemy=spawnKind(kind,...at);
   if(finale)waveFiveFinale.enemies.push(enemy);
   spawned++;toSpawn--;if(wave>10&&spawned%4===0)upperSpawnSlot=Math.floor(rng()*4);return true;
 }
@@ -1320,7 +1274,7 @@ function enemyFloorHeight(x,z){
 // floors, stairs and routes, and its own rules: Bella, the attic ladder, frenzy
 // waves, world events and Sir Blackthorn.
 const {updateEnemies,hasClearPath}=createEnemyAI({
-  level:{colliders,isBlocked,supportBelow,floorHeight:enemyFloorHeight,rampHeight:(x,z)=>cellarStairHeight(x,z)??stairHeight(x,z),move:moveWithCollision,crouchAt:bruteCrouchAt,get nav(){return nav;},crowd},
+  level:mansionLevel,
   run:{player,camera,zombies,scene:world,rand,tone,noise,get elapsed(){return elapsed;},get health(){return health;},hurtPlayer,gameOver,killZombie,disposeEnemy,lurkerBursts,lurkerBurst},
   rules:{
     // Bella cannot be hurt: blows aimed at her only land with a dull thud.
@@ -1417,4 +1371,3 @@ function combineMeshes(list,parent){if(list.length<2)return;const inverse=new T.
 function batchStaticWorld(){scene.updateMatrixWorld(true);const buckets=new Map();world.traverse(m=>{if(!m.isMesh||m.isInstancedMesh||m.userData.dynamic||m===fire)return;const p=m.getWorldPosition(new T.Vector3());let k=m.material.uuid+":"+Math.floor(p.x/24)+":"+Math.floor(p.z/24)+":"+m.castShadow;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);});for(const list of buckets.values())combineMeshes(list,world);}
 function batchArticulated(group){group.updateMatrixWorld(true);const groups=[];group.traverse(o=>{if(o.isGroup)groups.push(o);});for(const g of groups){const buckets=new Map();for(const m of [...g.children]){if(!m.isMesh)continue;const k=m.material.uuid;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(m);}for(const list of buckets.values())combineMeshes(list,g);}}
 
-function disposeEnemy(e){disposeLurkerGlow(e);disposeFace(e);if(e.sharedAssets)return;const sharedGeo=new Set([boxGeo,sphereGeo,cylGeo]),sharedMat=new Set([...Object.values(M),...bookMats]),geometries=new Set(),materials=new Set();e.group.traverse(o=>{if(o.isMesh){if(!sharedGeo.has(o.geometry))geometries.add(o.geometry);if(!sharedMat.has(o.material))materials.add(o.material);}});for(const g of e.resources?.geometries||[])geometries.add(g);for(const m of e.resources?.materials||[])materials.add(m);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();}

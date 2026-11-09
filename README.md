@@ -27,6 +27,41 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Shared enemy spawner (version 195)
+
+This is Dead Tide step 1, slice 2. Making enemies and choosing where they appear now live in a shared module. Nothing plays differently.
+
+- **What moved:** `public/game/enemy-spawn.mjs` now holds:
+  - making every kind of enemy (walker, brute, dog, Ashfang, feral and Grotesque Lurker), with its health, speed, temperament, build, face and battle wounds;
+  - deciding whether a spot is a valid place for a given kind to appear;
+  - choosing a spawn point, preferring short routes to the player;
+  - cleaning an enemy up when its body is removed.
+
+  The code is unchanged, with every random roll in the same order.
+- **What stays with the mansion:** when to spawn and what to spawn. That covers wave timing, the wave 5 and wave 10 finales, curse ranks, the lurker dice, camping in the cellar or attic, upstairs spawns, grave risings and Sir Blackthorn's summons. Dead Tide will bring its own director for this: threat levels, its 28 spawn points and continuous spawns.
+- **One map for both modules:** the mansion now builds a single `mansionLevel` and hands it to the spawner and the AI. The spawner adds one field to it: `canStand(x,z,y,r)`, where an enemy may stand. Upstairs, that means the mansion's real upper floor.
+- **How a mode drives it:** `createEnemySpawner({level,run,rules})` returns `{makeZombie,makeLurker,injure,spawnKind,placement,choosePoint,disposeEnemy}`.
+
+  | Part | Field | What the mode supplies |
+  |---|---|---|
+  | `level` | the same map the AI takes, plus `canStand(x,z,y,r)` | Where an enemy may stand |
+  | `run` | `player`, `zombies`, `scene`, `enemyAssets` | The player, enemy list, scene and prepared enemy rigs |
+  | | `rng`, `rand` | The game's random numbers |
+  | | `sharedResources()` | Geometry and materials that must never be disposed with an enemy |
+  | `rules` | `enemyStats()` | `{health,speed}` for a walker at the current difficulty: the mansion's wave and curse rank, or Dead Tide's threat level |
+- **A tidy-up of unused code:** `disposeEnemy` named a list of book materials that doesn't exist. That code could never run, because every enemy is built from shared rigs. The mansion now just lists its shared materials.
+- **Proof that nothing changed:** the golden trace now records every enemy's birth as well as its moves. That's 172 enemies across 13 scenarios, each with its position, health, speed, size, kind, temperament, route side, wound, face and build.
+  - **New scenarios:** waves 12 and up (upstairs spawns, lurkers, Ashfangs and ferals), both frenzied finales, camping in the storm cellar, and the Awakening grave risings.
+  - **The result:** main and this version produce byte-identical traces.
+- **A fight with no mansion:** `tests/enemy-spawn.mjs` gives the spawner a bare yard with its own walls, ledge, no-standing area and routes.
+  - It makes all six kinds from the yard's stats.
+  - It checks every placement rule against the yard's own rules.
+  - Then, with the shared AI, the yard's own spawns close in and attack.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Within noise:** time to playable (seven alternating pairs) and frame times.
+  - **The only measurable change:** one more file and 3 KB more source.
+
 ## Shared enemy AI (version 194)
 
 This is Dead Tide step 1, the first slice of moving the game's mode-neutral core out of `game.js` so the island can reuse it. Nothing plays differently.
