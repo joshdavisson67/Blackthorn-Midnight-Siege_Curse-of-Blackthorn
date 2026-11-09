@@ -30,6 +30,10 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v199-siege.json` | v199 (step 1: shared HUD) | The mansion after moving the HUD's shared readouts into `hud.mjs` |
 | `v199-load-phases.jsonl` | v198 (main) and v199 | Twenty balanced runs of `scripts/load-phases.mjs` |
 | `v199-frame-logic.jsonl` | v198 (main) and v199 | Twelve balanced pairs of `scripts/frame-logic.mjs` |
+| `v199-siege-rerun.json` | v199 (main) | The mansion re-measured beside v200 |
+| `v200-siege.json` | v200 (step 1: the play session) | The mansion after moving the session, mouse capture, pause flow and controls into `controls.mjs` |
+| `v200-load-phases.jsonl` | v199 (main) and v200 | Twenty balanced runs of `scripts/load-phases.mjs` |
+| `v200-frame-logic.jsonl` | v199 (main) and v200 | Twelve balanced pairs of `scripts/frame-logic.mjs` |
 
 ## Step 1 (v194) against main
 
@@ -208,6 +212,34 @@ Both builds were measured in full, back to back. Loading was timed phase by phas
 - **Size:** the one measurable change is one more file and 2 KB more source.
 
 **Gameplay and page:** `scripts/golden-trace.mjs` (21 scenarios, now fingerprinting every element on the page at every sample) produces byte-identical traces on main and v199.
+
+## Step 1, slice 7 (v200) against main
+
+Both builds were measured in full, back to back. Loading was timed phase by phase over 20 balanced runs, and the game's own per-frame work over 12 balanced pairs.
+
+From v200 on, the probe reports the mouse as locked through the browser's own `pointerLockElement` property instead of replacing `hasMouseLock`. Both builds here were measured that way.
+
+| Mansion | v199 (main) | v200 |
+|---|---:|---:|
+| Files loaded before playable | 97 | 98 (`controls.mjs`) |
+| Bytes loaded before playable | 8,952 KB | 8,957 KB |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,457 / 125 |
+| JS heap after load / after the fight | 237.2 / 243.9 MB | 237.7 / 243.9 MB |
+| Draw calls and triangles in the six views and the fight | as in step 0 | identical |
+| Load: modules / world / shaders (20 balanced runs) | 0.39 / 12.41 / 40.79 s | 0.36 / 12.37 / 39.80 s |
+| Load: total | 53.58 s | 52.53 s (−1.06 s, standard error 0.56 s) |
+| 32-zombie fight: mean frame time (software rendering) | 3,275 ms | 3,167 ms |
+| The game's own work per frame, no rendering (12 pairs) | 2.44 ms fastest · 2.90 ms median | 2.42 ms fastest · 2.73 ms median |
+
+**Verdict:** no regression.
+
+- **Counts:** every rendering, shader and memory count is identical.
+- **Loading:** every load phase is the same or quicker.
+- **Frame logic:** the game's own per-frame work matches.
+- **Size:** the one measurable change is one more file and 5 KB more source.
+
+**Gameplay and page:** `scripts/golden-trace.mjs` (22 scenarios, now including the pause, capture and menu flow) produces byte-identical traces on main and v200.
 
 ## Re-running
 

@@ -80,6 +80,11 @@ This is Dead Tide step 1, slice 7. Capturing the mouse, pausing, the settings pa
   - each way of pausing;
   - settings and the prompts;
   - touch and controller play.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading:** every load phase is the same or quicker.
+  - **Frame logic:** the game's own per-frame work matches.
+  - **The only measurable change:** one more file and 5 KB more source.
 
 ## Shared HUD (version 199)
 
