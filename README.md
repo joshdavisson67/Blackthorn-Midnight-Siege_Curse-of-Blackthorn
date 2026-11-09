@@ -72,7 +72,12 @@ This is Dead Tide step 1, slice 8. The renderer, the cameras, the quality settin
 - **On their own:**
   - `tests/display.mjs` runs the screen on a bare page with a world of its own. It checks the WebGL message, the renderer and cameras, each quality, resizing, dynamic resolution and its readout, the order a frame is drawn in, the warm-up, and the saved quality.
   - `tests/audio.mjs` runs the sound with a switch of its own. It checks silence before Resume, the wind, each kind of sound and its timing, the switch, waking a sleeping context, and a closed one.
-- **Mansion performance:** PERF_PLACEHOLDER
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs, geometries, textures, memory, and every draw-call and triangle count.
+  - **Loading:** no load phase changed beyond its run-to-run error.
+  - **Frame logic:** the game's own per-frame work matches.
+  - **Rechecked:** one fight heap reading was 9.5 MB high, and its repeat matched main.
+  - **The only measurable change:** two more files and 5 KB more source.
 
 ## The play session, shared (version 200)
 
