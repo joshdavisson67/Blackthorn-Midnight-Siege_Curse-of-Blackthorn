@@ -110,9 +110,18 @@ export function verifyZombieInjuries(qa,frames){
       if(!qa.spawnEnemy()){qa.startWave();qa.holdSpawns();continue;}const e=qa.get().zombies.at(-1);seen.push(e);
       e.group.traverse(o=>{if(o.isMesh)geos.add(o.geometry);});
     }
-    const walkers=seen.filter(e=>!e.dog&&!e.brute),injured=walkers.filter(e=>e.injury?.major).length/walkers.length;
-    assert(walkers.length>150&&injured>.15&&injured<.35,`Wave spawns arrive maimed about one time in four (${(injured*100).toFixed(0)}% of ${walkers.length})`);
-    const impaled=seen.filter(e=>e.injury?.props.length).length/seen.length;assert(impaled>.12&&impaled<.3,`and impaled about one time in five (${(impaled*100).toFixed(0)}%)`);
+    // v206: only enemies that can carry injuries are counted. Dogs, lurkers and elites always
+    // spawn whole, and counting them pulled the share down by however many a run happened to
+    // meet (dogs alone are about one spawn in seven), close to the floor. The roll's own odds
+    // are checked exactly above, from fixed seeds; this checks that spawns really use it.
+    // If it ever fails, the mix of kinds is in the message.
+    const whole=e=>e.dog||e.lurker||e.elite,canCarry=seen.filter(e=>!whole(e)),walkers=canCarry.filter(e=>!e.brute);
+    const mix=`${seen.length} spawns: ${seen.filter(e=>e.dog).length} dogs, ${seen.filter(e=>e.lurker).length} lurkers, ${seen.filter(e=>e.elite).length} elites, ${seen.filter(e=>e.brute&&!e.elite).length} brutes, ${seen.filter(e=>e.feral).length} ferals`;
+    const injured=walkers.filter(e=>e.injury?.major).length/walkers.length;
+    assert(walkers.length>150&&injured>.15&&injured<.35,`Wave spawns arrive maimed about one time in four (${(injured*100).toFixed(0)}% of ${walkers.length} walkers and ferals; ${mix})`);
+    const impaled=canCarry.filter(e=>e.injury?.props.length).length/canCarry.length;
+    assert(canCarry.length>200&&impaled>.12&&impaled<.3,`and impaled about one time in five (${(impaled*100).toFixed(0)}% of ${canCarry.length}; ${mix})`);
+    assert(seen.filter(whole).every(e=>!e.injury?.props.length&&!e.injury?.major),'Dogs, lurkers and elites spawn whole');
     assert(seen.filter(e=>e.dog).every(e=>!e.injury),'Dogs spawn whole');
     for(const e of seen.filter(e=>e.injury?.legless))assert(e.crawling&&e.crawl===1&&e.bodyHeight===CRAWL.height,'Legless spawns arrive crawling');
     const kitGeos=new Set([...Object.values(kit.props),...Object.values(kit.caps),...[...kit.crushed.values()].flat()]);

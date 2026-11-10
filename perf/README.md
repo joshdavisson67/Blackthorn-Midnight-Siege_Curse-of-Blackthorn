@@ -58,6 +58,7 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v205-load-phases.jsonl` | v204 (main) and v205 | Forty balanced runs of `scripts/load-phases.mjs`, in two rounds |
 | `v205-frame-logic.jsonl` | v204 (main) and v205 | Twenty-four balanced pairs of `scripts/frame-logic.mjs`, in two rounds |
 | `v205-tide.json`, `v205-tide-repeat.json` | v205 | Dead Tide carrying the shared katana, measured twice |
+| `v205-siege-files.json` | v205 | The mansion's load with the files it fetched, which `tests/release-tier.mjs` checks the tier map against (taken with the release-tier tooling; `--load-only`) |
 
 ## Step 1 (v194) against main
 
@@ -478,10 +479,34 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
-## Re-running
+## Release tiers (tooling after v205)
+
+`scripts/release-tier.mjs` decides how much of this measuring a change needs, for each mode on its own (`AGENTS.md` has the rules):
+
+- **Quick:** nothing the mode loads changed. No measuring.
+- **Standard:** something it loads changed. One measured pair at perf-measure's usual frame counts, six frame-logic pairs, and for the mansion the golden trace. Any difference in the counts, memory beyond 2 MB, JavaScript loading beyond 10%, or frame logic beyond its noise sends the mode to full.
+- **Full:** two full measured pairs, 20 balanced load-phase pairs (40 runs) and 24 frame-logic pairs, as the versions above were measured.
+
+**Tried on a simulated change** (on a scratch copy, not committed): a comment added to `game.js` and a crate added to the island in `island.mjs`.
+
+| Mode | Tier | What it found | Time |
+|---|---|---|---|
+| Mansion | standard | No differences in any count or memory; frame logic 2.374 → 2.389 ms (+0.015, SE 0.146); golden trace identical | 18 min |
+| Dead Tide | full | The crate: 207 → 208 geometries, one more draw call in the three views that see it (and heap noise, below). The full protocol found the same, with loading and frame logic unchanged (total −90 ms, SE 71 ms; frame logic −0.003 ms, SE 0.011 ms) | 9 min |
+| Mode picker | quick | Nothing it loads changed | — |
+
+The whole run took 27 minutes, against well over an hour for the full protocol on the mansion alone.
+
+**Two lessons built in:**
+- **Fewer frames per view aren't safe.** A first try with two frames per view let the hall's warming first frame decide its average: 2,748 against 2,315 draw calls on identical builds. The standard pair uses perf-measure's own frame counts, whose draw calls repeat exactly (`v205-siege.json` and its repeat).
+- **Memory is compared after a collection.** In the simulation, Dead Tide's heap right after loading ranged from 34.7 to 44.7 MB across six runs of builds one crate apart, and it was flagged as a difference too. perf-measure now also reads memory after a forced collection (`heapAfterGcMB`, `--js-flags=--expose-gc`): 31.0 MB in four runs out of four of today's Dead Tide. The comparison uses it wherever both records have it.
+
+**Dead Tide's tools:** `scripts/frame-logic.mjs --mode tide` (walking a circle on the beach and firing four times a second, about 0.24 ms a frame) and `scripts/load-phases.mjs --page tide.html` (Dead Tide's own performance marks). It has no golden trace yet; that comes with its enemies.
+
 ## Re-running
 
 ```
+node scripts/release-tier.mjs [--measure] [--full]   # v206: each mode's tier, and the measurements it calls for
 node scripts/perf-measure.mjs --label vNNN --out perf/vNNN-siege.json
 node scripts/perf-measure.mjs --page modes.html --out perf/vNNN-modes.json
 node scripts/perf-measure.mjs --page tide.html --out perf/vNNN-tide.json   # Dead Tide on its own page
@@ -489,5 +514,7 @@ node scripts/perf-measure.mjs --game <other checkout>/public/game --load-only
 node scripts/golden-trace.mjs > after.json   # then cmp it against a trace taken on main
 node scripts/golden-compare.mjs before.json after.json   # v205: channel by channel, for a change that adds something
 node scripts/load-phases.mjs --game <checkout>/public/game   # where loading time goes
+node scripts/load-phases.mjs --page tide.html [--game <dir>]  # v206: Dead Tide's
 node scripts/frame-logic.mjs [<checkout>]                    # the game's own per-frame work, no rendering
+node scripts/frame-logic.mjs --mode tide [<checkout>]        # v206: Dead Tide's
 ```

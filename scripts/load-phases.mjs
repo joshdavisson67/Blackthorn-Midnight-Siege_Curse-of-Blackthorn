@@ -9,6 +9,10 @@
 // with the same shader programs, and under software rendering it varies by seconds.
 //
 //   node scripts/load-phases.mjs [--game <public/game dir>] [--label name]
+//   node scripts/load-phases.mjs --page tide.html [--game <dir>]   # Dead Tide (v206)
+//
+// Dead Tide marks the same three phases itself (performance marks tide:modules,
+// tide:world and tide:shaders, since v204), so its page is timed without staging hooks.
 import http from 'node:http';
 import {cpSync,mkdtempSync,readFileSync,writeFileSync,existsSync,statSync,rmSync} from 'node:fs';
 import {join,extname,resolve,dirname} from 'node:path';
@@ -16,7 +20,8 @@ import {tmpdir} from 'node:os';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const arg=(name,fallback)=>{const i=process.argv.indexOf(`--${name}`);return i>0?process.argv[i+1]:fallback;};
-const dir=resolve(arg('game',join(root,'public/game'))),label=arg('label','');
+const dir=resolve(arg('game',join(root,'public/game'))),label=arg('label',''),page=arg('page','index.html'),tide=page==='tide.html';
+if(!['index.html','tide.html'].includes(page)){console.error('--page is index.html or tide.html');process.exit(2);}
 async function loadPlaywright(){
   for(const spec of [process.env.PLAYWRIGHT_MODULE,'playwright','/opt/npm-tools/node_modules/playwright/index.mjs'].filter(Boolean)){
     try{return await import(spec.startsWith('/')?pathToFileURL(spec).href:spec);}catch{}
@@ -26,10 +31,12 @@ async function loadPlaywright(){
 // Stage a copy with three timestamps added; the source is untouched.
 const stage=mkdtempSync(join(tmpdir(),'blackthorn-phases-'));cpSync(dir,stage,{recursive:true});
 // v201 moved the prepared flag into display.mjs; every build still awaits prepareRendering() once.
-let game=readFileSync(join(stage,'game.js'),'utf8');const anchor='await prepareRendering();';
-if(game.split(anchor).length!==2)throw new Error('game.js no longer ends its setup with prepareRendering()');
-game='window.__tTop=performance.now();\n'+game.replace(anchor,'window.__tWorld=performance.now();await prepareRendering();window.__tPrep=performance.now();');
-writeFileSync(join(stage,'game.js'),game);
+if(!tide){
+  let game=readFileSync(join(stage,'game.js'),'utf8');const anchor='await prepareRendering();';
+  if(game.split(anchor).length!==2)throw new Error('game.js no longer ends its setup with prepareRendering()');
+  game='window.__tTop=performance.now();\n'+game.replace(anchor,'window.__tWorld=performance.now();await prepareRendering();window.__tPrep=performance.now();');
+  writeFileSync(join(stage,'game.js'),game);
+}else if(!/tide:shaders/.test(readFileSync(join(stage,'tide.mjs'),'utf8')))throw new Error('tide.mjs no longer marks its load phases');
 const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.woff2':'font/woff2','.json':'application/json'};
 const server=http.createServer((q,r)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p==='/')p='/index.html';const f=join(stage,p);
   if(!existsSync(f)||statSync(f).isDirectory()){r.writeHead(404);r.end();return;}
@@ -40,8 +47,8 @@ const browser=await chromium.launch({args:['--use-angle=gl-egl','--ignore-gpu-bl
 const ctx=await browser.newContext({viewport:{width:1280,height:720},deviceScaleFactor:1});
 await ctx.addInitScript(()=>{try{localStorage.setItem('blackthorn-quality','high');localStorage.setItem('blackthorn-touch-controls','off');}catch{}});
 const tab=await ctx.newPage();tab.setDefaultTimeout(900000);
-await tab.goto(`http://localhost:${server.address().port}/index.html`,{waitUntil:'load'});
+await tab.goto(`http://localhost:${server.address().port}/${page}`,{waitUntil:'load'});
 await tab.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:900000});
-const t=await tab.evaluate(()=>({top:window.__tTop,world:window.__tWorld,prep:window.__tPrep}));
-console.log(JSON.stringify({label,modulesMs:Math.round(t.top),worldMs:Math.round(t.world-t.top),shadersMs:Math.round(t.prep-t.world),totalMs:Math.round(t.prep)}));
+const t=await tab.evaluate(tide=>{if(!tide)return {top:window.__tTop,world:window.__tWorld,prep:window.__tPrep};const at=n=>performance.getEntriesByName(n)[0]?.startTime;return {top:at('tide:modules'),world:at('tide:world'),prep:at('tide:shaders')};},tide);
+console.log(JSON.stringify({label,page,modulesMs:Math.round(t.top),worldMs:Math.round(t.world-t.top),shadersMs:Math.round(t.prep-t.world),totalMs:Math.round(t.prep)}));
 await browser.close();server.close();rmSync(stage,{recursive:true,force:true});

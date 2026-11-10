@@ -38,6 +38,9 @@ async function loadPlaywright(){
 // ---- Stage a copy of the game; the mansion gets a measuring hook ---------------------
 const stage=mkdtempSync(join(tmpdir(),'blackthorn-perf-'));
 cpSync(gameDir,stage,{recursive:true});
+// v206: the mansion's load phases too, as scripts/load-phases.mjs times them (Dead Tide marks its own).
+if(mansion){const f=join(stage,'game.js'),anchor='await prepareRendering();';let g=readFileSync(f,'utf8');
+  if(g.split(anchor).length===2)writeFileSync(f,'window.__tTop=performance.now();\n'+g.replace(anchor,'window.__tWorld=performance.now();await prepareRendering();window.__tPrep=performance.now();'));}
 if(mansion)appendFileSync(join(stage,'game.js'),`
 // ---- perf-measure hook (staged copy only) ----
 {const orig=renderer.render.bind(renderer);let cpu=0;
@@ -91,7 +94,9 @@ const server=http.createServer((q,r)=>{let p=decodeURIComponent(q.url.split('?')
 await new Promise(r=>server.once('listening',r));
 
 const {chromium}=await loadPlaywright();
-const browser=await chromium.launch({args:['--use-angle=gl-egl','--ignore-gpu-blocklist','--enable-precise-memory-info']});
+// v206: --expose-gc, so memory can also be read after a collection (heapAfterGcMB), which repeats
+// far more closely than the heap at an arbitrary moment after loading.
+const browser=await chromium.launch({args:['--use-angle=gl-egl','--ignore-gpu-blocklist','--enable-precise-memory-info','--js-flags=--expose-gc']});
 const ctx=await browser.newContext({viewport:{width:1280,height:720},deviceScaleFactor:1});
 await ctx.addInitScript(()=>{try{localStorage.setItem('blackthorn-quality','high');localStorage.setItem('blackthorn-touch-controls','off');}catch{}});
 const tab=await ctx.newPage();tab.setDefaultTimeout(900000);const errors=[];tab.on('pageerror',e=>errors.push(e.message));
@@ -101,6 +106,7 @@ const VIEW_FRAMES=Number(arg('view-frames',8)),FIGHT_FRAMES=Number(arg('fight-fr
 const frames=n=>q(n=>new Promise(res=>{const d=[];let last=performance.now(),k=0;const tick=()=>{const now=performance.now();if(k++)d.push(now-last);last=now;if(k<=n)requestAnimationFrame(tick);else res(d);};requestAnimationFrame(tick);}),n);
 const summary=d=>{const s=[...d].sort((a,b)=>a-b),avg=d.reduce((a,b)=>a+b,0)/d.length;return {avgMs:+avg.toFixed(2),p95Ms:+s[Math.floor(s.length*.95)].toFixed(2),maxMs:+s.at(-1).toFixed(2)};};
 const heap=()=>q(()=>performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576*10)/10:null);
+const heapGc=()=>q(()=>{if(typeof window.gc!=='function')return null;window.gc();window.gc();return performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576*10)/10:null;});
 const bytesUpTo=ms=>{const list=served.filter(s=>s.at<=ms&&s.status===200);return {requests:list.length,kb:Math.round(list.reduce((a,s)=>a+s.bytes,0)/1024)};};
 
 t0=Date.now();
@@ -110,8 +116,11 @@ if(mansion){
   await tab.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:900000});
   const playable=Date.now()-t0;log(`playable after ${(playable/1000).toFixed(1)}s`);await new Promise(r=>setTimeout(r,1500));
   const err=await q(()=>document.getElementById('errorDetails')?.textContent||'');if(err)throw new Error('Load error: '+err);
-  result.load={timeToPlayableMs:playable,untilPlayable:bytesUpTo(playable),total:bytesUpTo(Date.now()-t0),heapMB:await heap()};
-  if(process.argv.includes('--load-only')){result.errors=errors;await browser.close();server.close();rmSync(stage,{recursive:true,force:true});console.log(JSON.stringify(result));process.exit(0);}
+  // v206: the files fetched, so scripts/release-tier.mjs can check its map of what each page loads.
+  const ph=await q(()=>({top:window.__tTop,world:window.__tWorld,prep:window.__tPrep}));
+  result.load={timeToPlayableMs:playable,untilPlayable:bytesUpTo(playable),total:bytesUpTo(Date.now()-t0),heapMB:await heap(),heapAfterGcMB:await heapGc(),
+    ...(ph.prep?{phases:{modulesMs:Math.round(ph.top),worldMs:Math.round(ph.world-ph.top),shadersMs:Math.round(ph.prep-ph.world)}}:{}),files:served.filter(s=>s.status===200).map(s=>s.path)};
+  if(process.argv.includes('--load-only')){result.errors=errors;await browser.close();server.close();rmSync(stage,{recursive:true,force:true});if(out){mkdirSync(dirname(resolve(root,out)),{recursive:true});writeFileSync(resolve(root,out),JSON.stringify(result,null,2)+'\n');}console.log(JSON.stringify(result));process.exit(0);}
   await q(()=>window.__perf.fixRes());
   const s0=await q(()=>window.__perf.stats());result.gpu={shaderPrograms:s0.programs,geometries:s0.geometries,textures:s0.textures};
   // Fixed views with the world paused and no enemies.
@@ -127,14 +136,14 @@ if(mansion){
   const alive=await q(n=>window.__perf.fight(n),32);
   const hitch=await frames(10);await frames(5);
   const a=await q(()=>window.__perf.stats()),d=await frames(FIGHT_FRAMES),b=await q(()=>window.__perf.stats());
-  result.fight={enemies:alive,stillAlive:await q(()=>window.__perf.alive()),firstFramesMaxMs:+Math.max(...hitch).toFixed(2),drawCalls:Math.round((b.calls-a.calls)/FIGHT_FRAMES),trianglesK:Math.round((b.triangles-a.triangles)/FIGHT_FRAMES/1000),renderCpuMs:+((b.cpu-a.cpu)/FIGHT_FRAMES).toFixed(2),...summary(d),heapMB:await heap()};log(`fight: ${JSON.stringify(result.fight)}`);
+  result.fight={enemies:alive,stillAlive:await q(()=>window.__perf.alive()),firstFramesMaxMs:+Math.max(...hitch).toFixed(2),drawCalls:Math.round((b.calls-a.calls)/FIGHT_FRAMES),trianglesK:Math.round((b.triangles-a.triangles)/FIGHT_FRAMES/1000),renderCpuMs:+((b.cpu-a.cpu)/FIGHT_FRAMES).toFixed(2),...summary(d),heapMB:await heap(),heapAfterGcMB:await heapGc()};log(`fight: ${JSON.stringify(result.fight)}`);
   const s1=await q(()=>window.__perf.stats());result.gpu.shaderProgramsAfterFight=s1.programs;
 }else if(tide){
   await tab.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:900000});
   const playable=Date.now()-t0;log(`playable after ${(playable/1000).toFixed(1)}s`);await new Promise(r=>setTimeout(r,1500));
   const err=await q(()=>document.getElementById('errorDetails')?.textContent||'');if(err)throw new Error('Load error: '+err);
   const files=served.filter(s=>s.status===200).map(s=>s.path),ph=await q(()=>window.__perf.phases());
-  result.load={timeToPlayableMs:playable,untilPlayable:bytesUpTo(playable),total:bytesUpTo(Date.now()-t0),heapMB:await heap(),
+  result.load={timeToPlayableMs:playable,untilPlayable:bytesUpTo(playable),total:bytesUpTo(Date.now()-t0),heapMB:await heap(),heapAfterGcMB:await heapGc(),
     phases:{modulesMs:Math.round(ph.modules),worldMs:Math.round(ph.world-ph.modules),shadersMs:Math.round(ph.shaders-ph.world)},files,
     mansionFiles:files.filter(f=>/^\/(index\.html|boot\.js|game\.js|core\.mjs|estate-layout|graveyard|cellar|shed|vertical|second-floor|upper-shell|exterior-stairs|mansion-expansion|facade|furnishings|rugs|signage|grounds|estate-detail|rotunda-bell|olivia|bella|blackthorn-boss|curse|world-event|blackout|camp-spawns|lighting|environment-lights|combat-lights|leaderboard|changelog)/.test(f))};
   await q(()=>window.__perf.fixRes());
@@ -146,10 +155,10 @@ if(mansion){
   for(const [name,x,z,yaw,pitch] of views){await q(v=>window.__perf.view(...v),[x,z,yaw,pitch]);await measure(name);}
   // A grenade blast in view: its effects were compiled under the loading screen, so no new shaders now.
   await q(()=>{window.__perf.view(0,46.5,.073,-.1);window.__perf.blast(0,40);});await measure('blast');
-  const s1=await q(()=>window.__perf.stats());result.gpu.shaderProgramsAfterPlay=s1.programs;result.heapAfterPlayMB=await heap();
+  const s1=await q(()=>window.__perf.stats());result.gpu.shaderProgramsAfterPlay=s1.programs;result.heapAfterPlayMB=await heap();result.heapAfterPlayAfterGcMB=await heapGc();
 }else{
   const loaded=Date.now()-t0;await new Promise(r=>setTimeout(r,800));
-  result.load={timeToInteractiveMs:loaded,total:bytesUpTo(Date.now()-t0),heapMB:await heap(),files:served.filter(s=>s.status===200).map(s=>s.path)};
+  result.load={timeToInteractiveMs:loaded,total:bytesUpTo(Date.now()-t0),heapMB:await heap(),heapAfterGcMB:await heapGc(),files:served.filter(s=>s.status===200).map(s=>s.path)};
   result.webglContexts=await q(()=>[...document.querySelectorAll('canvas')].filter(c=>{try{return !!(c.__gl);}catch{return false;}}).length);
   result.loadsGameCode=served.some(s=>/three\.module|game\.js|boot\.js/.test(s.path));
   result.animation=summary(await frames(120));
