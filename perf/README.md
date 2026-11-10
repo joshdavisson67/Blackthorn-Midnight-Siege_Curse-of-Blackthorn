@@ -483,6 +483,54 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v206 (the dead come ashore) against main
+
+Measured by `node scripts/release-tier.mjs --measure` against main (v205) on one machine, headless Chromium with software rendering. Frame times are relative to this machine only.
+
+### Mansion: standard, no differences
+
+- **Standard comparison:** no differences from main. That covers files and bytes before playable, every fixed view's draw calls and triangles, shader programs, memory and the fight.
+- **Frame logic:** 2.485 → 2.470 ms (−0.015, SE 0.093), within noise.
+- **Golden trace:** byte-identical to main's in all 26 scenarios.
+- **The hall's draw calls depend on load timing, not on the build.** The first measurement of this branch showed the hall view at 2061 draw calls against main's 1953, consistently. Its visible meshes were identical, 801 in both builds. Main itself showed 2061 once its load was delayed by 300 ms and nothing else. The mansion refreshes shadow maps on a timer and a per-frame budget, so when loading ends decides which refreshes land in the measured frames. Treat a hall-only draw-call difference with identical meshes as timing.
+- **The extra file:** that first measurement also counted 106 files before playable against 105. That was a real regression from a new `feral-stats.mjs`, fixed by moving the mansion's wave mix to `curse.mjs` instead.
+
+### Dead Tide: full protocol, the cost of the dead
+
+Everything below is the island gaining enemies; nothing the island already did got worse. Its seven island scenarios in the golden trace match main in every gameplay channel.
+
+| | main (v205) | v206 |
+|---|---:|---:|
+| Files / KB before playable | 53 / 1,943 | 62 / 2,015 |
+| Time to playable (load phases, median of 20) | 4,651 ms | 10,810 ms |
+| ↳ modules | 241 ms | 251 ms |
+| ↳ world (island, the dead's bodies, routes) | 613 ms | 4,862 ms |
+| ↳ shaders | 3,798 ms | 5,698 ms |
+| Shader programs | 35 | 43 (none new after play or in the fight) |
+| Geometries / textures | 207 / 18 | 490 / 24 |
+| Heap after load, after a collection | 29.3 MB | 140.1 MB |
+| Frame logic, walking the empty island (24 pairs) | 0.209 ms | 0.241 ms (+0.032, SE 0.007) |
+
+- **Load:** building the dead's bodies (`createEnemyAssets`: sculpted templates, injuries, faces, batching) is nearly all of the world's extra 4.2 s here, and about 1 s in Node. The route grid takes about 56 ms. The mansion pays the same build inside its own world phase.
+- **Shaders:** the extra 1.9 s compiles the eight enemy and power-up programs, so none compile when the dead arrive.
+- **Memory:** the same enemy bodies account for about 110 MB of the mansion's 240 MB.
+- **Frame logic:** the scene graph is identical while walking: 669 objects in both builds. My own per-frame additions each cost under a microsecond. The +0.03 ms comes from the larger heap (more garbage-collection work), which comes with holding the dead in memory.
+- **A possible improvement:** build the dead after the island is playable, behind the title screen, and warm their shaders in the background. That could take most of the 6 s off time to playable without a hitch when the first walker rises.
+
+### Dead Tide: the 45-enemy stress test (new)
+
+A mixed ring of 45 unkillable dead (walkers, ferals, brutes, dogs, Ashfangs) around an unkillable player on the south beach.
+
+- **Browser** (`perf-measure.mjs --page tide.html`): all 45 alive throughout.
+  - 252 draw calls and 261K triangles a frame, against 2,955 draw calls for the mansion's 32-zombie fight.
+  - 8.2 ms of render CPU.
+  - Heap 144 MB after a collection.
+  - No new shader programs.
+- **Game logic** (`frame-logic.mjs --mode tide-fight`): 3.58 ms a frame (median of 5). The plan's cap of 45 holds in the tests: pressed for 500, the shore fills to exactly 45.
+- **Not measured:** real GPUs, integrated graphics, or frame rates in a real browser.
+
+Files: `v206-tide.json` and `v206-tide-repeat.json` (with the fight), `v206-siege.json`, `v206-tide-load-phases.jsonl`, `v206-tide-frame-logic.jsonl`.
+
 ## Release tiers (tooling after v205)
 
 `scripts/release-tier.mjs` decides how much of this measuring a change needs, for each mode on its own (`AGENTS.md` has the rules):
