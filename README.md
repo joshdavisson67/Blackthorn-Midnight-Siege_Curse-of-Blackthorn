@@ -29,6 +29,29 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide's golden trace (tooling; the game is unchanged at version 205)
+
+Before the dead come ashore (v206), Dead Tide gets the same safety net the mansion has: a golden trace of everything the island already does, so adding enemies can be checked channel by channel against what was there before.
+
+- **`scripts/tide-golden-trace.mjs`** plays seven fixed, seeded scenarios through `tests/tide-harness.mjs`, with the clock fixed and randomness seeded:
+  - **walk:** walking, strafing, sprinting, jumping and looking about on the south beach;
+  - **hill:** sprinting up Radio Hill to the summit, into the shack by its door, a jump under its roof and against its back wall;
+  - **wade:** out into the shallows to the wading limit;
+  - **arms:** every gun drawn, aimed, fired, reloaded and sprinted with; a grenade thrown and burst; the flashlight off and on;
+  - **katana:** drawn with 7, its three slashes, then held to keep slashing;
+  - **death:** a safe grenade, a blast at your feet, the tide taking you and New Run;
+  - **session:** pause, Settings, the controls card, Resume, back to the title and in again.
+- **What it records**, every half second: the player, every enemy and pickup (none yet), the run, the session, the weapons, the screen (every renderer call), the view in hand, the page and the sound, plus every enemy's birth and the renderer's log while loading.
+- **Comparing builds:** `BLACKTHORN_GAME_DIR=<checkout>/public/game` plays another build's game with this harness, so v205 (which has no script of its own) can be traced too. `scripts/golden-compare.mjs` now compares Dead Tide traces as well.
+- **In every release:** `scripts/release-tier.mjs` runs it in Dead Tide's standard tier beside the mansion's trace.
+- **Checked:**
+  - two runs of the same build are byte-identical, and so are main's v205 and this branch, since the game is unchanged;
+  - it catches a change: making the sea 5 cm shallower to wade changes the wade scenario's player, run and view, and nothing else;
+  - every scenario reaches what it tests (the coverage line on stderr).
+- **The harness** (`tests/tide-harness.mjs`) now also exposes the enemies, pickups, the weapon recoil, the muzzle flash, the grenade in hand and the held keys, and can reseed the game's own generator.
+- **Tiers for this change:** quick for the mansion, Dead Tide and the mode picker, since no file the game loads changed.
+- **Next (v206):** the dead come ashore. Its build adds a fight scenario here and to Dead Tide's frame logic, and must keep these seven scenarios byte-identical.
+
 ## Release checks by tier (tooling; the game is unchanged at version 205)
 
 Each release is now measured as much as its change needs, decided for the mansion, Dead Tide and the mode picker separately. The rule is the same for both modes: any measurable regression is corrected before release.

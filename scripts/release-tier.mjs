@@ -20,7 +20,7 @@
 //    standard  something it loads changed. One measured load of each build, side by side:
 //              files and bytes, shader programs, geometries, textures, draw calls and
 //              triangles in every fixed view (and the mansion's 32-zombie fight), memory,
-//              the load phases, a short frame-logic series, and the mansion's golden trace.
+//              the load phases, a short frame-logic series, and each mode's golden trace.
 //    full      the standard comparison found a difference (THRESHOLDS below). The whole
 //              protocol for that mode: two full measured pairs, 40 balanced load-phase runs
 //              and 24 frame-logic pairs (perf/README.md, "Re-running").
@@ -42,7 +42,7 @@ export const GAME='public/game';
 // ---- The modes -----------------------------------------------------------------------
 export const MODES={
   mansion:{label:'Mansion',pages:['index.html','siege.html'],perfPage:'index.html',frameLogic:'mansion',loadPhases:'index.html',goldenTrace:true},
-  tide:{label:'Dead Tide',pages:['tide.html'],perfPage:'tide.html',frameLogic:'tide',loadPhases:'tide.html',goldenTrace:false},
+  tide:{label:'Dead Tide',pages:['tide.html'],perfPage:'tide.html',frameLogic:'tide',loadPhases:'tide.html',goldenTrace:true},
   picker:{label:'Mode picker',pages:['modes.html'],perfPage:'modes.html',frameLogic:null,loadPhases:null,goldenTrace:false}
 };
 // What counts as "a difference" in the standard comparison. Counts must match exactly;
@@ -192,8 +192,8 @@ function changedFiles(base){
 
 // ---- Running the measurements ----------------------------------------------------------
 const log=m=>process.stderr.write(`[tier] ${m}\n`);
-function run(script,args,{cwd=root,timeout=45*60000}={}){
-  const r=spawnSync(process.execPath,[script,...args],{cwd,encoding:'utf8',maxBuffer:1<<28,timeout});
+function run(script,args,{cwd=root,timeout=45*60000,env=process.env}={}){
+  const r=spawnSync(process.execPath,[script,...args],{cwd,env,encoding:'utf8',maxBuffer:1<<28,timeout});
   if(r.status!==0&&!(script.endsWith('perf-measure.mjs')&&r.status===1&&r.stdout.trim().startsWith('{')))throw new Error(`${script} ${args.join(' ')} failed (${r.status??r.signal}): ${(r.stderr||'').trim().split('\n').slice(-4).join(' | ')}`);
   return r.stdout;
 }
@@ -239,12 +239,16 @@ function loadPhases(mode,builds,pairs,out){
   }
   return Object.fromEntries(Object.entries(list).map(([k,v])=>[k,paired(v)]));
 }
-function goldenTrace(builds,out){
+// The mansion's trace runs from each build's own checkout. Dead Tide's (v206 tooling) is this
+// checkout's script playing each build's game, as its frame logic does, since builds from
+// before it have none of their own.
+function goldenTrace(mode,builds,out){
   const files={};
   for(const which of ['base','head']){
-    log(`Mansion: golden trace of the ${which} build`);
-    const text=run(join(builds[which],'scripts/golden-trace.mjs'),[],{cwd:builds[which]});
-    files[which]=join(out,`golden-${which}.json`);writeFileSync(files[which],text);
+    log(`${MODES[mode].label}: golden trace of the ${which} build`);
+    const text=mode==='tide'?run(join(root,'scripts/tide-golden-trace.mjs'),[],{cwd:root,env:{...process.env,BLACKTHORN_GAME_DIR:join(builds[which],'public/game')}})
+      :run(join(builds[which],'scripts/golden-trace.mjs'),[],{cwd:builds[which]});
+    files[which]=join(out,`${mode==='tide'?'tide-':''}golden-${which}.json`);writeFileSync(files[which],text);
   }
   const r=spawnSync(process.execPath,[join(root,'scripts/golden-compare.mjs'),files.base,files.head],{cwd:root,encoding:'utf8'});
   return {identical:readFileSync(files.base,'utf8')===readFileSync(files.head,'utf8'),compare:r.stdout.trim().split('\n').slice(-1)[0]||r.stderr.trim()};
@@ -267,7 +271,7 @@ async function measure(plan,{base,outDir,escalate,force}){
       const unmapped=(pair.head[0].load?.files||[]).map(f=>f.replace(/^\//,'')).filter(f=>!plan.graphs[mode].includes(f));
       if(unmapped.length)r.standard.differences.push(`fetched but missing from the tier map (fix refsOf): ${unmapped.join(', ')}`);
       if(m.frameLogic){const fl=r.standard.frameLogic=frameLogic(mode,builds,S.frameLogicPairs[mode],outDir);if(slower(fl,THRESHOLDS.frameLogicPct))r.standard.differences.push(`frame logic: ${fmt(fl,'ms',3)}`);}
-      if(m.goldenTrace)r.standard.golden=goldenTrace(builds,outDir);
+      if(m.goldenTrace)r.standard.golden=goldenTrace(mode,builds,outDir);
       info.tier=r.standard.differences.length||force?'full':'standard';
       log(`${m.label}: ${r.standard.differences.length?'differences found: '+r.standard.differences.join('; '):'no differences'}${force?' (full protocol asked for)':''}`);
       if(info.tier!=='full'||!escalate)continue;

@@ -60,6 +60,10 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v205-tide.json`, `v205-tide-repeat.json` | v205 | Dead Tide carrying the shared katana, measured twice |
 | `v205-siege-files.json` | v205 | The mansion's load with the files it fetched, which `tests/release-tier.mjs` checks the tier map against (taken with the release-tier tooling; `--load-only`) |
 
+## Dead Tide's golden trace (tooling, before v206)
+
+`v205-tide-golden.json` is `scripts/tide-golden-trace.mjs` run on main's v205 game: the island before the dead come ashore. It is a fixed reference that, unlike frame times, does not depend on the machine. v206 must reproduce its seven scenarios byte for byte (compare with `scripts/golden-compare.mjs perf/v205-tide-golden.json <new trace>`); `release-tier.mjs` also traces main and the branch side by side in Dead Tide's standard tier. Load, frame and memory baselines for v205 are the release's own records above (`v205-tide.json`, `v205-tide-repeat.json`, `v205-siege*.json`), and each release measures main beside the branch on the same machine.
+
 ## Step 1 (v194) against main
 
 Main (v193) was measured again straight after v194, so the timings below come from the same machine and session.
