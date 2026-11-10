@@ -29,6 +29,23 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Release checks by tier (tooling; the game is unchanged at version 205)
+
+Each release is now measured as much as its change needs, decided for the mansion, Dead Tide and the mode picker separately. The rule is the same for both modes: any measurable regression is corrected before release.
+
+- **`scripts/release-tier.mjs`** compares the branch with main. A new version number alone is not a change. It follows each mode's page through everything it loads, so it knows which mode loads each changed file (a shared module counts for both).
+  - **Quick:** nothing a mode loads changed, so it needs no measuring.
+  - **Standard:** something it loads changed. One measured load of each build side by side, a short frame-logic series, and the mansion's golden trace. No difference is the proof.
+  - **Full:** the standard comparison found a difference, so that mode gets the whole protocol (two full measured pairs, 40 balanced load-phase runs, 24 frame-logic pairs).
+- **Dead Tide's measuring tools**, to match the mansion's:
+  - `tests/tide-harness.mjs`: Dead Tide's test harness, moved out of its test so scripts can play it;
+  - `scripts/frame-logic.mjs --mode tide`: its per-frame work (walking and firing for now; a fight once its dead come ashore);
+  - `scripts/load-phases.mjs --page tide.html`: its load phases.
+  - `scripts/perf-measure.mjs` now also records the mansion's load phases and every page's fetched files, which check the tier map.
+- **The rules** are in `AGENTS.md`, so every session picks the tier the same way and reports it.
+- **Tested** (`tests/release-tier.mjs`, in `npm test`): the map of what each page loads matches the files the browser fetched and an import walk from each boot script, and neither mode reaches into the other. Version-only changes are ignored, each kind of change gets the right tier, and the standard comparison flags real differences but not run-to-run noise.
+- **The flaky injury check is fixed** (`tests/zombie-injuries.mjs`): the share of spawns that arrive impaled now counts only enemies that can carry injuries. Dogs, lurkers and elites always spawn whole, and counting them had pulled the share close to the test's floor. A failure now prints the mix of kinds that spawned.
+
 ## The katana (version 205)
 
 The Tsuru katana is a melee weapon in the shared modules, so both Midnight Siege and Dead Tide can carry it. In the mansion it rests on its stand in the servants' quarters.

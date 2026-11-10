@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import {parseHTML} from 'linkedom';
-import {mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {readFileSync,existsSync} from 'node:fs';
 import {resolve,dirname} from 'node:path';
-import {fileURLToPath,pathToFileURL} from 'node:url';
-import {writeThreeStub} from './qa-stub.mjs';
+import {fileURLToPath} from 'node:url';
 
 // v204 (Dead Tide step 2): Dead Tide's own page and the grey-box island. Run on its own
 // (its page is a different document from the mansion's): node tests/dead-tide.mjs.
@@ -93,27 +91,8 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
 }
 
 // ---- 4. Playing Dead Tide ---------------------------------------------------------------
-const qaDir=resolve(root,'.qa-tide');mkdirSync(qaDir,{recursive:true});writeThreeStub(qaDir);
-for(const f of closure('tide.mjs'))if(f!=='three.module.js'&&f!=='tide.mjs')writeFileSync(resolve(qaDir,f),read(f));
-writeFileSync(resolve(qaDir,'tide.mjs'),read('tide.mjs')+`
-export const qa={tick,keys,resetRun,returnToMenu,shoot,reload,grenade,selectWeapon,hurtPlayer,openControls,closeControls,explode:p=>combat.explode(p),
-  setKeys(list){keys.clear();for(const k of list)keys.add(k);},setAim(yaw,pitch){session.lookYaw=yaw;session.lookPitch=pitch;},
-  setPlayer(x,z,y=groundHeight(x,z)){player.set(x,y,z);runState.grounded=true;runState.jumpV=0;},
-  get(){return {mode:session.mode,pointer:session.pointer,player,run:runState,session,camera,island,zone,effects,firstPerson,gunRoot,renderer,scene,world,explosionFx,markPool,display,swing};}};`);
-const {document,window:domWindow}=parseHTML(read('tide.html'));
-for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{configurable:true,get(){return (select.querySelector('option[selected]')||select.querySelector('option'))?.getAttribute('value')||'';},set(value){for(const option of select.querySelectorAll('option'))option.toggleAttribute('selected',option.getAttribute('value')===String(value));}});
-const ctx=new Proxy({createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};}},{get(o,k){return k in o?o[k]:(()=>{});},set(o,k,v){o[k]=v;return true;}});
-domWindow.HTMLCanvasElement.prototype.getContext=()=>ctx;
-const $=id=>document.getElementById(id),listeners={},windowEvents={},canvas=$('game');canvas.events={};canvas.addEventListener=(name,fn)=>{canvas.events[name]=fn;};
-const acquire=()=>{document.pointerLockElement=canvas;listeners.pointerlockchange?.();return Promise.resolve();};canvas.requestPointerLock=acquire;
-document.addEventListener=(name,fn)=>{listeners[name]=fn;};document.exitPointerLock=()=>{document.pointerLockElement=null;listeners.pointerlockchange?.();};
-let enter=null;const storage=new Map();
-globalThis.document=document;globalThis.window={addEventListener(name,fn){windowEvents[name]=fn;},Blackthorn:{ready(fn){enter=fn;}}};
-Object.assign(globalThis,{devicePixelRatio:1,innerWidth:1280,innerHeight:720,requestAnimationFrame(){},localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k)}});
-$('sound').checked=true;
-const random=Math.random;Math.random=()=>.25;   // impact marks and the like, made repeatable
-const {qa}=await import(pathToFileURL(resolve(qaDir,'tide.mjs')).href);
-let clock=performance.now();const frames=(n,step=1000/60)=>{for(let i=0;i<n;i++){clock+=step;qa.tick(clock);}};
+// The harness (tests/tide-harness.mjs, v206) loads tide.mjs on the three.js stand-in.
+const {qa,frames,$,listeners,windowEvents,canvas,document,random,entry}=await import('./tide-harness.mjs'),enter=entry();
 const G=()=>qa.get(),key=e=>listeners.keydown({preventDefault(){},...e});
 try{
   // Loading: the island is built, its shaders compiled, and the title screen waits.
