@@ -9,7 +9,7 @@ An original, single-player, first-person zombie survival game for desktop browse
 **Dead Tide (preview):** add `tide.html` to that address for the island mode's grey-box build (version 204), with no dead yet. `modes.html` is the mode picker.
 
 
-Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1/2/3 switch owned weapons, M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
+Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1–6 switch owned guns and 7 draws the katana (version 205), M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
 
 Survive increasingly difficult waves. Hits and kills earn essence; headshots and completed waves give bonuses. Kill awards are 50 for walkers and either dog variant, 110 for brutes, or 75 for any headshot kill. The separate 10-point hit award and wave-clear bonuses are unchanged. Four permanent perks improve health, reload speed, damage, and movement. Buy the shotgun in the library and the SMG in the dining room, refill ammunition in the courtyard, and upgrade weapons at the violet forge under the rotunda bell. Zombie dogs join the mixed waves from wave one, typically one in five spawns. They trot on four articulated legs, wind up before biting, and move at 125% of the current wave’s base zombie speed. Their lower silhouette, pointed ears, snarling muzzle, collar and tail distinguish them from walkers. Dogs follow the same stair routes, support headshots and leg reactions, and collapse into dynamic ragdolls. Wave five introduces tougher brutes. From wave six, rare Ashfang hounds replace roughly one in twenty spawn slots (brutes retain priority). They move at 150% of the wave’s base zombie speed, compared with ordinary dogs at 125%. Charcoal hides, pale skull masks, swept horns, exposed ribs, dorsal spines, barbed tails and ice-blue eyes distinguish them. Both dog variants scale their movement speed with the same wave curve and late-wave cap as zombies, retaining their 1.25× and 1.5× speed multipliers. Ashfangs have twice the health of a standard dog at the same wave. Their paired-leg bounding gait, higher growl and cyan radar markers also set them apart. Occasional pickups use distinctive, camera-facing icons: a green ammo box refills ammunition, a gold ×2 doubles damage for 20 seconds, and a violet grenade grants infinite grenades for 12 seconds. Press G to throw during the grenade bonus, even with an empty reserve; throws do not consume your stored grenades. Active bonuses have matching HUD icons and countdowns. Collecting the same timed bonus refreshes its duration, and pausing freezes its timer. Personal bests are saved in the browser.
 
@@ -28,6 +28,63 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## The katana (version 205)
+
+The Tsuru katana is a melee weapon in the shared modules, so both Midnight Siege and Dead Tide can carry it. In the mansion it rests on its stand in the servants' quarters.
+
+- **Where and how much:** a weapon bench against the north wall of the servants' quarters, between the two rows of beds and facing the doorway from the infirmary. It is marked KT on the estate map. **2,500 essence.** Press **E** to buy it (it is drawn at once), then **7** to draw it again. Touch and controller players reach it with Next weapon.
+- **The sword**, modelled on the reference picture:
+  - a curved, folded-steel (Damascus) blade with a groove along it, a wavy temper line and a bright edge;
+  - a brass collar, a round black guard, and a grip bound in black cord over white diamonds of ray skin, with small gold ornaments;
+  - on the stand: a matte black lacquered scabbard painted with white cranes and teal pine, bound with a black-and-white cord with two hanging tassels, on a red rosewood stand. The handle points left and the cranes face out.
+  - Every finish is painted once from formulas (about 1 MB of maps, no image downloads).
+  - **Kept light:**
+    - Every painted finish pairs its colour map with the guns' metal finish as roughness, exactly as the guns do. So the sword compiles to the guns' shader programs (no new ones), and a software renderer reuses the guns' texture routines.
+    - The small stand casts no shadow, so it stays out of the moonlight's estate-wide shadow pass, and it shares the bench's brass. The bench under it casts, like every station.
+- **How it fights:**
+  - **Slashing:** click to slash, or hold to keep slashing, one slash every 0.48 s. Each slash cuts every enemy in a **100° arc** in front of you within **4 yards (3.66 m)**, 150 damage each. The arc is deliberately narrower than a half circle, to leave room for upgrades.
+  - **Three slashes in turn:** a diagonal cut down from the right, a rising cut from the left and an overhead cut. After 1.2 s without a slash the set starts again. Damage lands as the blade crosses the middle of the view.
+  - **What stops it:** walls, doors and floors. A Gravewarden facing you takes the cut on its shield.
+  - **Bonuses:** each enemy cut pays the usual 10 essence a hit. Deadeye adds 50% and Double Damage doubles it (the shrine and the field guide now say "bullet and blade damage").
+  - **What it doesn't have:** ammunition, reloads, sights (right click does nothing while it is out) and upgrade ranks.
+  - **The Soul Forge** raises its damage (2×, 4×, 6×) and nothing else. While the katana is held, the forge's plaques, prompt and message show only the damage.
+- **On screen:** the HUD reads MELEE where the ammunition goes, without the reload hint, and the crosshair becomes a dot over the arc it cuts.
+- **What changed in the shared modules:**
+  - `katana.mjs` (new): its numbers, finishes, model, stand, the three slashes' paths, and who a slash reaches.
+  - `weapon-stats.mjs`: the katana's entry.
+  - `weapon-runtime.mjs`: the slash, when it lands (`updateMelee`), and the slash state the view reads (`swing`).
+  - `first-person.mjs`: the sword in hand and its poses.
+  - `controls.mjs`: key 7, cycling, and no aiming with a blade.
+  - `hud.mjs`: the MELEE readout.
+  - `stations.mjs` and `station-models.mjs`: its stand, prompt and map mark, and the forge's blade wording.
+  - `soul-forge.mjs`: the blade's plaques.
+  - `combat-feedback.mjs`: a hit may carry its own stagger.
+  - `reticles.mjs`: the blade arc.
+- **Dead Tide** carries the katana through those modules, and key 7 draws it once owned. The island has no stand for it yet; that comes with Dead Tide's stations in step 4.
+- **Proof that nothing else changed:** `scripts/golden-compare.mjs` compares the golden traces of `main` and this version channel by channel.
+  - **Identical in all 25 existing scenarios:** every birth, the player, every enemy, pickups, the run, the session, the weapons (with the katana's own inventory slot set aside) and every sound.
+  - **Different, as expected:** the screen, view and page hashes, because the katana's bench is in the scene, its sword is in the view and its reticle and key are on the page.
+  - **The station tour** matches row for row except the Double Damage shrines' new wording.
+  - **A new scenario**, run last, buys the katana and slashes a ring of the dead with clicks and a held trigger through all three slashes. It also forges the katana, draws a gun and draws the katana again.
+- **Tested** (`tests/katana.mjs` and Dead Tide's test):
+  - the arc, reach, floors and walls, and the Gravewarden's shield;
+  - the stand's place, approach and price, buying, key 7 and drawing it again;
+  - the HUD and reticle; no reload and no aiming;
+  - all three slashes in turn, the reset after a pause, and holding to keep slashing;
+  - the blade's poses in hand;
+  - Soul Forge, Deadeye and Double Damage damage, and the forge's blade-only wording;
+  - a new run without it;
+  - in Dead Tide: key 7 and the three slashes.
+- **Mansion performance** (`perf/README.md`, measured beside main):
+  - **Unchanged:** shader programs (89), loading (no phase changed beyond its run-to-run error across 40 balanced runs), the game's own per-frame work, and the fight's frame time.
+  - **What it costs:**
+    - one more file and 32 KB, and 1.3–2.6 MB more memory;
+    - 3–4 more draw calls in every view (the bench in the moonlight's shadow pass, as every station is);
+    - 13–15 more in views whose camera reaches the servants' quarters through the walls (the bench itself, drawn as any station is, since the mansion has no occlusion culling).
+  - **Fixed before release:** measuring the first build found two new shader programs, the stand in the moonlight's shadow pass and a slower first frame. Each was fixed (see above and `perf/README.md`).
+- **Dead Tide:** the same 35 shader programs and the same draw calls, plus the katana's module (31 KB) and its five finishes.
+- **Not verified:** how the slashes feel and real-browser frame rates. The slashes were checked frame by frame in headless screenshots only.
 
 ## Dead Tide's own page and a grey-box island (version 204)
 
