@@ -385,3 +385,6 @@ await verifySharedStations();
 
 const {verifyFirstPerson}=await import('./first-person.mjs');
 await verifyFirstPerson();
+
+const {verifyKatana}=await import('./katana.mjs');
+verifyKatana({qa,frames,listeners,elements,canvas:gameCanvas});

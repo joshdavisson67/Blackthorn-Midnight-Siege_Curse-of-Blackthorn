@@ -11,8 +11,10 @@ export function verifyAmmoRefills(qa,frames,listeners,elements){
   const stations=()=>qa.get().interactables.filter(s=>s.type==='ammo');
   function collect(){qa.setPlayer(0,20);qa.dropPickup(0,20,'ammo');frames(1);}
   function purchase(s){at(s);qa.setPoints(s.price+17);const score=qa.get().totalScore;press('KeyE');assert.equal(qa.get().points,17);assert.equal(qa.get().totalScore,score,'Buying ammo preserves earned leaderboard score');}
+  // v205: the katana has no ammunition; every gun does.
+  const guns=Object.keys(weapons).filter(k=>!weapons[k].melee);
   start();let cases=0;
-  for(const [index,type] of Object.keys(weapons).entries())for(const rank of [0,1,2,3]){
+  for(const [index,type] of guns.entries())for(const rank of [0,1,2,3]){
     const inv=qa.get().inventory[type];inv.owned=true;inv.forgeRank=rank;qa.selectWeapon(type);
     const [mag,reserve]=capacity(type,rank),fps=[30,60,144][(index+rank)%3],ms=1000/fps;
     // Empty, deterministically varied partial, and full magazines cover the
@@ -46,11 +48,12 @@ export function verifyAmmoRefills(qa,frames,listeners,elements){
   for(const [type,before] of Object.entries(locked))assert.deepEqual(inventory[type],before,'Refills never alter or unlock an unowned weapon');
   qa.shoot();assert.equal(inventory.glock.ammo,3);press('KeyR');frames(120);
   assert.deepEqual([inventory.glock.ammo,inventory.glock.reserve],[13,77],'A round fired after restocking is still spent after reloading');
-  for(const [i,type] of Object.keys(weapons).entries()){
+  for(const [i,type] of guns.entries()){
     const inv=inventory[type],[mag]=capacity(type,i%4);inv.owned=true;inv.forgeRank=i%4;inv.ammo=i%(mag-1);inv.reserve=1;
   }
   const carried=Object.fromEntries(Object.entries(inventory).map(([type,inv])=>[type,inv.ammo]));collect();
-  for(const [type,inv] of Object.entries(inventory)){
+  inventory.katana.owned=true;collect();assert.deepEqual([inventory.katana.ammo,inventory.katana.reserve],[0,0],'Refills give the katana no ammunition');
+  for(const [type,inv] of Object.entries(inventory).filter(([type])=>!weapons[type].melee)){
     assert.equal(inv.ammo,carried[type],'One pickup preserves every owned magazine');
     const [mag,reserve]=capacity(type,inv.forgeRank),loaded=inv.ammo;assert.equal(loaded+inv.reserve,mag+reserve,'One pickup replenishes each weapon using its own capacity');
     qa.selectWeapon(type);press('KeyR');frames(Math.ceil(qa.get().reloadDuration*60)+1);assert.deepEqual([inv.ammo,inv.reserve],[mag,reserve]);

@@ -5,7 +5,7 @@ import {UPPER_Y} from '../public/game/vertical.mjs';
 
 export function verifyFacade(qa){
   const state=qa.get(),{facade,world,mainRoof}=state;world.updateMatrixWorld(true);
-  assert.equal(state.colliders.filter(c=>!c.attic).length,554,'Only the eight portico pedestals (plus the closed tomb lid rest, v130, the courtyard pistol bench, v152, the solid underside of the main stairs, v173, and the v187 stone-house furnishings; the v190 removal of the tomb nuke takes one away, and the v192 open upper floor ten more) add collision outside Olivia’s attic');
+  assert.equal(state.colliders.filter(c=>!c.attic).length,555,'Only the eight portico pedestals (plus the closed tomb lid rest, v130, the courtyard pistol bench, v152, the solid underside of the main stairs, v173, and the v187 stone-house furnishings; the v190 removal of the tomb nuke takes one away, the v192 open upper floor ten more, and the v205 katana bench one) add collision outside Olivia’s attic');
   assert.equal(state.colliders.filter(c=>c.portico).length,8);
   assert.equal(facade.faces.length,4);assert.equal(facade.windows.length,65);assert.equal(facade.windows.filter(w=>w.upper).length,13);assert.equal(facade.dormers.length,0,'The pediment replaces the front dormers');assert.equal(facade.drains.length,12);
   let triangles=0;const materials=new Set(),geometries=new Set();

@@ -21,12 +21,21 @@ export function configureForgeStation(station,{plates,label}){
       return label(value,color,1024,{width,height,kind:plates.length===1?'placard':i===0?'title':'detail',maxLines:plates.length===1?4:i===0?1:3});
     });
   });
+  // v205: a blade has no ammunition or reload, so while the katana is held the plaques
+  // show only the damage. The title and the maximum rank read the same as for a gun.
+  const melee=materials.map((set,rank)=>{
+    if(rank===FORGE.maxRank)return set;
+    const next=rank+1,title=`SOUL FORGE · RANK ${next}`,detail=`${FORGE.prices[rank].toLocaleString()} ESSENCE\n${forgeBonuses(next).damageMultiplier}× BASE DAMAGE`;
+    const color=rank===0?'#c1a1ff':rank===1?'#a9ccff':'#ffd17a',text=plates.length===1?[`${title}\n${detail}`]:[title,detail];
+    return text.map((value,i)=>{if(plates.length>1&&i===0)return set[0];const {width,height}=plates[i].geometry.parameters;
+      return label(value,color,1024,{width,height,kind:plates.length===1?'placard':'detail',maxLines:plates.length===1?4:3});});
+  });
   plates.forEach(p=>{p.userData.dynamic=true;});
-  station.forgeMaterials=materials.flat();
-  station.setForgeRank=rank=>{
-    station.forgeRank=rank;station.price=FORGE.prices[rank]??0;
+  station.forgeMaterials=[...new Set([...materials.flat(),...melee.flat()])];
+  station.setForgeRank=(rank,blade=false)=>{
+    station.forgeRank=rank;station.forgeMelee=blade;station.price=FORGE.prices[rank]??0;
     station.forgeMaximum=rank===FORGE.maxRank;
-    plates.forEach((p,i)=>{p.material=materials[rank][i];});
+    plates.forEach((p,i)=>{p.material=(blade?melee:materials)[rank][i];});
   };
   station.setForgeRank(0);return station;
 }

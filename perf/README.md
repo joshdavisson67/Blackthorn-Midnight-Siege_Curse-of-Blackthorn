@@ -52,6 +52,12 @@ Dead Tide is being built as a separate mode. Its rule is that Midnight Siege (th
 | `v204-load-phases.jsonl` | v203 (main) and v204 | Forty balanced runs of `scripts/load-phases.mjs`, in two rounds |
 | `v204-frame-logic.jsonl` | v203 (main) and v204 | Twenty-four balanced pairs of `scripts/frame-logic.mjs`, in two rounds |
 | `v204-tide.json`, `v204-tide-repeat.json` | v204 | Dead Tide's grey-box island on its own page, `tide.html`, measured twice |
+| `v204-siege-rerun.json`, `v204-siege-rerun2.json` | v204 (main) | The mansion re-measured twice beside v205 |
+| `v204-tide-rerun.json`, `v204-tide-rerun2.json` | v204 (main) | Dead Tide re-measured twice beside v205 |
+| `v205-siege.json`, `v205-siege-repeat.json` | v205 (the katana) | The mansion with the katana's stand in the servants' quarters and the katana among the weapons in hand, measured twice |
+| `v205-load-phases.jsonl` | v204 (main) and v205 | Forty balanced runs of `scripts/load-phases.mjs`, in two rounds |
+| `v205-frame-logic.jsonl` | v204 (main) and v205 | Twenty-four balanced pairs of `scripts/frame-logic.mjs`, in two rounds |
+| `v205-tide.json`, `v205-tide-repeat.json` | v205 | Dead Tide carrying the shared katana, measured twice |
 
 ## Step 1 (v194) against main
 
@@ -409,6 +415,70 @@ Dead Tide's page, `tide.html`, measured twice. The probe checks the title screen
 - **Beside the mansion on this machine:** Dead Tide loads 1,911 KB to the mansion's 8,971 KB and is playable in about 6.5 s to its 55 s. It compiles 35 shader programs to the mansion's 89, its heap after loading is 36 MB to the mansion's 237 MB, and its views take 24–97 draw calls to the mansion's 1,479–2,376.
 - **The frame times** are software rendering and only comparable with other runs here; real-browser FPS was not measured.
 
+## v205 (the katana) against main
+
+v205 adds a feature to the mansion rather than moving code, so the question here is what the katana costs, and that it costs nothing beyond what it must. Both builds were measured in full twice (v205 first, then main first), loading over two rounds of 20 balanced runs in opposite orders, and the game's own per-frame work over two rounds of 12 balanced pairs.
+
+| Mansion | v204 (main) | v205 |
+|---|---:|---:|
+| Files loaded before playable | 104 | 105 (`katana.mjs`) |
+| Bytes loaded before playable | 8,971 KB | 9,003 KB |
+| Time to playable (two full runs) | 48.0, 54.6 s | 46.9, 52.1 s |
+| Shader programs (after a 32-zombie fight) | 89 (89) | 89 (89) |
+| GPU geometries / textures | 1,457 / 125 | 1,470 / 135 |
+| JS heap after load (two runs) | 237.3, 237.4 MB | 239.2, 238.7 MB |
+| JS heap after the fight (two runs) | 243.9, 243.8 MB | 245.9, 246.4 MB |
+| Draw calls: hall / ballroom / rotunda | 2,046 / 1,835 / 1,867 | 2,061 / 1,838 / 1,870 |
+| Draw calls: chapel / upstairs west / courtyard | 1,479 / 1,788 / 2,376 | 1,483 / 1,792 / 2,391 |
+| Draw calls and triangles in the 32-zombie fight | 2,942 / 2,726K | 2,955 / 2,733K |
+| Load: modules / world / shaders (40 balanced runs) | 0.38 / 11.91 / 38.90 s | 0.37 / 11.83 / 38.79 s |
+| Load: total | 51.19 s | 50.99 s (−0.20 s, standard error 0.51 s) |
+| 32-zombie fight: mean frame time (software rendering, two runs) | 3,150 / 3,179 ms | 3,028 / 3,141 ms |
+| The game's own work per frame, no rendering (24 pairs) | 2.18 ms fastest · 2.48 ms median | 2.17 ms fastest · 2.47 ms median |
+
+**What the katana costs, and why each cost is there:**
+
+- **Size:** one more file and 32 KB, mostly `katana.mjs` itself (the model, its painted finishes and the slashes).
+- **Memory:** 1.3–2.6 MB more heap. Ten more textures, five of them the katana's finishes (about 1 MB with mipmaps); the other five are the bench's two plaques and the Soul Forge's three blade-only plaques. Thirteen more geometries.
+- **Draw calls:**
+  - **+3 or +4 in every view.** The bench under the katana casts into the moonlight's estate-wide shadow map, as every station does.
+  - **+15 in the hall, the courtyard and the fight (+13).** Those cameras look north, and their view reaches the servants' quarters 90–110 m away, through the walls. The mansion has no occlusion culling, so the bench is drawn there as any station would be: its two plaques, three station materials and the sword's five.
+  - **Triangles:** at most 8,000 more (0.4%).
+- **Unchanged:**
+  - **Shader programs:** 89, before and after a fight.
+  - **Loading:** no phase differs beyond its run-to-run error.
+  - **The game's own per-frame work:** median −0.01 ms (standard error 0.10 ms).
+  - **The fight's frame time:** within its run-to-run spread.
+
+**Found by measuring, and fixed before release.** The first v205 build cost more in three ways:
+
+- **Shader programs:** it compiled two new ones, for the sword's textured materials. Every painted finish now pairs its colour map with the guns' metal finish as roughness, exactly as the guns do, so the sword uses the guns' programs.
+- **The moonlight's shadow map:** every view drew 11–25 more calls, because the stand's seven materials were drawn into that estate-wide map. The small stand now casts no shadow and shares the bench's brass.
+- **The first frame:** loading's shader phase ran 1.27 s longer (standard error 0.24 s, 20 runs), although no new program was compiled and later frames cost the same. The machine renders with Mesa's llvmpipe, which compiles a texture routine for each new combination of maps it meets. The scabbard, cord and stand used a colour map on its own at 4× anisotropy, a combination no other lit material uses, so the first frame compiled new routines. With the guns' pairing, the warm-up frame matches main: 25.9 s against 26.2 s over four alternating pairs, and the 40 balanced runs above.
+
+**Gameplay:** `scripts/golden-compare.mjs` compares the golden traces of main and v205 channel by channel.
+
+- **Identical in all 25 existing scenarios:** every birth, the player, every enemy, pickups, the run, the session, the weapons (the katana's own slot set aside) and every sound.
+- **Different, as expected:** the screen, view and page hashes, because the bench is in the scene, the sword is in the view, and its reticle and key are on the page.
+- **The station tour** matches except the Double Damage shrines' new wording.
+- **A new katana scenario** runs last.
+
+### Dead Tide
+
+Dead Tide carries the katana through the shared modules. Measured twice beside main:
+
+| Dead Tide | v204 (main) | v205 |
+|---|---:|---:|
+| Files / bytes before playable | 52 / 1,911 KB | 53 / 1,942 KB (`katana.mjs`) |
+| Time to playable (two runs) | 5.40, 6.54 s | 5.42, 6.05 s |
+| Shader programs (after the views and a blast) | 35 (35) | 35 (35) |
+| GPU geometries / textures | 203 / 13 | 207 / 18 (the katana's five finishes) |
+| JS heap after load (two runs) | 36.9, 36.3 MB | 34.1, 35.2 MB |
+| Draw calls and triangles in the seven views | as in v204 | identical |
+
+No mansion files are fetched on either build.
+
+## Re-running
 ## Re-running
 
 ```
@@ -417,6 +487,7 @@ node scripts/perf-measure.mjs --page modes.html --out perf/vNNN-modes.json
 node scripts/perf-measure.mjs --page tide.html --out perf/vNNN-tide.json   # Dead Tide on its own page
 node scripts/perf-measure.mjs --game <other checkout>/public/game --load-only
 node scripts/golden-trace.mjs > after.json   # then cmp it against a trace taken on main
+node scripts/golden-compare.mjs before.json after.json   # v205: channel by channel, for a change that adds something
 node scripts/load-phases.mjs --game <checkout>/public/game   # where loading time goes
 node scripts/frame-logic.mjs [<checkout>]                    # the game's own per-frame work, no rendering
 ```

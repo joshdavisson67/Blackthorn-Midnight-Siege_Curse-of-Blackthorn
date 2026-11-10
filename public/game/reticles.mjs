@@ -27,6 +27,8 @@ export const RETICLES=Object.freeze({
   smg:{name:'Close-quarters circle dot',size:40,color:'#c6eee2',opticColor:'#ff4933',opticScale:.0012,dot:1.15,stroke:1.3,segments:[segment(0,-15,0,-20)],arcs:[[11,0,Math.PI*2]]},
   shotgun:{name:'Pellet ring',size:54,color:'#ffe0a7',opticColor:'#ffb25c',opticScale:.0011,dot:.85,stroke:1.6,segments:[],arcs:Array.from({length:4},(_,i)=>[22,i*Math.PI/2+Math.PI/12,(i+1)*Math.PI/2-Math.PI/12])},
   lmg:{name:'Support brackets',size:56,color:'#f0d1b3',opticColor:'#ff6d37',opticScale:.001,opticDot:.22,opticStroke:.30,dot:1,stroke:1.4,segments:[segment(-16,8,-20,8),segment(-20,8,-20,-8),segment(-20,-8,-16,-8),segment(16,8,20,8),segment(20,8,20,-8),segment(20,-8,16,-8),segment(-5,-12,5,-12),segment(-3.5,-18,3.5,-18),segment(-2,-24,2,-24),segment(0,13,0,20)],arcs:[]},
+  // v205: the katana's mark: a dot over the arc it cuts, with ticks at its ends.
+  katana:{name:'Blade arc',size:46,color:'#e8f1ee',dot:1.1,stroke:1.4,segments:[segment(-12.94,-9.4,-16.18,-11.76),segment(12.94,-9.4,16.18,-11.76)],arcs:[[16,-Math.PI*.8,-Math.PI*.2]]},
   bushmaster:{name:'BDC10 ranging reticle',size:50,color:'#e3ecec',opticColor:'#ff2f22',opticScale:.0009,opticDot:.16,opticStroke:.14,dot:.60,stroke:.70,segments:precision,arcs:[],optic:bdc10}
 });
 for(const p of Object.values(RETICLES)){for(const s of p.segments)Object.freeze(s);for(const a of p.arcs)Object.freeze(a);Object.freeze(p.segments);Object.freeze(p.arcs);Object.freeze(p);}

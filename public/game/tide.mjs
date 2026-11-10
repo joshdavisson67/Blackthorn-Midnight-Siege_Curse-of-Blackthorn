@@ -1,22 +1,23 @@
 import * as T from './three.module.js';
-import {createDisplay} from './display.mjs?v=201';
+import {createDisplay} from './display.mjs?v=205';
 import {createAudio} from './audio.mjs?v=201';
 import {batchArticulated} from './batching.mjs?v=204';
-import {createFirstPerson} from './first-person.mjs?v=203';
+import {createFirstPerson} from './first-person.mjs?v=205';
 import {createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
 import {createExplosionFx} from './explosion-fx.mjs?v=191';
 import {createEffectPool} from './effect-pool.mjs?v=47';
-import {createWeaponRecoil,createCombatHud} from './combat-feedback.mjs?v=184';
-import {createReticleHud} from './reticles.mjs?v=167';
+import {createWeaponRecoil,createCombatHud} from './combat-feedback.mjs?v=205';
+import {createReticleHud} from './reticles.mjs?v=205';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
-import {ambientEnvironment} from './graphics.mjs?v=187';
-import {SHOT_RUMBLE} from './weapon-stats.mjs?v=204';
+import {katanaSurfaces} from './katana.mjs?v=205';
+import {ambientEnvironment} from './graphics.mjs?v=205';
+import {SHOT_RUMBLE} from './weapon-stats.mjs?v=205';
 import {createRunState,createPlayer} from './player.mjs?v=198';
-import {createHud} from './hud.mjs?v=204';
-import {createSession,createControls,WEAPON_CYCLE} from './controls.mjs?v=200';
-import {createWeaponRuntime} from './weapon-runtime.mjs?v=204';
-import {createCombat} from './enemy-combat.mjs?v=204';
-import {PERKS} from './stations.mjs?v=202';
+import {createHud} from './hud.mjs?v=205';
+import {createSession,createControls,WEAPON_CYCLE} from './controls.mjs?v=205';
+import {createWeaponRuntime} from './weapon-runtime.mjs?v=205';
+import {createCombat} from './enemy-combat.mjs?v=205';
+import {PERKS} from './stations.mjs?v=205';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
@@ -94,14 +95,14 @@ link(runState,['inventory','weapon','perkOwned','points','reloadLeft','reloadDur
 link(session,['mode','aiming','lookYaw','lookPitch']);
 link(firstPerson,['flashTime','recoil','dualSide','viewFov'],['flashTime','recoil','dualSide','weaponViewFov']);
 const raycaster=new T.Raycaster();let combat=null;
-const {freshInventory,shoot,reload,finishReload,holdToFire,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,selectWeapon,applyWeaponRanks,viewGun,zoomOf,aimFovOf,aimHeight}=createWeaponRuntime({
+const {swing,updateMelee,freshInventory,shoot,reload,finishReload,holdToFire,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,selectWeapon,applyWeaponRanks,viewGun,zoomOf,aimFovOf,aimHeight}=createWeaponRuntime({
   level:{colliders,isBlocked,solidMeshes},
   view:{camera,gunGroups,bushDot,smgDual,dualGuns,dualMuzzle,flash,reticleHud,weaponRecoil,grenadeThrow,grenadeAssets},
-  run:{scene:world,zombies,effects,markPool,rand,tone,noise,notify,rumble:padRumble,suppressedReport,updateHud,updateReloadHud,shotRumble:SHOT_RUMBLE,raycaster},
+  run:{scene:world,zombies,effects,markPool,rand,tone,noise,notify,rumble:padRumble,suppressedReport,updateHud,updateReloadHud,shotRumble:SHOT_RUMBLE,raycaster,player},
   state:armsState,
   combat:{get damageEnemy(){return combat.damageEnemy;},get bloodBurst(){return combat.bloodBurst;},get detonateRound(){return combat.detonateRound;}}
 });
-firstPerson.bind({player,state:runState,session,weaponRecoil,grenadeThrow,arms:{aimFovOf,zoomOf,dualOn,aimHeight,viewGun}});
+firstPerson.bind({player,state:runState,session,weaponRecoil,grenadeThrow,arms:{aimFovOf,zoomOf,dualOn,aimHeight,viewGun,swing}});
 // Combat on the island: grenade blasts, blood and impact marks (the dead arrive in v205).
 combat=createCombat({
   level:{supportBelow,floorHeight:island.floorHeight,solidMeshes,visibleFloor:island.visibleFloor,colliders,isBlocked},
@@ -256,6 +257,7 @@ function tick(now){
   if(session.mode==='playing'){
     weaponRecoil.update(dt);runState.runTime+=dt;runState.shotTimer=Math.max(0,runState.shotTimer-dt);runState.grenadeCooldown=Math.max(0,runState.grenadeCooldown-dt);
     if(session.mouseDown&&holdToFire())shoot();
+    updateMelee(dt);
     if(runState.reloadLeft>0){runState.reloadLeft-=dt;if(runState.reloadLeft<=0){runState.reloadLeft=0;finishReload();}}
     const stick=touchControls?.active?touchControls.move:padPlay()&&gamepad.connected?gamepad.move:null;
     const moving=keys.has('KeyW')||keys.has('KeyS')||keys.has('KeyA')||keys.has('KeyD')||!!(stick&&(stick.x||stick.z));
@@ -289,7 +291,7 @@ async function prepareRendering(){
     const scopeMasks=scopedGuns.map(({sight})=>sight.mask),savedMasks=scopeMasks.map(mask=>mask.visible);scopeMasks.forEach(mask=>mask.visible=true);
     camera.position.set(player.x,player.y+1.68,player.z);camera.rotation.set(0,0,0);gunRoot.visible=true;viewModels.forEach(g=>g.visible=true);grenadeThrow.warm();
     return {world,warm:[grenadeAssets.create(),explosionFx.warmGroup()],
-      textures:()=>[...weaponSurfaces().textures,island.depthMap],
+      textures:()=>[...weaponSurfaces().textures,...katanaSurfaces().textures,island.depthMap],
       done(){viewModels.forEach((g,i)=>g.visible=savedVisibility[i]);scopeMasks.forEach((mask,i)=>mask.visible=savedMasks[i]);gunRoot.visible=savedGun;grenadeThrow.cancel();}};
   });
 }

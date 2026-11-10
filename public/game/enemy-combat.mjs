@@ -1,9 +1,9 @@
 import * as T from './three.module.js';
 import {CRAWL,reactToHit,noteLegDamage,beginZombieDeath} from './zombies.mjs?v=183';
-import {registerStagger} from './combat-feedback.mjs?v=184';
+import {registerStagger} from './combat-feedback.mjs?v=205';
 import {enrageNearby} from './enrage.mjs?v=130';
 import {LURKER,lurkerPlayerDamage,lurkerEnemyDamage} from './lurker.mjs?v=179';
-import {choosePowerup} from './powerups.mjs?v=190';
+import {choosePowerup} from './powerups.mjs?v=205';
 import {EXPLOSION_FX} from './explosion-fx.mjs?v=191';
 import {dropOpacity,fadeMaterials} from './drop-fade.mjs?v=169';
 

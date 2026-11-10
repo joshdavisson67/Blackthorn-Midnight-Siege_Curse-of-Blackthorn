@@ -24,6 +24,10 @@
 // and both fields of view, the muzzle flash and light, and the flashlight; a new
 // scenario aims, fires, reloads and sprints with every gun, the twin Ravens, the
 // Blood Moon dot sight, a grenade and the flashlight.
+// v205: the katana. A new scenario buys it at its stand in the servants' quarters, draws it
+// with 7 and slashes a ring of the dead with clicks and a held trigger, through all three
+// slashes; forges it once, draws a gun and draws it again. Its stand is visited (and the fight
+// played) after every other scenario, so they run exactly as before.
 // v202: a station tour. Every station on the estate is visited in turn, early in a run
 // and again after wave 21 (shed, cellar, tomb and attic open): the prompt the player sees,
 // then E with no essence, with plenty, and once more, recording the message shown,
@@ -192,6 +196,12 @@ const actions={
     if(f===710)return ()=>{listeners.mouseup({button:2});const crate=st().interactables.find(s=>s.type==='ammo'&&s.name==='AMMUNITION');qa.setPlayer(crate.x,crate.z+1.6);frames(1);qa.interact();qa.interact();};
     if(f===740)return ()=>{const forge=st().interactables.find(s=>s.type==='upgrade'&&!(s.y<-1));qa.setPlayer(forge.x+Math.sin(forge.rotation||0)*1.6,forge.z+Math.cos(forge.rotation||0)*1.6);frames(1);qa.interact();};
     return null;},
+  // v205: the katana: clicks, a held trigger, the Soul Forge, a gun and back.
+  katana:f=>{const key=code=>()=>listeners.keydown({code,key:code,preventDefault(){},repeat:false,target:{}});
+    const plan={300:()=>gameCanvas.events.mousedown({button:0}),480:()=>listeners.mouseup({button:0}),
+      520:()=>{const forge=st().interactables.find(s=>s.type==='upgrade'&&!(s.y<-1));qa.setPlayer(forge.x+Math.sin(forge.rotation||0)*1.6,forge.z+Math.cos(forge.rotation||0)*1.6);frames(1);qa.interact();},
+      560:key('Digit1'),580:key('Digit7'),600:()=>{qa.setPlayer(28,-70);qa.setAim(0,0);}};
+    return plan[f]||((f<300||f>600)&&f%40===0?()=>qa.shoot():null);},
   // Grenades: counted throws, infinite ones with their cooldown, and a throw into a wall.
   throws:f=>f===1||f===40||f===80?()=>qa.grenade():f===200?()=>{qa.dropPickup(st().player.x,st().player.z,'grenades');}:f>200&&f<420&&f%12===0?()=>qa.grenade():f===500?()=>{qa.setGrenades(2);qa.setPlayer(6,12.6);qa.setAim(0,0);qa.grenade();}:null,
   // Thrown grenades into a ring of 20, a direct blast, and one close enough to hurt.
@@ -218,6 +228,7 @@ const watch={
   moves:()=>{const s=st();note('airborne',!s.grounded);note('upstairs',s.player.y>4);note('on the hall stairs',s.player.y>.5&&s.player.y<4);note('health regrowing',s.health>40&&s.health<100);note('nightstride',s.perkOwned.has('stride'));note('armor tier 2+',s.armorTier>=2);note('armor regrowing',s.armorTier>=2&&s.armor>0&&s.armor<s.armorMax);},
   arsenal:()=>{const s=st();note('aimed',s.aiming);note('reloading',s.reloadLeft>0);note('held trigger',s.mouseDown&&s.weapon!=='glock');note(s.weapon+' out',true);},
   upgrades:()=>{const s=st();note('forged',Object.values(s.inventory).some(v=>v.forgeRank>0));note('twin ravens',s.smgDual.visible);note('pistol rank 4',s.inventory.glock.weaponRank>=4);note('shotgun ranks',s.inventory.shotgun.weaponRank>0);note('bushmaster ranks',s.inventory.bushmaster.weaponRank>0);},
+  katana:()=>{const s=st();note('katana slashing',s.swing.active&&s.weapon==='katana');note('katana kills',s.kills>0);note('katana forged',s.inventory.katana.forgeRank>0);note('katana drawn again',s.weapon==='katana'&&s.inventory.katana.forgeRank>0);},
   throws:()=>{note('infinite grenades',st().grenadeTime>0);note('grenade cooldown',st().grenadeCooldown>0);},
   grenades:()=>{note('lurker burst',st().zombies.some(e=>e.lurkerBurst));note('corpse cap',st().zombies.filter(e=>e.dead).length>=14);note('enraged',st().zombies.some(e=>e.enraged));note('drops on the ground',st().pickups.length>0);note('blast hurt the player',st().health<1e6);},
   ranks:()=>{note('lurker burst (ranks)',st().zombies.some(e=>e.lurkerBurst));note('healed by a kill',st().health>40&&st().weapon==='lmg');note('crawlers',st().zombies.some(e=>e.crawling&&!e.dead));},
@@ -231,8 +242,8 @@ const tour=[];
 const stationState=s=>[s.used??'-',s.purchased??'-',s.locked??'-',s.forgeRank??'-',s.forgeMaximum??'-',s.armorTier??'-',s.price??'-'].map(r);
 const runDigest=()=>{const s=st();return [s.points,s.health,s.maxHealth,s.armor,s.armorMax,s.armorTier,s.weapon,[...s.perkOwned].join('+'),s.grenades,s.doubleTime,s.grenadeTime,s.reloadLeft,s.bella.unlocked?1:0,s.bella.rank,s.frenzyWave,s.wave,s.waveDelay,
   ...Object.entries(s.inventory).flatMap(([k,v])=>[k,v.owned?1:0,v.ammo,v.reserve,v.weaponRank,v.forgeRank])].map(r);};
-function visitStations(label){
-  for(const [i,s] of st().interactables.entries()){
+function visitStations(label,only=s=>s.type!=='katana'){
+  for(const [i,s] of st().interactables.entries()){if(!only(s))continue;
     const turn=s.rotation||0;qa.setPlayer(s.x+Math.sin(turn)*1.6,s.z+Math.cos(turn)*1.6,s.y||0);frames(1);
     const seen=()=>{const prompt=elements.get('interaction').innerHTML;if(prompt.includes(s.name))note('tour: '+(s.shedWeapon?'shed weapon':s.type));return [prompt,elements.get('toast').textContent,...runDigest(),...stationState(s)];};
     const row=[label,i,s.type,s.name,...seen()];
@@ -304,6 +315,10 @@ const trace={
     for(const e of st().zombies)if(!e.dead)qa.damageEnemy(e,1e9);qa.setHealth(1e9);visitStations('late');},60,30),
   screen:run('screen',()=>{globalThis.devicePixelRatio=2;qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,22);qa.setAim(0,-.05);for(let i=0;i<6;i++){const e=qa.makeZombie(-5+i*2,12);e.hp=e.maxHp=4e3;e.speed=.25;}},600,15),
   shell:run('shell',()=>{qa.holdSpawns();qa.setHealth(1e6);qa.setPlayer(0,20);qa.setAim(0,0);for(const k of ['shotgun','smg'])st().inventory[k].owned=true;st().inventory.glock.weaponRank=0;},900,10),
+  // v205: last, so every earlier scenario plays exactly as it did before the katana: the tour's
+  // visit to its stand (broke, paid, again), then the fight.
+  katana:run('katana',()=>{qa.holdSpawns();qa.setHealth(1e9);visitStations('katana',s=>s.type==='katana');qa.setHealth(1e6);qa.setPoints(1e6);at('katana');qa.interact();qa.setPlayer(28,-70);qa.setAim(0,0);
+    for(let i=0;i<8;i++){const a=(i/8-.5)*2.4,e=qa.makeZombie(28+Math.sin(a)*2.6,-70-Math.cos(a)*2.6,i%4===3);e.hp=e.maxHp=900;e.speed=.2;}},900,15),
 };
 trace.stationTour=tour;
 trace.boot={render:fullLogs?bootLog.join('\n'):fnv(bootLog.join('\n')),calls:bootLog.length,compiles:bootLog.filter(l=>l.startsWith('compileAsync')).length,uploads:bootLog.filter(l=>l.startsWith('initTexture')).length};
