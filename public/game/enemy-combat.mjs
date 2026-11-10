@@ -17,10 +17,14 @@ export function createCombat({level,run,rules}){
   const {player,zombies,scene,rand,rng,tone,noise,notify,rumble,sphere,effects,bloodPool,explosionFx,blastLight,powerupAssets,pickups,enemyAssets,
     addPoints,addKill,hurtPlayer,kick,killHeal,hitFeedback,collect,releasePickup}=run;
   const lurkerBursts=[];
+  // v206: an enemy's y is its floor height. Where it stands (standAt) and its height in the
+  // world (heightAt) come from the map when the map's ground rises and falls (Dead Tide's
+  // island); the mansion's flat floors keep its own rules.
+  const standAt=level.standAt||((x,z,y)=>Math.abs(y)>.1?y:floorHeight(x,z)),heightAt=level.standAt||((x,z,y)=>y);
   // A lurker bursts: everything within 4 m with a clear line takes the blast.
   function lurkerBurst(e){
     // Where it stood when it went off (the ragdoll may already be moving).
-    const at=e.lurkerAt||e.walkPos,ground=new T.Vector3(at.x,Math.abs(at.y)>.1?at.y:floorHeight(at.x,at.z),at.z),pos=ground.clone().add(new T.Vector3(0,.9,0));
+    const at=e.lurkerAt||e.walkPos,ground=new T.Vector3(at.x,standAt(at.x,at.z,at.y),at.z),pos=ground.clone().add(new T.Vector3(0,.9,0));
     noise(.9,.4,420);tone(42,.9,.22,'sawtooth',22);tone(90,.35,.12,'square',30);
     {const d=Math.hypot(pos.x-player.x,pos.z-player.z);if(d<16)rumble(1-d/16,.9*(1-d/16),360);}
     const s=sphere(pos.x,pos.y-.2,pos.z,.42,.42,.42,new T.MeshBasicMaterial({color:0x9dff4a,transparent:true,opacity:.8}));
@@ -32,13 +36,13 @@ export function createCombat({level,run,rules}){
         damageEnemy(o,dmg,false,{direction:o.group.position.clone().sub(ground),part:'torso',force:2.4*(1-d/12),source:'lurker'});
     }
     const pd=lurkerPlayerDamage(Math.hypot(player.x-at.x,player.z-at.z));
-    if(pd>0&&Math.abs(player.y-e.walkPos.y)<2.2&&blastLine(pos,player.clone().add(new T.Vector3(0,.9,0))))hurtPlayer(pd,pos);
+    if(pd>0&&Math.abs(player.y-heightAt(e.walkPos.x,e.walkPos.z,e.walkPos.y))<2.2&&blastLine(pos,player.clone().add(new T.Vector3(0,.9,0))))hurtPlayer(pd,pos);
   }
   function killZombie(e,headshot=false,impact={}){if(e.dead)return;e.dead=true;e.death=0;killHeal(impact);rules.onKill(e,impact);const massKill=impact.source==='nuke';if(massKill)e.hp=0;
   // v179: a lurker that reaches you bursts by itself (no essence); zombies its
   // blast kills pay 35% more.
   const selfBurst=impact.source==='lurkerSelf';if(e.lurker&&!e.lurkerBurst){e.lurkerBurst=true;e.lurkerAt=e.walkPos.clone();lurkerBursts.push(e);}
-  const reward=selfBurst?0:addPoints(rules.killReward(headshot?(e.brute?200:75):e.brute?110:50)*(impact.source==='lurker'?LURKER.essenceBonus:1));if(!selfBurst)addKill();if(e.bonusEssence)rules.bonusDrop(e);const enraged=massKill?0:enrageNearby(e,zombies,Math.random,enemyAssets.enrage);if(!massKill&&!selfBurst){if(headshot){notify(`HEADSHOT +${reward}`);}else tone(280,.06,.025,'triangle');}if(!selfBurst&&Math.random()<.13)dropPickup(e.group.position.x,e.group.position.z,choosePowerup(Math.random()),e.floorY);bloodBurst(e.group.position.clone().add(new T.Vector3(0,e.dog?.55:1.4,0)),massKill?4:10);beginZombieDeath(e,{...impact,source:massKill?'grenade':impact.source,part:headshot?'head':impact.part},rng);
+  const reward=selfBurst?0:addPoints(rules.killReward(headshot?(e.brute?200:75):e.brute?110:50)*(impact.source==='lurker'?LURKER.essenceBonus:1));if(!selfBurst)addKill();if(e.bonusEssence)rules.bonusDrop(e);const enraged=massKill?0:enrageNearby(e,zombies,Math.random,enemyAssets.enrage);if(!massKill&&!selfBurst){if(headshot){notify(`HEADSHOT +${reward}`);}else tone(280,.06,.025,'triangle');}if(!selfBurst&&Math.random()<.13)dropPickup(e.group.position.x,e.group.position.z,choosePowerup(Math.random()),heightAt(e.walkPos.x,e.walkPos.z,e.floorY));bloodBurst(e.group.position.clone().add(new T.Vector3(0,e.dog?.55:1.4,0)),massKill?4:10);beginZombieDeath(e,{...impact,source:massKill?'grenade':impact.source,part:headshot?'head':impact.part},rng);
   if(enraged&&e.walkPos.distanceToSquared(player)<324)notify(`BLOOD RAGE · ${enraged} NEARBY ${enraged===1?'ENEMY':'ENEMIES'} ENRAGED`);
   const corpses=zombies.filter(z=>z.dead&&z.ragdoll.life>z.death);if(corpses.length>14){const oldest=corpses.reduce((a,b)=>a.death>b.death?a:b);oldest.ragdoll.life=oldest.death;}
   }

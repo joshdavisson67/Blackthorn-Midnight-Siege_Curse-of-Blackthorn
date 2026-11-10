@@ -14,10 +14,11 @@ export async function verifyEnemyAI(qa){
   assert.deepEqual(imports('enemy-ai.mjs').filter(f=>!shared.includes(f)),[],'The AI imports only shared enemy modules');
   const closure=new Set(),walk=f=>{if(closure.has(f))return;closure.add(f);for(const g of imports(f))walk(g);};walk('enemy-ai.mjs');
   // Nothing that builds or holds the mansion: no rooms, floors, stairs, Bella, Olivia,
-  // Sir Blackthorn, curses or world events. (core.mjs still carries the estate's
-  // bounds as two small constant tables; a later step moves those out.)
+  // Sir Blackthorn, curses or world events. v206: nor core.mjs, which the AI reached
+  // through feral.mjs until v206 moved the mansion's wave mix out of it.
   const mansion=['vertical.mjs','cellar-layout.mjs','cellar.mjs','graveyard.mjs','mansion-expansion.mjs','second-floor.mjs','facade.mjs','furnishings.mjs','grounds.mjs','estate-detail.mjs','shed.mjs','shed-layout.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','rotunda-bell.mjs','world-events.mjs','curse.mjs','camp-spawns.mjs','upper-shell.mjs','exterior-stairs.mjs','graphics.mjs','lighting.mjs'];
   assert.deepEqual([...closure].filter(f=>mansion.includes(f)),[],'Nothing the AI loads builds or holds the mansion');
+  assert(!closure.has('core.mjs')&&!closure.has('estate-layout.mjs'),'nor the mansion’s core.mjs and its layout tables');
   const src=read('game.js');
   for(const name of ['updateEnemies','hasClearPath','shoulderNeighbour','corpseFloor','corpseBlocked'])assert(!new RegExp(`function ${name}\\(`).test(src),`game.js no longer keeps its own ${name}`);
   assert(/import \{createEnemyAI\} from '\.\/enemy-ai\.mjs\?v=\d+'/.test(src)&&/const \{updateEnemies,hasClearPath\}=createEnemyAI\(\{/.test(src),'The mansion drives the shared AI');

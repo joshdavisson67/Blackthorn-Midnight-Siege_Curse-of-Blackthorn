@@ -5,7 +5,7 @@
 //
 //   const {qa,frames,$,listeners,canvas,entry}=await import('./tide-harness.mjs');
 //
-// Math.random returns .25 while the harness is loaded (impact marks and the like, made
+// Math.random is seeded while the harness is loaded (impact marks and the like, made
 // repeatable); `random` is the original, for a test to restore when it ends.
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve,dirname} from 'node:path';
@@ -29,7 +29,8 @@ export const qa={tick,keys,resetRun,returnToMenu,shoot,reload,grenade,selectWeap
   // v206 (golden trace): reseed the game's own generator so every scenario starts alike.
   setSeed(s){seed=s>>>0;},
   get(){return {mode:session.mode,pointer:session.pointer,player,run:runState,session,camera,island,zone,effects,firstPerson,gunRoot,renderer,scene,world,explosionFx,markPool,display,swing:typeof swing==='undefined'?undefined:swing,
-    zombies,pickups,weaponRecoil,flash,grenadeThrow,keys};}};`);
+    zombies,pickups,weaponRecoil,flash,grenadeThrow,keys,shore:typeof shore==='undefined'?undefined:shore,hunter:typeof hunter==='undefined'?undefined:hunter,routes:typeof routes==='undefined'?undefined:routes,
+    updateEnemies:typeof updateEnemies==='undefined'?undefined:updateEnemies,spawnKind:typeof spawnKind==='undefined'?undefined:spawnKind,combat};}};`);
 const {document,window:domWindow}=parseHTML(read('tide.html'));
 for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{configurable:true,get(){return (select.querySelector('option[selected]')||select.querySelector('option'))?.getAttribute('value')||'';},set(value){for(const option of select.querySelectorAll('option'))option.toggleAttribute('selected',option.getAttribute('value')===String(value));}});
 const ctx=new Proxy({createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};}},{get(o,k){return k in o?o[k]:(()=>{});},set(o,k,v){o[k]=v;return true;}});
@@ -41,7 +42,9 @@ let enter=null;const storage=new Map();
 globalThis.document=document;globalThis.window={addEventListener(name,fn){windowEvents[name]=fn;},Blackthorn:{ready(fn){enter=fn;}}};
 Object.assign(globalThis,{devicePixelRatio:1,innerWidth:1280,innerHeight:720,requestAnimationFrame(){},localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k)}});
 $('sound').checked=true;
-export const random=Math.random;Math.random=()=>.25;
+// v206: seeded rather than a constant, as the mansion's harness is. A constant gave every
+// three.js object the same uuid, which the batcher keys on (the dead's bodies merged wrongly).
+export const random=Math.random;{let s=0x71de5;Math.random=()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 export const {qa}=await import(pathToFileURL(resolve(qaDir,'tide.mjs')).href);
 let clock=performance.now();
 export const frames=(n,step=1000/60)=>{for(let i=0;i<n;i++){clock+=step;qa.tick(clock);}};

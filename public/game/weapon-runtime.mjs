@@ -116,7 +116,10 @@ export function createWeaponRuntime({level,view,run,state:S,combat}){
   }
   function cut(){
     const inv=S.inventory.katana,yaw=S.lookYaw;
-    const hits=slashTargets({player,yaw,zombies,blocked:(x,z,y,height)=>isBlocked(x,z,.04,colliders,undefined,y,height)});
+    // v206: on a map whose enemies keep floor heights relative to the ground (Dead Tide's island,
+    // level.floorOf), the slash measures you on that scale; walls are still tested in the world.
+    const lift=level.floorOf?player.y-level.floorOf(player):0,from=lift?{x:player.x,y:player.y-lift,z:player.z}:player;
+    const hits=slashTargets({player:from,yaw,zombies,blocked:(x,z,y,height)=>isBlocked(x,z,.04,colliders,undefined,y+lift,height)});
     const damage=KATANA.damage*(S.perkOwned.has('eye')?1.5:1)*forgeBonuses(inv.forgeRank).damageMultiplier*(S.doubleTime>0?2:1);
     for(const {enemy} of hits){const impact=slashImpact(swing.kind,{player,yaw,enemy});combat.damageEnemy(enemy,damage,false,{...impact,shotId:S.shotId});combat.bloodBurst(impact.point,6);}
     if(hits.length){tone(150,.09,.06,'sawtooth',70);noise(.07,.07,2600);rumble(.35,.5,90);}

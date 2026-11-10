@@ -6,7 +6,7 @@ An original, single-player, first-person zombie survival game for desktop browse
 
 **Play in your browser:** https://joshdavisson67.github.io/Blackthorn-Midnight-Siege-v119-source/ (published automatically from `main` by `.github/workflows/pages.yml`). This copy's shared leaderboard is stored in Supabase; see below.
 
-**Dead Tide (preview):** add `tide.html` to that address for the island mode's grey-box build (version 204), with no dead yet. `modes.html` is the mode picker.
+**Dead Tide (preview):** add `tide.html` to that address for the island mode: the grey-box island with the dead coming ashore (version 206), before its threat director, stations and leaderboard. `modes.html` is the mode picker.
 
 
 Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1–6 switch owned guns and 7 draws the katana (version 205), M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
@@ -28,6 +28,52 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## The dead come ashore (version 206)
+
+This is Dead Tide step 2, slice 3. The dead now rise out of the surf and hunt you across the island, using the mansion's own enemy AI, spawner, crowd and combat. The mansion plays exactly as before.
+
+- **Play it:** `tide.html` (the mode picker still marks Dead Tide *In development*).
+- **How a run goes, for now:** a stand-in until the threat director (step 3) arrives.
+  - **The opening:** no dead for the first 4 seconds. Then walkers rise out of the shallows one at a time, 1.4 s apart, until **eight** are alive, the plan's threat-level-1 population. Each one killed is replaced the same way.
+  - **Their strength:** the mansion's wave 1 (93 health, its walking pace, 19.5 damage a strike), with their usual faces, builds and injuries. Walkers only for now; the threat director brings in the other kinds.
+  - **Where they come from:** the plan's spawn network, laid out on the island in `island.mjs` (`shoreSpawns`).
+    - **8 major shoreline zones**, each five points along a stretch of waterline;
+    - **14 minor shoreline points** between them;
+    - **6 interior zones**, placed but switched off until the threat director opens them at The Swarm.
+    - The major zones are named by compass bearing (North Beach, North-East Reef, …) until the landmarks they are named for are built.
+  - **Safe arrivals:** never within 18 m of you, never where you are looking within 40 m, never inside another body, and only where a route reaches you. With no safe point the shore waits half a second and tries again.
+  - **The cap:** never more than **45** living dead, whatever the target.
+  - **Rising from the sea:** each walker climbs up out of the water over 1.6 s, then wades ashore (slower in the water, as you are).
+  - **They hunt as in the mansion:** routes, flanking, crowding into a ring, strikes. They climb Radio Hill after you and follow you into the shack through its door. Bodies never overlap: you cannot walk through them, nor they through you.
+  - **Kills** pay 50 essence (75 for a headshot), and the dead drop the mansion's power-ups (ammo, Double Damage, infinite grenades), on the ground where they fall.
+  - **Dying** to them ends the run on the existing "The tide takes you." screen. The run summary and leaderboard come in step 4.
+- **The island as one floor** (`tide-dead.mjs`): the shared enemy code was written for the mansion's flat floors, where an enemy on your floor is within half a metre of your height. On the island the ground rises 14 m, so the dead keep their height relative to the ground under them, and so does the player as they see it. The island's view of itself turns those heights back into the world's for collision, footing and drawing.
+- **Routes** (`island.mjs`, `buildRoutes`): a grid of 0.5 m cells over the land and the wadeable shallows (fine enough for the shack's door), with a second, wider grid for brutes built only when first needed. It is rebuilt only when you reach another cell, and only while there are dead to lead. Building it takes about 0.1 s while loading; a rebuild takes about 3.5 ms.
+- **Changed in the shared modules**, so the mansion plays identically:
+  - `enemy-ai.mjs`, `enemy-spawn.mjs`, `enemy-combat.mjs`: where an enemy stands, its height in the world, and where bodies fall now come from the map when it provides them (`standAt`, `corpseBlocked`, `corpseFloor`). The mansion provides none, so it keeps its own rules.
+  - `weapon-runtime.mjs`: the katana measures your height on the enemies' scale when the map provides it (`floorOf`). So a slash reaches walkers below you on a slope, which the v205 notes flagged.
+  - `feral.mjs` now holds only the feral's numbers. The shared AI reads them there, and the file also held the mansion's wave mix, which needs the mansion's `core.mjs`, so Dead Tide would have loaded the mansion's layout tables. The wave mix (`chooseEnemyKind`, unchanged) moved to `curse.mjs`, which already loads `core.mjs`, so the mansion loads the same 105 files as before.
+  - **The proof:** the mansion's golden trace is byte-identical to main's in all 26 scenarios.
+- **Dead Tide's golden trace** now has two fights:
+  - **fight:** holding the south beach, firing at the nearest walker, then holding fire as they arrive;
+  - **summit:** on Radio Hill with the gun lowered, as they climb the slopes, then in the shack as they follow you in.
+  - Its seven island scenarios hold the shore and match v205 in every gameplay channel.
+- **The test harness** now seeds `Math.random` rather than holding it at 0.25. The constant gave every three.js object the same identifier, so the batcher merged unrelated enemy parts and the dead could not load in tests.
+- **Tested** (`tests/dead-tide.mjs`):
+  - none arrive in the first 4 s; each rises out of the shallows from below the water, more than 18 m away and out of sight, and stands on the ground once risen;
+  - the shore keeps eight walkers at wave-1 strength, never more, all routed to you;
+  - pressed for 500, it fills to exactly 45 and stops;
+  - New Run clears the dead and their drops;
+  - shots and the katana land downhill on Radio Hill's slopes, and kills count and pay;
+  - you cannot walk through the dead;
+  - power-ups drop on the hillside where a walker fell and are picked up.
+- **Performance:** see `perf/README.md`. The 45-enemy stress test is new in `scripts/perf-measure.mjs --page tide.html` and `scripts/frame-logic.mjs --mode tide-fight`.
+- **Not verified:**
+  - how the dead look under the island's moonlight (the mansion's lighting hooks are not on the island, so their materials use three.js's standard lighting);
+  - how the fight feels;
+  - real-browser frame rates. Only headless measurements were made.
+- **Next:** the threat director (step 3): threat levels every 20 kills, ranks, the growing population, rotating zones and the enemy mix.
 
 ## Dead Tide's golden trace (tooling; the game is unchanged at version 205)
 
