@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {FERAL} from './feral.mjs?v=205';
+import {FERAL} from './feral.mjs?v=206';
 import {ENRAGE} from './enrage.mjs?v=130';
 import {SPREAD} from './crowd.mjs?v=123';
 import {advanceStagger} from './combat-feedback.mjs?v=205';
@@ -18,9 +18,14 @@ export function createEnemyAI({level,run,rules}){
   const {colliders,isBlocked,supportBelow,floorHeight,rampHeight,move,crouchAt,crowd}=level;
   const {player,camera,zombies,scene,rand,tone,noise,hurtPlayer,gameOver,killZombie,disposeEnemy,lurkerBursts,lurkerBurst}=run;
   const boss=rules.boss,clamp=T.MathUtils.clamp,decoyLook=new T.Vector3();
+  // v206: where an enemy at floor height y stands. A map whose ground rises and falls (Dead
+  // Tide's island) keeps each enemy's y relative to the ground under it and passes
+  // level.standAt; the mansion's floors are flat and keep this, its own rule.
+  const standAt=level.standAt||((x,z,y)=>Math.abs(y)>.1?y:floorHeight(x,z));
   function hasClearPath(x,z,tx,tz,y=0,ty=y,radius=.35,height=1.8){if(Math.abs(ty-y)>.55)return false;const dist=Math.hypot(tx-x,tz-z);for(let t=.25;t<dist;t+=.25){const f=t/dist,xx=x+(tx-x)*f,zz=z+(tz-z)*f;const ramp=rampHeight(xx,zz);if((ramp!==null&&ramp>y+.30&&y+height>ramp-.20)||isBlocked(xx,zz,radius,colliders,undefined,y,height)||Math.abs(supportBelow(xx,zz,y,.3)-y)>.31)return false;}return true;}
-  function corpseBlocked(x,z,r,y){return isBlocked(x,z,r,colliders,undefined,y-r,2*r);}
-  function corpseFloor(x,z,y){const h=supportBelow(x,z,y+.2);return Math.abs(h)>.1?h+.008:floorHeight(x,z)+.008;}
+  // Bodies fall in world heights; a map with relative floors passes its own (v206).
+  const corpseBlocked=level.corpseBlocked||function(x,z,r,y){return isBlocked(x,z,r,colliders,undefined,y-r,2*r);};
+  const corpseFloor=level.corpseFloor||function(x,z,y){const h=supportBelow(x,z,y+.2);return Math.abs(h)>.1?h+.008:floorHeight(x,z)+.008;};
   // A blocked enemy shoulders the neighbour in its way a little to the side.
   // Only on flat floors, never mid-attack, and only into genuinely free space.
   function shoulderNeighbour(e,dx,dz,dt){
@@ -42,7 +47,7 @@ export function createEnemyAI({level,run,rules}){
   if(e.warCry>0){e.warCry-=dt;if(e.warCry<=0)boss.endWarCry(e);}
   if(e.emergeLeft>0){
     e.emergeLeft=Math.max(0,e.emergeLeft-dt);
-    const floor=(Math.abs(e.floorY)>.1?e.floorY:floorHeight(e.walkPos.x,e.walkPos.z))-.02;e.group.position.y=floor-(e.emergeDepth||1.65)*(e.emergeLeft/(e.emergeTime||1.05))**2;
+    const floor=standAt(e.walkPos.x,e.walkPos.z,e.floorY)-.02;e.group.position.y=floor-(e.emergeDepth||1.65)*(e.emergeLeft/(e.emergeTime||1.05))**2;
     animateZombie(e,dt,99,0);continue;
   }
   const decoy=rules.decoy(e);
@@ -122,7 +127,7 @@ export function createEnemyAI({level,run,rules}){
   // Turn at a limited, eased rate (v136): bodies swing round with weight rather
   // than snapping to every steering wobble; the head leads, tracking the player.
   const turn=Math.atan2(Math.sin(heading-e.group.rotation.y),Math.cos(heading-e.group.rotation.y)),maxTurn=(e.dog?6:e.feral?5:e.brute?2.4:3.2)*dt,yawStep=clamp(turn*(1-Math.exp(-dt*6)),-maxTurn,maxTurn);e.group.rotation.y+=yawStep;e.turnRate=T.MathUtils.lerp(e.turnRate||0,yawStep/Math.max(dt,1e-4),1-Math.exp(-dt*10));
-  e.floorY=p.y;e.group.position.set(p.x,Math.abs(p.y)>.1?p.y-.02:floorHeight(p.x,p.z)-.02,p.z);e.attack-=dt*rules.attackRate(e);const contact=(e.dog?animateZombieDog:animateZombie)(e,dt,sameFloor?dist:99,Math.hypot(p.x-oldX,p.z-oldZ),onDecoy?decoyLook.set(hunt.x,hunt.y+.45,hunt.z):camera.position);if(casting)boss.pose(e);
+  e.floorY=p.y;e.group.position.set(p.x,standAt(p.x,p.z,p.y)-.02,p.z);e.attack-=dt*rules.attackRate(e);const contact=(e.dog?animateZombieDog:animateZombie)(e,dt,sameFloor?dist:99,Math.hypot(p.x-oldX,p.z-oldZ),onDecoy?decoyLook.set(hunt.x,hunt.y+.45,hunt.z):camera.position);if(casting)boss.pose(e);
   // A decoy cannot be hurt; the mode decides what a blow at it does.
   if(onDecoy){if(contact&&!(e.staggerLeft>0)&&dist<1.7&&sameFloor)rules.decoyStruck(e);}
   else if(contact&&!casting&&!(e.staggerLeft>0)&&dist<1.7&&Math.abs(player.y-p.y)<.7&&hasClearPath(p.x,p.z,player.x,player.z,p.y,player.y)){

@@ -102,7 +102,9 @@ try{
   assert.deepEqual([...top].sort(),['Blood particles','Bullet impact marks','Explosion effects','Island ground','Palm crowns','Palm trunks','Radio shack','Radio tower','Rocks','The sea','Tower beacon','Wreck'].sort(),'The world holds the island and the shared effects, nothing else');
   frames(30);const orbit=G().camera.position.clone();frames(30);assert(orbit.distanceTo(G().camera.position)>.05&&!G().gunRoot.visible,'The title screen circles the island with no gun in view');
   // Enter: capture in the click, then play from the south beach.
-  enter();await Promise.resolve();assert.equal(G().mode,'playing');assert(G().pointer&&$('menu').classList.contains('hidden')&&!$('hud').classList.contains('hidden'));
+  // v206: the island's own checks run with the shore held (no dead); the dead are tested below.
+  const holdShore=()=>{G().shore.target=0;};
+  enter();await Promise.resolve();holdShore();assert.equal(G().mode,'playing');assert(G().pointer&&$('menu').classList.contains('hidden')&&!$('hud').classList.contains('hidden'));
   const sp=ISLAND.spawn;assert(Math.abs(G().player.x-sp.x)<1e-9&&Math.abs(G().player.z-sp.z)<1e-9&&Math.abs(G().player.y-groundHeight(sp.x,sp.z))<1e-9,'The run starts on the south beach');
   frames(2);assert($('location').textContent.includes('SOUTH BEACH')&&$('ammo').textContent==='13'&&$('reserve').textContent==='78'&&$('points').textContent==='500'&&$('health').textContent==='100','The HUD shows the beach, a full pistol, 500 essence and full health');
   // Walking north up the beach, the feet follow the ground.
@@ -152,7 +154,7 @@ try{
   // Too close: a blast hurts, and the tide takes you.
   qa.explode(G().player.clone().add(new T.Vector3(1,.3,0)));assert.equal(G().run.health,75,'A blast within 3 m hurts');frames(10);
   qa.hurtPlayer(500);assert.equal(G().mode,'dead');assert.equal($('pauseTitle').textContent,'The tide takes you.');assert(!$('pause').classList.contains('hidden')&&$('resume').classList.contains('hidden'));
-  $('restart').onclick();await Promise.resolve();assert.equal(G().mode,'playing','New Run starts at once after a death');assert.equal(G().run.health,100);assert.equal(G().run.grenades,3);
+  $('restart').onclick();await Promise.resolve();holdShore();assert.equal(G().mode,'playing','New Run starts at once after a death');assert.equal(G().run.health,100);assert.equal(G().run.grenades,3);
   // Pausing, settings, the controls card, and back to the title.
   key({code:'Escape'});assert.equal(G().mode,'paused');assert(!$('pause').classList.contains('hidden'));assert($('pauseText').textContent.startsWith('South beach · 0 kills'));
   $('settingsPause').onclick();assert(!$('pauseSettings').classList.contains('hidden'));assert.equal($('settingsEyebrow').textContent,'DEAD TIDE / PAUSED');
@@ -162,5 +164,51 @@ try{
   key({code:'Escape'});$('mainMenuPause').onclick();assert(!$('pauseConfirm').classList.contains('hidden'));$('confirmYes').onclick();
   assert.equal(G().mode,'menu');assert(!$('menu').classList.contains('hidden')&&$('hud').classList.contains('hidden')&&!$('start').disabled,'Title Screen asks first, then returns to the title');
   console.log('PASS: playing Dead Tide (v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, go into the shack by its door (its walls and roof hold), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
+  // ---- 5. The dead come ashore (v206) ------------------------------------------------------
+  const {SHORE_RULES:R}=await import('../public/game/tide-dead.mjs');
+  const alive=()=>G().zombies.filter(e=>!e.dead),dist=e=>Math.hypot(e.walkPos.x-G().player.x,e.walkPos.z-G().player.z);
+  const aimAt=(point)=>{const eye=G().camera.position,dx=point.x-eye.x,dy=point.y-eye.y,dz=point.z-eye.z;qa.setAim(Math.atan2(-dx,-dz),Math.atan2(dy,Math.hypot(dx,dz)));};
+  const still=e=>{e.emergeLeft=0;e.speed=0;e.attack=1e9;return e;};
+  enter();await Promise.resolve();assert.equal(G().mode,'playing');qa.setAim(ISLAND.spawn.yaw,0);
+  assert(G().shore.target===R.living&&alive().length===0,'A run starts with no dead and a target of eight');
+  frames(Math.floor(R.firstDelay*60)-5);assert.equal(G().zombies.length,0,`None arrive in the first ${R.firstDelay} s`);
+  let first=null;for(let i=0;i<120&&!first;i++){frames(1);first=G().zombies[0];}
+  assert(first&&first.emergeLeft>0&&first.shoreBorn,'Then the first rises out of the surf');
+  {const g=groundHeight(first.walkPos.x,first.walkPos.z);assert(g<0&&g>=-ISLAND.wade,'in the shallows');assert(first.group.position.y<g-.5,'from below the water');assert(dist(first)>R.near,`more than ${R.near} m away`);
+   const yaw=G().session.lookYaw,dx=first.walkPos.x-G().player.x,dz=first.walkPos.z-G().player.z,d=Math.hypot(dx,dz),ang=Math.acos((dx*-Math.sin(yaw)+dz*-Math.cos(yaw))/d);
+   assert(d>R.sight.range||ang>=R.sight.halfAngle,'and out of sight');}
+  frames(Math.ceil(R.emerge.time*60)+2);assert(!(first.emergeLeft>0)&&Math.abs(first.group.position.y-(groundHeight(first.walkPos.x,first.walkPos.z)+first.walkPos.y-.02))<1e-6,'It stands on the ground once risen');
+  // A steady eight, never more, all on legal ground and routed to you.
+  let most=0;for(let i=0;i<40;i++){frames(30);most=Math.max(most,alive().length);G().run.health=100;}
+  assert.equal(most,R.living,`The shore keeps ${R.living} walkers, never more`);
+  for(const e of alive()){assert(!e.brute&&!e.dog&&!e.feral&&!e.lurker,'all walkers');assert(groundHeight(e.walkPos.x,e.walkPos.z)>=-ISLAND.wade-1e-6,'on land or in the shallows');
+    assert(G().routes.direction(e.walkPos.x,e.walkPos.z,0)?.reachable,'with a route to you');assert(e.hp<=R.stats.health&&e.maxHp===R.stats.health,'at the mansion’s wave-1 strength');}
+  // The cap: however many are asked for, never more than 45 at once.
+  G().shore.target=500;assert.equal(G().shore.target,R.cap,'The target can never pass the cap of 45');
+  let crowdPeak=0;G().run.health=1e9;for(let i=0;i<260&&crowdPeak<R.cap;i++){frames(30);G().run.health=1e9;crowdPeak=Math.max(crowdPeak,alive().length);}
+  frames(600);assert(G().mode==="playing"&&alive().length<=R.cap&&crowdPeak===R.cap,`Pressed, the shore fills to 45 and stops there (${crowdPeak})`);
+  for(const e of alive())assert(Number.isFinite(e.walkPos.x+e.walkPos.y+e.walkPos.z+e.group.position.y),'every one in a real place');
+  // New Run clears the dead.
+  qa.resetRun();await Promise.resolve();assert(G().zombies.length===0&&G().pickups.length===0&&G().shore.target===R.living,'New Run clears the dead and their drops');
+  G().shore.target=0;
+  // Shooting downhill: a walker on Radio Hill's flank is hit where it stands, and its kill pays.
+  {const b=Math.PI/2+.3,fx=H=>[ISLAND.hill.x+Math.cos(b)*H,ISLAND.hill.z+Math.sin(b)*H];const [px,pz]=fx(16),[ex,ez]=fx(23);qa.setPlayer(px,pz);frames(1);
+   const e=still(G().spawnKind('walker',ex,ez,0));frames(2);assert(groundHeight(px,pz)-groundHeight(ex,ez)>2,'(standing well above it)');
+   const points=G().run.points,kills=G().run.kills;let shots=0;while(!e.dead&&shots<40){aimAt(e.group.position.clone().add(new T.Vector3(0,1.15,0)));frames(1);if(G().run.inventory.glock.ammo===0){qa.reload();frames(130);}qa.shoot();shots++;frames(12);}
+   assert(e.dead&&G().run.kills===kills+1&&G().run.points-points>=50,`Shots downhill land and kill (${shots} shots); the kill counts and pays`);}
+  // The katana on a slope: a walker below you on the hillside, inside the arc, is cut.
+  {frames(120);const b=Math.PI*1.2,at=d=>[ISLAND.hill.x+Math.cos(b)*d,ISLAND.hill.z+Math.sin(b)*d];const [px,pz]=at(17),[ex,ez]=at(19.6);qa.setPlayer(px,pz);
+   G().run.inventory.katana.owned=true;key({code:'Digit7',repeat:false});frames(30);const e=still(G().spawnKind('walker',ex,ez,0));
+   assert(groundHeight(px,pz)-groundHeight(ex,ez)>.8,'(it stands lower)');aimAt(e.group.position.clone().add(new T.Vector3(0,1,0)));const hp=e.hp;qa.shoot();frames(30);
+   assert(e.hp<hp,'The katana cuts a walker below you on the slope');key({code:'Digit1',repeat:false});frames(30);if(!e.dead)G().combat.damageEnemy(e,1e4,false,{part:'torso',direction:new T.Vector3(0,0,1),source:'glock'});}
+  // Bodies never overlap: you cannot walk through a walker, nor it through you.
+  {frames(200);const [px,pz]=[0,30];qa.setPlayer(px,pz);const e=still(G().spawnKind('walker',px,pz-1.5,0));qa.setAim(0,0);qa.setKeys(['KeyW']);frames(90);qa.setKeys([]);
+   assert(Math.hypot(G().player.x-e.walkPos.x,G().player.z-e.walkPos.z)>=.32+e.radius-.02,'You cannot walk through one of the dead');G().combat.damageEnemy(e,1e4,false,{part:'torso',direction:new T.Vector3(0,0,1),source:'glock'});frames(200);}
+  // Power-ups drop on the ground where the dead fall, even on the hill, and you pick them up.
+  {const b=-.4,[x,z]=[ISLAND.hill.x+Math.cos(b)*20,ISLAND.hill.z+Math.sin(b)*20];qa.setPlayer(x+3,z);const e=still(G().spawnKind('walker',x,z,0));
+   const seeded=Math.random;Math.random=()=>.05;try{G().combat.damageEnemy(e,1e4,false,{part:'torso',direction:new T.Vector3(1,0,0),source:'glock'});}finally{Math.random=seeded;}
+   const p=G().pickups.at(-1);assert(p&&Math.abs(p.y-groundHeight(x,z))<.05,`A power-up drops on the hillside where it fell (${p?.y.toFixed(2)} m, ground ${groundHeight(x,z).toFixed(2)} m)`);
+   const count=G().pickups.length;qa.setPlayer(p.mesh.position.x,p.mesh.position.z);frames(3);assert.equal(G().pickups.length,count-1,'and walking onto it collects it');}
+  console.log(`PASS: the dead come ashore: none in the first ${R.firstDelay} s, then each rises out of the shallows from below the water, more than ${R.near} m away and out of sight, and stands on the ground; the shore keeps ${R.living} walkers at the mansion's wave-1 strength, never more, all routed to you; pressed for 500 it fills to ${crowdPeak} and never passes ${R.cap}; New Run clears them; shots and the katana land downhill on Radio Hill's slopes and kills pay; bodies never overlap; power-ups drop on the hillside and are picked up.`);
 }finally{Math.random=random;}
 process.exit(0);

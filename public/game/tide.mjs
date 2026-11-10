@@ -15,21 +15,28 @@ import {SHOT_RUMBLE} from './weapon-stats.mjs?v=205';
 import {createRunState,createPlayer} from './player.mjs?v=198';
 import {createHud} from './hud.mjs?v=205';
 import {createSession,createControls,WEAPON_CYCLE} from './controls.mjs?v=205';
-import {createWeaponRuntime} from './weapon-runtime.mjs?v=205';
-import {createCombat} from './enemy-combat.mjs?v=205';
+import {createWeaponRuntime} from './weapon-runtime.mjs?v=206';
+import {createCombat} from './enemy-combat.mjs?v=206';
 import {PERKS} from './stations.mjs?v=205';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
-import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=204';
+import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=206';
+import {createEnemyAssets} from './enemy-assets.mjs?v=183';
+import {createCrowd,enemyBody} from './crowd.mjs?v=123';
+import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
+import {createEnemyAI} from './enemy-ai.mjs?v=206';
+import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
+import {fadeMaterials} from './drop-fade.mjs?v=169';
+import {createIslandLevel,followPlayer,playerOccupancy,createShoreDirector,SHORE_RULES} from './tide-dead.mjs?v=206';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
 // through tide-boot.js. It builds the island and nothing of the mansion, and plays with
 // the shared modules: the screen and sound, the first-person view, the player's run,
 // the weapon runtime, combat, the HUD and the play session (keyboard and mouse, touch,
-// controller). This grey-box build has no dead yet: walk the island, jump, shoot and
-// throw grenades. The dead (v205), the threat director (step 3) and stations, the
-// leaderboard and the run summary (step 4) come next.
+// controller). v206: the dead come ashore, with the shared enemy AI, spawner and combat,
+// through the island's view of itself in tide-dead.mjs and a stand-in director. The threat
+// director (step 3) and stations, the leaderboard and the run summary (step 4) come next.
 performance.mark?.('tide:modules');
 const domCache=new Map(),$=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);};
 const shownMarkup=new Map(),shownOpacity=new Map();
@@ -77,10 +84,20 @@ function sphere(x,y,z,sx,sy,sz,material){const m=new T.Mesh(SPHERE,material);m.p
 // ---- The run -------------------------------------------------------------------------------
 const session=createSession(),runState=createRunState(),keys=new Set();
 const spawn=ISLAND.spawn,player=new T.Vector3(spawn.x,groundHeight(spawn.x,spawn.z),spawn.z);
+// v206: the dead. `hunter` is where the player stands for them (height above the ground);
+// the crowd keeps bodies apart; the routes lead them to you (the brutes' wider ones are
+// built the first time something asks for them).
+const enemyAssets=createEnemyAssets(batchArticulated),powerupAssets=createPowerupAssets();
+const hunter=new T.Vector3();followPlayer(hunter,player,island);
+const crowd=createCrowd(zombies,hunter),playerCanOccupy=playerOccupancy({crowd,island,player});
+const routes=island.buildRoutes({radius:.44});let bruteRoutes=null,navTarget=null;
+Object.defineProperty(routes,'brutes',{get(){if(!bruteRoutes){const b=enemyBody({brute:true});bruteRoutes=island.buildRoutes({radius:Math.max(.44,b.radius),height:b.height});if(navTarget)bruteRoutes.rebuild(...navTarget);}return bruteRoutes;}});
+const rebuildRoutes=()=>{navTarget=[player.x,player.z];routes.rebuild(player.x,player.z);bruteRoutes?.rebuild(player.x,player.z);};
+const islandLevel=createIslandLevel({island,crowd,routes,hunter});
 let elapsed=0,lastTime=performance.now(),hudTick=0,zone='SOUTH BEACH';
 const soundOn=()=>$('sound').checked,gameAudio=createAudio({isOn:soundOn}),{init:initAudio,tone,noise,suppressedReport}=gameAudio;
 const {walk,recover,hurtPlayer}=createPlayer({
-  level:{colliders,supportBelow,move:(pos,dx,dz,r)=>island.move(pos,dx,dz,r,{grounded:runState.grounded}),updateHeight:island.updateHeight},
+  level:{colliders,supportBelow,move:(pos,dx,dz,r)=>island.move(pos,dx,dz,r,{grounded:runState.grounded,canOccupy:zombies.length?playerCanOccupy:null}),updateHeight:island.updateHeight},
   run:{player,tone,noise,rumble:padRumble,gameOver,onHurt(source,shielded){flashDamage(shielded);combatHud.hurt(player,source,session.lookYaw+weaponRecoil.yaw,shielded);}},
   state:runState
 });
@@ -96,23 +113,45 @@ link(session,['mode','aiming','lookYaw','lookPitch']);
 link(firstPerson,['flashTime','recoil','dualSide','viewFov'],['flashTime','recoil','dualSide','weaponViewFov']);
 const raycaster=new T.Raycaster();let combat=null;
 const {swing,updateMelee,freshInventory,shoot,reload,finishReload,holdToFire,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,selectWeapon,applyWeaponRanks,viewGun,zoomOf,aimFovOf,aimHeight}=createWeaponRuntime({
-  level:{colliders,isBlocked,solidMeshes},
+  level:{colliders,isBlocked,solidMeshes,floorOf:islandLevel.floorOf},
   view:{camera,gunGroups,bushDot,smgDual,dualGuns,dualMuzzle,flash,reticleHud,weaponRecoil,grenadeThrow,grenadeAssets},
   run:{scene:world,zombies,effects,markPool,rand,tone,noise,notify,rumble:padRumble,suppressedReport,updateHud,updateReloadHud,shotRumble:SHOT_RUMBLE,raycaster,player},
   state:armsState,
   combat:{get damageEnemy(){return combat.damageEnemy;},get bloodBurst(){return combat.bloodBurst;},get detonateRound(){return combat.detonateRound;}}
 });
 firstPerson.bind({player,state:runState,session,weaponRecoil,grenadeThrow,arms:{aimFovOf,zoomOf,dualOn,aimHeight,viewGun,swing}});
-// Combat on the island: grenade blasts, blood and impact marks (the dead arrive in v205).
+// Combat on the island: hits, kills and essence, grenade blasts, blood, impact marks and the
+// power-ups the dead drop. Blasts and pickups are in the world's heights; enemies' heights
+// go through the island's standAt (v206).
+const {makeZombie,spawnKind,placement,choosePoint,disposeEnemy}=createEnemySpawner({
+  level:islandLevel,
+  run:{player:hunter,zombies,scene:world,enemyAssets,rng,rand,sharedResources:()=>({geometries:new Set(),materials:new Set()})},
+  rules:{enemyStats:()=>SHORE_RULES.stats}
+});
 combat=createCombat({
-  level:{supportBelow,floorHeight:island.floorHeight,solidMeshes,visibleFloor:island.visibleFloor,colliders,isBlocked},
-  run:{player,zombies,scene:world,rand,rng,tone,noise,notify,rumble:padRumble,sphere,effects,bloodPool,explosionFx,blastLight:{release(){}},powerupAssets:null,pickups,enemyAssets:null,
+  level:{supportBelow,floorHeight:island.floorHeight,solidMeshes,visibleFloor:island.visibleFloor,colliders,isBlocked,standAt:islandLevel.standAt},
+  run:{player,zombies,scene:world,rand,rng,tone,noise,notify,rumble:padRumble,sphere,effects,bloodPool,explosionFx,blastLight:{release(){}},powerupAssets,pickups,enemyAssets,
     get elapsed(){return elapsed;},get playing(){return session.mode==='playing';},
     addPoints,addKill:()=>{runState.kills++;},hurtPlayer,kick:()=>{firstPerson.recoil=.1;},killHeal(){},
     hitFeedback(headshot,impact){markHit(headshot);if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}},
     collect(p){grantPowerup(p.type);},releasePickup(){}},
   rules:{killReward:base=>base,onKill(){},bonusDrop(){},hitAmount:(e,amount)=>amount}
 });
+// How the dead hunt, walk and strike: the shared AI, with none of the mansion's extras
+// (no Bella, no attic, no frenzy waves, no world events, no Sir Blackthorn).
+const NO_BOSS={rules:{meleeMultiplier:1,cry:{speed:1,damage:1}},warden:{damageMultiplier:1},update:()=>false,pose(){},endWarCry(){}};
+const {updateEnemies}=createEnemyAI({
+  level:islandLevel,
+  run:{player:hunter,camera,zombies,scene:world,rand,tone,noise,get elapsed(){return elapsed;},get health(){return runState.health;},hurtPlayer,gameOver,killZombie:combat.killZombie,disposeEnemy,lurkerBursts:combat.lurkerBursts,lurkerBurst:combat.lurkerBurst},
+  rules:{decoy:()=>null,decoyStruck(){},detour:()=>null,baseDamage:()=>SHORE_RULES.stats.damage,surge:()=>1,speedScale:()=>1,attackRate:()=>1,boss:NO_BOSS}
+});
+const shore=createShoreDirector({spawner:{placement,choosePoint,spawnKind},zombies,player,look:()=>session.lookYaw,noise});
+let navTimer=0;
+function clearTheDead(){
+  for(const e of zombies){world.remove(e.group);disposeEnemy(e);}zombies.length=0;
+  for(const p of pickups){p.fade?.dispose();world.remove(p.mesh);}pickups.length=0;
+  shore.reset();navTimer=0;followPlayer(hunter,player,island);rebuildRoutes();
+}
 runState.inventory=freshInventory();
 selectWeapon('glock');
 
@@ -199,7 +238,7 @@ function startFromMenu(){resetRun();}
 function resetRun({capture=true}={}){
   applyFormFactor();releaseMouse();grenadeThrow.cancel();
   for(const e of effects){world.remove(e.mesh);if(e.type==='blast')e.mesh.material?.dispose();}effects.length=0;explosionFx.clear();bloodPool.reset();markPool.reset();
-  player.set(spawn.x,groundHeight(spawn.x,spawn.z),spawn.z);session.lookYaw=spawn.yaw;session.lookPitch=0;camera.fov=firstPerson.viewFov=75;camera.updateProjectionMatrix();
+  player.set(spawn.x,groundHeight(spawn.x,spawn.z),spawn.z);clearTheDead();session.lookYaw=spawn.yaw;session.lookPitch=0;camera.fov=firstPerson.viewFov=75;camera.updateProjectionMatrix();
   Object.assign(runState,{health:100,maxHealth:100,armor:0,armorMax:0,armorTier:0,points:500,totalScore:0,kills:0,runTime:0,lastHurt:-20,grenades:3,doubleTime:0,grenadeTime:0,grenadeCooldown:0});
   runState.perkOwned.clear();runState.inventory=freshInventory();applyWeaponRanks();
   Object.assign(runState,{reloadLeft:0,shotTimer:0,feetY:0,jumpV:0,grounded:true,shotId:0});clearFlashes();
@@ -207,7 +246,7 @@ function resetRun({capture=true}={}){
   session.mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');
   if(capture)requestPointer();
   else{$('pauseTitle').textContent='The island is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}
-  announce('DEAD TIDE','GREY-BOX PREVIEW · WALK THE ISLAND · THE DEAD COME ASHORE NEXT BUILD');updateHud();
+  announce('DEAD TIDE','THE DEAD COME ASHORE · SURVIVE');updateHud();
 }
 function returnToMenu(){
   if(session.mode!=='paused'&&session.mode!=='dead')return;
@@ -266,6 +305,10 @@ function tick(now){
     let x=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),z=(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0);if(stick&&!x&&!z){x=stick.x;z=stick.z;}
     walk(dt,x,z,{sprint,aiming:aimingWeapon,yaw:session.lookYaw});
     firstPerson.pose(dt,{moving,sprint,aiming:aimingWeapon});
+    // The dead: routes follow you, the shore sends more, and they hunt.
+    // (Routes are only rebuilt while there are dead to lead, or the shore is about to send more.)
+    followPlayer(hunter,player,island);navTimer-=dt;if(navTimer<=0&&(shore.alive()>0||shore.wanting())){rebuildRoutes();navTimer=.6;}
+    shore.update(dt);updateEnemies(dt);
     grenadeThrow.update(dt,releaseGrenade,grenadeCue);combat.updateEffects(dt);explosionFx.update(dt);combat.updatePickups(dt);
     recover(dt,true);runState.doubleTime=Math.max(0,runState.doubleTime-dt);runState.grenadeTime=Math.max(0,runState.grenadeTime-dt);
     zone=island.zoneAt(player.x,player.z,player.y);setMarkup('location',`DEAD TIDE <span> / ${zone}</span>`);setMarkup('interaction','');
@@ -284,14 +327,19 @@ function tick(now){
 window.addEventListener('resize',display.resize);display.resize();
 
 // What Dead Tide warms before play: every gun and the grenade in hand, the scope masks,
-// a grenade and the explosion's effects, with the island lit as in play.
+// a grenade and the explosion's effects, with the island lit as in play. v206: every enemy
+// body (and its blood-rage variant), their injuries and faces, and every power-up, solid and
+// fading, so nothing compiles when the dead arrive.
 async function prepareRendering(){
   return display.prepare(()=>{
     const viewModels=[...Object.values(gunGroups),bushDot],savedVisibility=viewModels.map(g=>g.visible),savedGun=gunRoot.visible;
     const scopeMasks=scopedGuns.map(({sight})=>sight.mask),savedMasks=scopeMasks.map(mask=>mask.visible);scopeMasks.forEach(mask=>mask.visible=true);
     camera.position.set(player.x,player.y+1.68,player.z);camera.rotation.set(0,0,0);gunRoot.visible=true;viewModels.forEach(g=>g.visible=true);grenadeThrow.warm();
-    return {world,warm:[grenadeAssets.create(),explosionFx.warmGroup()],
-      textures:()=>[...weaponSurfaces().textures,...katanaSurfaces().textures,island.depthMap],
+    const warmRage=enemyAssets.templates.map(r=>{const group=r.group.clone(true);enemyAssets.enrage({group});return group;});
+    const warmPickups=Object.keys(POWERUPS).map(type=>powerupAssets.create(type)),warmFading=Object.keys(POWERUPS).map(type=>powerupAssets.create(type));
+    for(const g of warmFading){g.visible=true;fadeMaterials(g).set(.5);}
+    return {world,warm:[...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,enemyAssets.faces.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create(),explosionFx.warmGroup()],
+      textures:()=>[...weaponSurfaces().textures,...katanaSurfaces().textures,island.depthMap,enemyAssets.surfaces.map,enemyAssets.surfaces.bumpMap,enemyAssets.surfaces.detail],
       done(){viewModels.forEach((g,i)=>g.visible=savedVisibility[i]);scopeMasks.forEach((mask,i)=>mask.visible=savedMasks[i]);gunRoot.visible=savedGun;grenadeThrow.cancel();}};
   });
 }

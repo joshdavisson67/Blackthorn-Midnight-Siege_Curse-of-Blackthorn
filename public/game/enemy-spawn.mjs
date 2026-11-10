@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {FERAL} from './feral.mjs?v=205';
+import {FERAL} from './feral.mjs?v=206';
 import {enemyBody} from './crowd.mjs?v=123';
 import {staggerLimits} from './combat-feedback.mjs?v=205';
 import {DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from './zombie-dog.mjs?v=183';
@@ -20,6 +20,8 @@ import {rollFace,applyFace,resetFaceGeometry,disposeFace} from './zombie-faces.m
 export function createEnemySpawner({level,run,rules}){
   const {colliders,isBlocked,supportBelow,floorHeight,crouchAt,canStand,crowd}=level;
   const {player,zombies,scene,enemyAssets,rng,rand}=run;
+  // v206: where an enemy at floor height y stands (see enemy-ai.mjs).
+  const standAt=level.standAt||((x,z,y)=>Math.abs(y)>.1?y:floorHeight(x,z));
   function makeZombie(x,z,brute=false,dog=false,rareDog=false,y=0,feral=false,asset={}){
     if(feral){dog=rareDog=brute=false;}else if(rareDog){dog=true;brute=false;}
     const rig=enemyAssets.instantiate({rng,brute,dog,rareDog,feral,...asset}),cfg=rules.enemyStats(),hp=cfg.health*(dog?.85:brute?BRUTE.healthMultiplier:1)*(rareDog?2:1);
@@ -36,7 +38,7 @@ export function createEnemySpawner({level,run,rules}){
     if(!dog)applyBuild(e,rollBuild(e.navigation.seed,{feral,brute}));
     // v183: and a face of its own: one of its body's heads, proportions, jaw hang and eye glow.
     if(!dog)applyFace(e,rollFace(e.navigation.seed,enemyAssets.faces.count(e.templateIndex)),enemyAssets.faces);
-    scene.add(e.group);e.group.position.set(x,Math.abs(y)>.1?y-.02:floorHeight(x,z)-.02,z);tagZombie(e,e);zombies.push(e);return e;
+    scene.add(e.group);e.group.position.set(x,standAt(x,z,y)-.02,z);tagZombie(e,e);zombies.push(e);return e;
   }
   // v178: natural spawns may arrive battle-worn (missing arm or jaw, crushed
   // skull, legless and crawling, something driven through them).

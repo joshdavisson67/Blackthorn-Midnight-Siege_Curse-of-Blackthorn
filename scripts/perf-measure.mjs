@@ -8,6 +8,7 @@
 //   node scripts/perf-measure.mjs                      # the mansion (index.html)
 //   node scripts/perf-measure.mjs --page modes.html    # the mode picker
 //   node scripts/perf-measure.mjs --page tide.html     # Dead Tide (v204): its island, on its own page
+//                                                     # (v206: and a 45-enemy fight, the plan's cap)
 //   node scripts/perf-measure.mjs --out perf/v193-siege.json --label v193
 //   node scripts/perf-measure.mjs --game ../old-checkout/public/game   # another build
 //   node scripts/perf-measure.mjs --load-only                          # time to playable only
@@ -79,9 +80,16 @@ if(tide)appendFileSync(join(stage,'tide.mjs'),`
    stats(){const i=renderer.info;return {calls:i.render.calls,triangles:i.render.triangles,cpu,programs:i.programs?.length??0,geometries:i.memory.geometries,textures:i.memory.textures};},
    // Dead Tide marks when its modules have loaded, its island is built and its shaders are compiled.
    phases(){const at=n=>performance.getEntriesByName(n)[0]?.startTime??null;return {modules:at('tide:modules'),world:at('tide:world'),shaders:at('tide:shaders')};},
-   view(x,z,yaw,pitch){Object.defineProperty(document,'pointerLockElement',{configurable:true,get:()=>canvas});session.mode='playing';session.pointer=true;keys.clear();
+   view(x,z,yaw,pitch){Object.defineProperty(document,'pointerLockElement',{configurable:true,get:()=>canvas});if(typeof shore==='object')shore.target=0;session.mode='playing';session.pointer=true;keys.clear();
      $('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');player.set(x,groundHeight(x,z),z);runState.grounded=true;runState.jumpV=0;session.lookYaw=yaw;session.lookPitch=pitch;},
-   blast(x,z){combat.explode(new T.Vector3(x,groundHeight(x,z)+.3,z));}
+   blast(x,z){combat.explode(new T.Vector3(x,groundHeight(x,z)+.3,z));},
+   // v206: the 45-enemy stress test (the plan's hard cap): a mixed ring of the dead around you on
+   // the south beach, unkillable, with you unkillable too. Builds from before v206 have no dead.
+   fight:typeof shore==='object'?n=>{clearTheDead();shore.target=0;window.__perf.view(0,40,0,-.05);runState.health=runState.maxHealth=1e9;
+     const kinds=['walker','walker','walker','brute','walker','feral','walker','dog','walker','walker','ashfang','walker','feral','walker','brute','walker'];
+     for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=9+(i%4)*1.6;const e=spawnKind(kinds[i%kinds.length],Math.sin(a)*r,40+Math.cos(a)*r*.55,0);e.hp=e.maxHp=1e9;}
+     return zombies.filter(e=>!e.dead).length;}:null,
+   alive(){return zombies.filter(e=>!e.dead).length;}
  };}
 `);
 
@@ -155,6 +163,12 @@ if(mansion){
   for(const [name,x,z,yaw,pitch] of views){await q(v=>window.__perf.view(...v),[x,z,yaw,pitch]);await measure(name);}
   // A grenade blast in view: its effects were compiled under the loading screen, so no new shaders now.
   await q(()=>{window.__perf.view(0,46.5,.073,-.1);window.__perf.blast(0,40);});await measure('blast');
+  // v206: the 45-enemy stress test, when the build has the dead.
+  if(await q(()=>!!window.__perf.fight)){
+    const alive=await q(n=>window.__perf.fight(n),45);const hitch=await frames(10);await frames(5);
+    const a=await q(()=>window.__perf.stats()),d=await frames(FIGHT_FRAMES),b=await q(()=>window.__perf.stats());
+    result.fight={enemies:alive,stillAlive:await q(()=>window.__perf.alive()),firstFramesMaxMs:+Math.max(...hitch).toFixed(2),drawCalls:Math.round((b.calls-a.calls)/FIGHT_FRAMES),trianglesK:Math.round((b.triangles-a.triangles)/FIGHT_FRAMES/1000),renderCpuMs:+((b.cpu-a.cpu)/FIGHT_FRAMES).toFixed(2),...summary(d),heapMB:await heap(),heapAfterGcMB:await heapGc()};log(`fight: ${JSON.stringify(result.fight)}`);
+  }
   const s1=await q(()=>window.__perf.stats());result.gpu.shaderProgramsAfterPlay=s1.programs;result.heapAfterPlayMB=await heap();result.heapAfterPlayAfterGcMB=await heapGc();
 }else{
   const loaded=Date.now()-t0;await new Promise(r=>setTimeout(r,800));

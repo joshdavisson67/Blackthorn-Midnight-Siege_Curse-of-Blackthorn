@@ -28,6 +28,8 @@ export const ISLAND=Object.freeze({
   beacon:Object.freeze({period:1.6,on:.55})   // the tower's red light: on .55 s of every 1.6 s
 });
 const {coast:COAST,hill:HILL,lowland:LOW,seabed:DEEP}=ISLAND;
+// v206: the routes' grid (cell size and half-width, m).
+export const NAV=Object.freeze({cell:.5,extent:84});
 const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
 export function coastRadius(bearing){let r=COAST.radius;for(const [a,f,p] of COAST.waves)r+=a*Math.sin(f*bearing+p);return r;}
 // How far out from the centre a point is, as a fraction of the coast radius on its bearing.
@@ -141,7 +143,7 @@ void main(){
   }
   // Walking: short sub-steps, sliding along whatever blocks. On the ground the feet
   // follow it up and down; the sea is wadeable to ISLAND.wade and slows you as it deepens.
-  function move(pos,dx,dz,r=.32,{grounded=true,height=1.8}={}){
+  function move(pos,dx,dz,r=.32,{grounded=true,height=1.8,canOccupy=null}={}){
     const depth=Math.max(0,-groundHeight(pos.x,pos.z)),drag=1-.45*Math.min(1,depth/ISLAND.wade);dx*=drag;dz*=drag;
     function step(x,z){
       if(groundHeight(x,z)<-ISLAND.wade)return;
@@ -150,6 +152,7 @@ void main(){
       const y=grounded&&near?surface:pos.y;
       if(isBlocked(x,z,r,colliders,null,y,height))return;
       if(y+height>ceilingAt(x,z,y))return;
+      if(canOccupy&&!canOccupy(x,z,y))return;   // v206: bodies never overlap
       pos.x=x;pos.z=z;if(grounded&&near)pos.y=surface;
     }
     const n=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.10));for(let i=0;i<n;i++){step(pos.x+dx/n,pos.z);step(pos.x,pos.z+dz/n);}return pos;
@@ -291,7 +294,73 @@ void main(){
   // The beacon blinks and the sea moves.
   function update(elapsed){seaMat.uniforms.time.value=elapsed;const on=(elapsed%ISLAND.beacon.period)<ISLAND.beacon.on;beaconMat.emissiveIntensity=on?3.2:.25;beaconLight.intensity=on?26:0;}
 
-  return {colliders,platforms,solidMeshes,lights,sea,seaMat,depthMap,beacon,beaconLight,lamp,palms:palmSpots,rocks:rockSpots,shack,tower,wreck,summit,moonDir,
+  // ---- Routes (v206) ---------------------------------------------------------------------------
+  // A flow field toward the player over the land and the wadeable shallows, in 0.5 m cells (fine
+  // enough for the shack's door). A cell is open when a body of the given radius stands there
+  // clear of every collider, on the ground or the shack's deck; it is rebuilt only when the
+  // player reaches another cell. The shape the shared enemy AI expects: direction(x,z,y,
+  // preference) gives the next cell on the way, whether the player can be reached from here,
+  // and how far it is (m). Heights are the enemies' own, relative to the ground.
+  function buildRoutes({radius=.44,height=1.8}={}){
+    const C=NAV.cell,E=NAV.extent,w=Math.round(2*E/C)+1,n=w*w,blocked=new Uint8Array(n),distance=new Int32Array(n),queue=new Int32Array(n);
+    const at=i=>[(i%w)*C-E,Math.floor(i/w)*C-E];
+    for(let i=0;i<n;i++){const [x,z]=at(i);if(groundHeight(x,z)<-(ISLAND.wade-.05)||Math.abs(x)+radius>ISLAND.bounds||Math.abs(z)+radius>ISLAND.bounds)blocked[i]=1;}
+    // Only cells near a collider can be blocked by one.
+    for(const c of colliders){const reach=(c.r??Math.hypot(c.w,c.d)/2)+radius+C;
+      for(let iz=Math.max(0,Math.floor((c.z-reach+E)/C));iz<=Math.min(w-1,Math.ceil((c.z+reach+E)/C));iz++)for(let ix=Math.max(0,Math.floor((c.x-reach+E)/C));ix<=Math.min(w-1,Math.ceil((c.x+reach+E)/C));ix++){
+        const i=iz*w+ix;if(blocked[i])continue;const [x,z]=at(i),y=supportBelow(x,z,groundHeight(x,z),ISLAND.step);
+        if(isBlocked(x,z,radius,colliders,null,y,height)||y+height>ceilingAt(x,z,y))blocked[i]=1;}}
+    const index=(x,z)=>{const ix=Math.round((x+E)/C),iz=Math.round((z+E)/C);return ix<0||ix>=w||iz<0||iz>=w?-1:iz*w+ix;};
+    distance.fill(99999);let target=-2;
+    return {cell:C,w,blocked,distance,index,
+      rebuild(x,z){let t=index(x,z);if(t<0){distance.fill(99999);target=-2;return;}
+        if(blocked[t]){let best=Infinity;const ix=t%w,iz=Math.floor(t/w);for(let r=1;r<=12&&best===Infinity;r++)for(let dz=-r;dz<=r;dz++)for(let dx=-r;dx<=r;dx++){const jx=ix+dx,jz=iz+dz;if(jx<0||jz<0||jx>=w||jz>=w)continue;const j=jz*w+jx,d=dx*dx+dz*dz;if(!blocked[j]&&d<best){best=d;t=j;}}}
+        if(t===target)return;target=t;distance.fill(99999);let head=0,tail=0;queue[tail++]=t;distance[t]=0;
+        while(head<tail){const i=queue[head++],ix=i%w,next=distance[i]+1;
+          if(ix>0&&!blocked[i-1]&&distance[i-1]>next){distance[i-1]=next;queue[tail++]=i-1;}
+          if(ix<w-1&&!blocked[i+1]&&distance[i+1]>next){distance[i+1]=next;queue[tail++]=i+1;}
+          if(i>=w&&!blocked[i-w]&&distance[i-w]>next){distance[i-w]=next;queue[tail++]=i-w;}
+          if(i<n-w&&!blocked[i+w]&&distance[i+w]>next){distance[i+w]=next;queue[tail++]=i+w;}}
+      },
+      direction(x,z,y=0,preference=null){
+        const i=index(x,z);if(i<0)return null;let best=i,bestCost=Infinity;const ix=i%w;
+        for(const j of [ix>0?i-1:-1,ix<w-1?i+1:-1,i>=w?i-w:-1,i<n-w?i+w:-1]){
+          if(j<0||blocked[j]||distance[j]>=distance[i])continue;
+          if(!preference){if(distance[j]<distance[best])best=j;continue;}
+          const [px,pz]=at(j);let hash=Math.imul(j^preference.seed,0x45d9f3b);hash^=hash>>>16;
+          const cost=distance[j]+(hash>>>0)/4294967296*.65+preference.crowding(px,pz,0)*2;
+          if(cost<bestCost){bestCost=cost;best=j;}
+        }
+        const [px,pz]=at(best);return {x:px,z:pz,y:0,reachable:distance[best]<99999,distance:distance[best]*C};
+      }};
+  }
+
+  return {colliders,platforms,solidMeshes,lights,sea,seaMat,depthMap,beacon,beaconLight,lamp,palms:palmSpots,rocks:rockSpots,shack,tower,wreck,summit,moonDir,buildRoutes,
     wreckAt:{x:wx,z:wz,heading},groundHeight,supportBelow,ceilingAt,isBlocked,move,updateHeight,zoneAt,update,
     shackInside,visibleFloor:(x,z,support)=>support,floorHeight:(x,z)=>groundHeight(x,z)};
+}
+
+// ---- Where the dead come ashore (v206) ------------------------------------------------------
+// The spawn network from the Dead Tide plan: 8 major shoreline zones (each a stretch of
+// waterline, five points along it), 14 minor shoreline points between them, and 6 concealed
+// interior zones that stay off until the threat director opens them (step 3). The major zones
+// are named by compass bearing until the landmarks they are named for are built. North is -z.
+// Shoreline points sit in the shallows, SHORE.depth deep, where the dead rise out of the
+// surf. These are candidates only: the director still checks each one before using it.
+export const SHORE=Object.freeze({depth:.35,zoneSpread:.09,
+  major:Object.freeze([['NORTH BEACH',-Math.PI/2],['NORTH-EAST REEF',-Math.PI/4],['EAST SHORE',0],['SOUTH-EAST COVE',Math.PI/4],['SOUTH SHORE',Math.PI/2],['SOUTH-WEST BEACH',Math.PI*3/4],['WEST SHORE',Math.PI],['NORTH-WEST REEF',-Math.PI*3/4]]),
+  minor:14,
+  interior:Object.freeze([['JUNGLE RUIN BRUSH',-36,-30],['NORTH BRUSH',-6,-40],['BUNKER FOLIAGE',30,-32],['EAST THICKET',36,-2],['SOUTH BRUSH',0,28],['SOUTH-WEST FOLIAGE',-30,20]])
+});
+// The point in the shallows on a bearing: walking out from the land until the water is this deep.
+export function waterline(bearing,depth=SHORE.depth){
+  const c=Math.cos(bearing),s=Math.sin(bearing);let r=coastRadius(bearing)*.7;
+  while(groundHeight(c*r,s*r)>-depth&&r<120)r+=.05;
+  return [+(c*r).toFixed(3),+(s*r).toFixed(3)];
+}
+export function shoreSpawns(){
+  const major=SHORE.major.map(([name,bearing])=>({name,bearing,kind:'major',points:[-2,-1,0,1,2].map(k=>waterline(bearing+k*SHORE.zoneSpread/2))}));
+  const minor=Array.from({length:SHORE.minor},(_,k)=>{const bearing=-Math.PI/2+(k+.5)*Math.PI*2/SHORE.minor;return {name:`SHORE ${k+1}`,bearing,kind:'minor',points:[waterline(bearing)]};});
+  const interior=SHORE.interior.map(([name,x,z])=>({name,kind:'interior',points:[[x,z],[x+2.5,z+1],[x-2,z+2]]}));
+  return {major,minor,interior};
 }

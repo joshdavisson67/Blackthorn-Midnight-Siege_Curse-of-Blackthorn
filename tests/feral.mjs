@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {FERAL,chooseEnemyKind} from '../public/game/feral.mjs';
+import {FERAL} from '../public/game/feral.mjs';
+import {chooseEnemyKind} from '../public/game/curse.mjs';
 import {waveConfig} from '../public/game/core.mjs';
 import {enrageNearby} from '../public/game/enrage.mjs';
 import {UPPER_Y} from '../public/game/vertical.mjs';

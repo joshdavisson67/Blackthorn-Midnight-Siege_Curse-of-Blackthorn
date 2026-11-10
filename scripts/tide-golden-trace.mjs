@@ -124,6 +124,24 @@ const scenarios={
   // Grenades and death: a safe throw, a blast at your feet, the tide taking you, and New Run.
   death:{frames:540,script:f=>f===1?()=>{qa.setAim(0,-.2);key('KeyG');}:f===2?()=>keyUp('KeyG'):f===300?()=>qa.explode(G().player.clone().add(new T.Vector3(1,.3,0))):f===340?()=>qa.hurtPlayer(500):f===420?()=>$('restart').onclick():null,
     watch:()=>note('death: dead',G().mode==='dead')},
+  // v206, the dead come ashore: the shore at its usual eight. You hold the south beach, turning
+  // to the nearest walker and firing (reloading when empty, a grenade once), then hold the
+  // summit of Radio Hill as they climb after you; they strike, you fall or survive.
+  fight:{frames:4200,dead:true,script:f=>{
+    if(f===1)return ()=>{qa.setAim(0,0);};
+    if(f===3000)return ()=>{qa.setPlayer(H.x,H.z+3);};
+    if(f===700)return ()=>{key('KeyG');};if(f===701)return ()=>keyUp('KeyG');
+    if(f%10===0)return ()=>{const s=G(),alive=s.zombies.filter(e=>!e.dead&&!(e.emergeLeft>0));if(!alive.length)return;
+      let near=alive[0],best=Infinity;for(const e of alive){const d=Math.hypot(e.walkPos.x-s.player.x,e.walkPos.z-s.player.z);if(d<best){best=d;near=e;}}
+      const tip=near.group.position.clone().add(new T.Vector3(0,1.3,0)),eye=s.camera.position,dx=tip.x-eye.x,dy=tip.y-eye.y,dz=tip.z-eye.z;
+      qa.setAim(Math.atan2(-dx,-dz),Math.atan2(dy,Math.hypot(dx,dz)));
+      if(f%20===0&&best<(f>1800&&f<3000?0:30)){if(s.run.inventory[s.run.weapon].ammo>0)qa.shoot();else if(!(s.run.reloadLeft>0))qa.reload();}};
+    return null;},
+    watch:()=>{const s=G();note('fight: kills',s.run.kills>0);note('fight: hurt',s.run.health<100);note('fight: emerging',s.zombies.some(e=>e.emergeLeft>0));note('fight: dead',s.mode==='dead');note('fight: pickups',s.pickups.length>0);note('fight: summit',s.zone.includes('SUMMIT'));}},
+  // v206: on the summit of Radio Hill with the gun lowered; the dead climb its slopes to you
+  // and strike. Then into the shack: they follow you through its door.
+  summit:{frames:4200,dead:true,script:f=>f===1?()=>{qa.setPlayer(H.x,H.z+3);qa.setAim(0,-.3);}:f===2400?()=>{qa.setPlayer(S.x,S.z);}:null,
+    watch:()=>{const s=G();note('summit: hurt',s.run.health<100);note('summit: climbing',s.zombies.some(e=>!e.dead&&groundHeight(e.walkPos.x,e.walkPos.z)>9));note('summit: in the shack',s.zombies.some(e=>!e.dead&&s.island.shackInside(e.walkPos.x,e.walkPos.z)));}},
   // The session: pause, Settings and the controls card, Resume, a pause to the title, and back in.
   session:{frames:480,script:f=>f===30?()=>key('Escape'):f===60?()=>$('settingsPause').onclick():f===90?()=>key('Escape'):f===120?()=>$('controlsPause').onclick():f===150?()=>key('Escape'):f===180?()=>$('resume').onclick():
     f===260?()=>key('Escape'):f===290?()=>$('mainMenuPause').onclick():f===320?()=>$('confirmYes').onclick():f===400?()=>enter():null,
@@ -133,9 +151,14 @@ const scenarios={
 const out={tide:true,boot:fullLogs?bootLog.join('\n'):fnv(bootLog.join('\n'))};
 enter();await settle();
 let index=0;
-for(const [name,sc] of Object.entries(scenarios)){
+// The island's own scenarios first, then the fights (v206), so nothing a fight leaves behind
+// reaches a scenario that builds before the dead also play.
+const order=Object.keys(scenarios).sort((a,b)=>(scenarios[a].dead?1:0)-(scenarios[b].dead?1:0));
+for(const name of order){const sc=scenarios[name];
   seed=0x71de5+(++index)*977;Math.random=seeded;qa.setSeed?.(206+index);
   qa.resetRun();await settle();
+  // v206: the island's own scenarios hold the shore (no dead), so they match builds before it.
+  if(!sc.dead&&G().shore)G().shore.target=0;
   sc.setup?.();step();renderLog.length=0;audioLog.length=0;
   const known=new WeakSet(),births=[],frames=[snapshot()];
   for(let f=1;f<=sc.frames;f++){
@@ -146,6 +169,8 @@ for(const [name,sc] of Object.entries(scenarios)){
   qa.setKeys([]);listeners.mouseup?.({button:0});listeners.mouseup?.({button:2});
   out[name]={frames,births};
 }
-console.log(JSON.stringify(out));
+// Written synchronously: a pipe (as release-tier.mjs reads it) would lose the end of a large
+// asynchronous write when the process exits.
+(await import('node:fs')).writeSync(1,JSON.stringify(out)+'\n');
 console.error('coverage: '+Object.entries(seen).filter(([k])=>!k.startsWith('sound:')).map(([k,v])=>`${k} ${v}`).join(', '));
 process.exit(0);

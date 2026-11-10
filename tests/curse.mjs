@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {CURSE_RULES,MAX_CURSE_RANK,CURSE_LADDER_KEYS,curseTitle,curseModifiers,curseWaveConfig,curseReward,chooseCurseEnemyKind,createCurse,createCurseLadder,clampCurseRank} from '../public/game/curse.mjs';
 import {curseSummary} from '../public/game/curse-ui.mjs';
 import {waveConfig} from '../public/game/core.mjs';
-import {chooseEnemyKind} from '../public/game/feral.mjs';
+import {chooseEnemyKind} from '../public/game/curse.mjs';
 import {DOG_SPEED_MULTIPLIER,RARE_DOG_SPEED_MULTIPLIER} from '../public/game/zombie-dog.mjs';
 
 function memory(initial={}){const data={...initial};return {data,getItem:k=>k in data?data[k]:null,setItem:(k,v)=>{data[k]=String(v);}};}

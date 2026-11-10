@@ -9,10 +9,12 @@
 //   node scripts/frame-logic.mjs <other checkout>
 //   node scripts/frame-logic.mjs --mode tide [<checkout>]  # Dead Tide (v206): see below
 //
-// Dead Tide has no enemies yet, so its frames are the player's own: walking a circle on
-// the beach with the Glock, firing four times a second. When its enemies come ashore,
-// add a fight here as the mansion has. A checkout from before v206 has no Dead Tide
-// harness of its own, so this checkout's tests/tide-harness.mjs plays its game.
+// Dead Tide (--mode tide): the player's own frames, walking a circle on the beach with the
+// Glock, firing four times a second, with the shore held (v206) so builds before and after
+// the dead play the same frames. --mode tide-fight (v206): the 45-enemy stress test, a mixed
+// ring of unkillable dead around an unkillable player who keeps firing (builds with the dead
+// only). A checkout from before v206 has no Dead Tide harness of its own, so this checkout's
+// tests/tide-harness.mjs plays its game.
 //
 // Prints the median and the fastest of five 300-frame samples, in ms per frame.
 import {existsSync} from 'node:fs';
@@ -20,7 +22,7 @@ import {resolve,dirname} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 const here=resolve(dirname(fileURLToPath(import.meta.url)),'..'),argv=process.argv.slice(2);
 const mi=argv.indexOf('--mode'),mode=mi>=0?argv[mi+1]:'mansion',repo=resolve(argv.filter((a,i)=>mi<0||i!==mi&&i!==mi+1)[0]||here);
-if(!['mansion','tide'].includes(mode)){console.error('--mode is mansion or tide');process.exit(2);}
+if(!['mansion','tide','tide-fight'].includes(mode)){console.error('--mode is mansion, tide or tide-fight');process.exit(2);}
 let seed=1;Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 const log=console.log;
 let frames;
@@ -34,10 +36,15 @@ if(mode==='mansion'){
   const h=await import(pathToFileURL(existsSync(own)?own:resolve(here,'tests/tide-harness.mjs')).href),qa=h.qa,step=h.frames;console.log=()=>{};
   h.entry()();await Promise.resolve();
   if(qa.get().mode!=='playing')throw new Error('Dead Tide did not start');
-  let n=0;const start=qa.get().player.clone();qa.setPlayer(start.x,start.z);qa.setKeys(['KeyW']);
+  if(qa.get().shore)qa.get().shore.target=0;
+  if(mode==='tide-fight'){const g=qa.get();if(!g.spawnKind)throw new Error('This build has no dead');g.run.health=g.run.maxHealth=1e9;qa.setPlayer(0,40);
+    const kinds=['walker','walker','walker','brute','walker','feral','walker','dog','walker','walker','ashfang','walker','feral','walker','brute','walker'];
+    for(let i=0;i<45;i++){const a=i/45*Math.PI*2,r=9+(i%4)*1.6;const e=g.spawnKind(kinds[i%kinds.length],Math.sin(a)*r,40+Math.cos(a)*r*.55,0);e.hp=e.maxHp=1e9;}}
+  let n=0;const start=qa.get().player.clone();qa.setPlayer(start.x,start.z);qa.setKeys(mode==='tide'?['KeyW']:[]);
   frames=count=>{for(let i=0;i<count;i++,n++){qa.setAim(n/600*Math.PI*2,-.05);if(n%15===0){qa.get().run.inventory.glock.ammo=13;qa.shoot();}step(1);}};
   frames(120);const g=qa.get();
-  if(g.player.distanceTo(start)<1||!g.effects.length)throw new Error('Dead Tide frame logic: the player should be walking and firing');
+  if(g.player.distanceTo(start)<1&&mode==='tide'||!g.effects.length&&mode==='tide')throw new Error('Dead Tide frame logic: the player should be walking and firing');
+  if(mode==='tide-fight'&&g.zombies.filter(e=>!e.dead).length!==45)throw new Error('the stress test needs 45 dead');
 }
 const samples=[];for(let k=0;k<5;k++){const t=performance.now();frames(300);samples.push((performance.now()-t)/300);}
 samples.sort((a,b)=>a-b);

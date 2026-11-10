@@ -1,5 +1,14 @@
-import {waveConfig} from './core.mjs?v=205';
-import {FERAL,chooseEnemyKind} from './feral.mjs?v=205';
+import {waveConfig,enemyKind} from './core.mjs?v=205';
+import {FERAL} from './feral.mjs?v=206';
+
+// The mansion's wave mix (moved here from feral.mjs in v206, unchanged).
+export function chooseEnemyKind(wave,slot,roll=Math.random()){
+  const kind=enemyKind(wave,slot);
+  if(wave<FERAL.unlockWave||kind==='brute'||kind==='ashfang')return kind;
+  // The existing brute/Ashfang schedule reserves 26 of every 140 slots.
+  // Compensate across the other 114 slots for ~1 in 8 total spawns.
+  return roll<FERAL.chance*140/114?'feral':kind;
+}
 
 // The curse is a ladder (v130): each run is played at one chosen rank, and
 // defeating Sir Blackthorn at the highest unlocked rank unlocks the next.
