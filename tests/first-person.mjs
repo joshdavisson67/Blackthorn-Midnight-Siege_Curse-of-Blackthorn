@@ -11,7 +11,7 @@ export async function verifyFirstPerson(){
   const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),game=resolve(root,'public/game'),read=f=>readFileSync(resolve(game,f),'utf8');
   // ---- Isolation ------------------------------------------------------------------------
   const imports=f=>[...read(f).matchAll(/^import[^'"]*['"]\.\/([\w.-]+?)(?:\?v=\d+)?['"]/gm)].map(m=>m[1]);
-  assert.deepEqual(imports('first-person.mjs'),['three.module.js','weapon-models.mjs','reload-pose.mjs','graphics.mjs'],'The view imports only three.js, the gun models, the reload pose and the graphics toolkit');
+  assert.deepEqual(imports('first-person.mjs'),['three.module.js','weapon-models.mjs','reload-pose.mjs','graphics.mjs','katana.mjs'],'The view imports only three.js, the gun models, the reload pose, the graphics toolkit and (v205) the katana');
   const closure=new Set(),walk=f=>{if(closure.has(f))return;closure.add(f);for(const g of imports(f))walk(g);};walk('first-person.mjs');
   const mansion=['vertical.mjs','cellar-layout.mjs','cellar.mjs','graveyard.mjs','mansion-expansion.mjs','second-floor.mjs','facade.mjs','furnishings.mjs','grounds.mjs','estate-detail.mjs','shed.mjs','shed-layout.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','rotunda-bell.mjs','world-events.mjs','world-event-visuals.mjs','curse.mjs','curse-ui.mjs','camp-spawns.mjs','upper-shell.mjs','exterior-stairs.mjs','lighting.mjs','estate-layout.mjs','environment-lights.mjs'];
   assert.deepEqual([...closure].filter(f=>mansion.includes(f)),[],'Nothing the view loads builds or holds the mansion');
@@ -25,7 +25,7 @@ export async function verifyFirstPerson(){
   const scene=new T.Scene(),camera=new T.PerspectiveCamera(75,2,.09,240);camera.rotation.order='YXZ';scene.add(camera);
   const V=createFirstPerson({camera,batchArticulated:()=>{}});
   assert(V.gunRoot.parent===camera&&V.gunRoot.position.toArray().join()==='0.28,-0.26,-0.48','The guns ride on the camera at the hip');
-  assert.deepEqual(Object.keys(V.gunGroups),['glock','rifle','shotgun','smg','lmg','bushmaster'],'Every gun is built');
+  assert.deepEqual(Object.keys(V.gunGroups),['glock','rifle','shotgun','smg','lmg','bushmaster','katana'],'Every gun (and, v205, the katana) is built');
   assert(!V.bushDot.visible&&!V.smgDual.visible&&V.dualGuns.length===2&&V.dualGuns.every(d=>d.g.parent===V.smgDual),'with the dot-sight Bushmaster and the Twin Ravens hidden until earned');
   assert.deepEqual(V.scopedGuns.map(s=>s.type),['lmg','bushmaster'],'Magnified sights get a mask');assert(V.scopedGuns.every(s=>s.sight.mask&&!s.sight.mask.visible));
   let meshes=0;V.gunRoot.traverse(o=>{if(o.isMesh){meshes++;assert(!o.castShadow&&!o.receiveShadow,'Guns in hand cast no shadows');}});assert(meshes>50);

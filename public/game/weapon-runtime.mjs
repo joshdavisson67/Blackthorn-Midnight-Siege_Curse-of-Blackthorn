@@ -1,30 +1,31 @@
 import * as T from './three.module.js';
-import {weapons,weaponAimFov} from './weapon-stats.mjs?v=204';
-import {COMBAT} from './combat-feedback.mjs?v=184';
+import {weapons,weaponAimFov} from './weapon-stats.mjs?v=205';
+import {COMBAT} from './combat-feedback.mjs?v=205';
 import {INJURY} from './zombie-injuries.mjs?v=178';
-import {forgeBonuses} from './soul-forge.mjs?v=118';
-import {setPistolDot} from './weapon-models.mjs?v=187';
+import {forgeBonuses} from './soul-forge.mjs?v=205';
+import {setPistolDot} from './weapon-models.mjs?v=205';
 import {nextRank,rankMagazine,rankReserve,rankDamage,rankFireRate,rankHasDot,rankReloadTime,rankDual,rankAuto,rankRecoil,rankDetonate} from './weapon-ranks.mjs?v=191';
 import {GRENADE_THROW} from './grenade-throw.mjs?v=186';
-import {POWERUPS} from './powerups.mjs?v=190';
+import {POWERUPS} from './powerups.mjs?v=205';
+import {KATANA,SLASHES,slashTargets,slashImpact} from './katana.mjs?v=205';
 
 // Weapon runtime (v197, Dead Tide step 1): firing, reloading, ammunition, weapon
 // ranks and their effects, the first-person gun on screen, grenades and power-ups,
-// for any map. Moved from game.js unchanged; scripts/golden-trace.mjs checks the
+// for any map. v205: the katana's slashes too (`run.player` is where you stand). Moved from game.js unchanged; scripts/golden-trace.mjs checks the
 // mansion plays identically. The run's own values (inventory, the held weapon,
 // timers, essence, aim) still live with the mode and are reached through `state`;
 // the README's version 197 section lists every field.
 export function createWeaponRuntime({level,view,run,state:S,combat}){
   const {colliders,isBlocked,solidMeshes}=level;
   const {camera,gunGroups,bushDot,smgDual,dualGuns,dualMuzzle,flash,reticleHud,weaponRecoil,grenadeThrow,grenadeAssets}=view;
-  const {scene,zombies,effects,markPool,rand,tone,noise,notify,rumble,suppressedReport,updateHud,updateReloadHud}=run;
+  const {scene,zombies,effects,markPool,rand,tone,noise,notify,rumble,suppressedReport,updateHud,updateReloadHud,player}=run;
   const clamp=T.MathUtils.clamp,dir=new T.Vector3(),grenadeLaunchRay=new T.Raycaster();
   // Weapon ranks set the base magazine (v159) and a reserve that grows with it
   // (v160); the Soul Forge scales both on top.
-  function ammoCapacity(k=S.weapon){const inv=S.inventory[k],w=weapons[k],multiplier=forgeBonuses(inv.forgeRank).ammoMultiplier;return {mag:Math.ceil(rankMagazine(k,inv.weaponRank,w.mag)*multiplier)*(rankDual(k,inv.weaponRank)?2:1),reserve:Math.ceil(rankReserve(k,inv.weaponRank,w.mag,w.reserve)*multiplier)};}
+  function ammoCapacity(k=S.weapon){if(weapons[k].melee)return {mag:0,reserve:0};const inv=S.inventory[k],w=weapons[k],multiplier=forgeBonuses(inv.forgeRank).ammoMultiplier;return {mag:Math.ceil(rankMagazine(k,inv.weaponRank,w.mag)*multiplier)*(rankDual(k,inv.weaponRank)?2:1),reserve:Math.ceil(rankReserve(k,inv.weaponRank,w.mag,w.reserve)*multiplier)};}
   function freshInventory(){return Object.fromEntries(Object.entries(weapons).map(([k,v])=>[k,{ammo:v.mag,reserve:v.reserve,owned:k==='glock',forgeRank:0,weaponRank:0}]));}
-  function selectWeapon(k){if(!S.inventory[k].owned||S.reloadLeft>0)return;if(S.weapon!==k){weaponRecoil.reset();camera.fov=S.weaponViewFov=75;camera.updateProjectionMatrix();}S.weapon=k;reticleHud.select(k);S.recoil=.06;flash.position.copy(viewGun(k).userData.muzzle);flash.scale.setScalar(k==='glock'?.58:k==='smg'?.32:1);flash.position.z-=.11*flash.scale.x;for(const t in gunGroups)gunGroups[t].visible=t===k;syncDualSmg();syncBushmasterSight();updateHud();}
-  function shoot(){if(S.mode!=='playing'||grenadeThrow.active||S.reloadLeft>0||S.shotTimer>0)return;const inv=S.inventory[S.weapon],w=weapons[S.weapon];if(inv.ammo<=0){S.shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;S.shotTimer=w.rate/rankFireRate(S.weapon,inv.weaponRank);{const r=run.shotRumble[S.weapon];if(r)rumble(...r);}const id=++S.shotId;if(S.weapon==='glock')gunGroups.glock.userData.slideTime=.12;if(dualOn())fireDualSide();S.flashTime=.045;if(S.weapon==='smg')suppressedReport();else{noise(S.weapon==='shotgun'?.22:.12,.18,S.weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);}const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
+  function selectWeapon(k){if(!S.inventory[k].owned||S.reloadLeft>0)return;if(S.weapon!==k){weaponRecoil.reset();camera.fov=S.weaponViewFov=75;camera.updateProjectionMatrix();if(swing.active||k==='katana')drawKatana(k);}S.weapon=k;reticleHud.select(k);S.recoil=.06;flash.position.copy(viewGun(k).userData.muzzle);flash.scale.setScalar(k==='glock'?.58:k==='smg'?.32:1);flash.position.z-=.11*flash.scale.x;for(const t in gunGroups)gunGroups[t].visible=t===k;syncDualSmg();syncBushmasterSight();updateHud();}
+  function shoot(){if(S.mode!=='playing'||grenadeThrow.active||S.reloadLeft>0||S.shotTimer>0)return;if(weapons[S.weapon].melee){slash();return;}const inv=S.inventory[S.weapon],w=weapons[S.weapon];if(inv.ammo<=0){S.shotTimer=.25;tone(120,.045,.03,'square');reload();return;}inv.ammo--;S.shotTimer=w.rate/rankFireRate(S.weapon,inv.weaponRank);{const r=run.shotRumble[S.weapon];if(r)rumble(...r);}const id=++S.shotId;if(S.weapon==='glock')gunGroups.glock.userData.slideTime=.12;if(dualOn())fireDualSide();S.flashTime=.045;if(S.weapon==='smg')suppressedReport();else{noise(S.weapon==='shotgun'?.22:.12,.18,S.weapon==='shotgun'?1200:2500);tone(80,.13,.1,'triangle',35);}const active=zombies.filter(e=>!e.dead).map(e=>e.group);const hitObjects=[...solidMeshes,...active];
   camera.rotation.set(clamp(S.lookPitch+weaponRecoil.pitch,-1.3,1.3),S.lookYaw+weaponRecoil.yaw,0);camera.updateMatrixWorld();
   for(let i=0;i<w.pellets;i++){const spread=S.aiming?(w.aimSpread??w.spread*.28):w.spread;dir.set(rand(-spread,spread),rand(-spread,spread),-1).normalize().applyQuaternion(camera.quaternion);run.raycaster.set(camera.position,dir);const hits=run.raycaster.intersectObjects(hitObjects,true);if(hits.length){const h=hits[0],e=h.object.userData.enemy;if(e&&!e.dead){const head=h.object.userData.head;const damage=w.damage*(S.perkOwned.has('eye')?1.5:1)*forgeBonuses(inv.forgeRank).damageMultiplier*rankDamage(S.weapon,inv.weaponRank)*(head?2.6*(e.crushed?INJURY.crushedHeadshot:1):1)*(S.doubleTime>0?2:1);combat.damageEnemy(e,damage,head,{direction:dir.clone(),point:h.point.clone(),part:h.object.userData.part,side:h.object.userData.side,limb:h.object.userData.limb,force:COMBAT[S.weapon].force,source:S.weapon,shotId:id});combat.bloodBurst(h.point,3);}else if(Math.random()<.5){const effect=markPool.acquire();if(effect){effect.mesh.position.copy(h.point);effect.mesh.scale.set(.025,.025,.025);effect.vel.set(0,0,0);effect.life=effect.max=6;effects.push(effect);}}const detonate=rankDetonate(S.weapon,inv.weaponRank);if(detonate)combat.detonateRound(h.point.clone().addScaledVector(dir,-.08),detonate,S.weapon);}}
   weaponRecoil.fire(S.weapon,S.aiming,rankRecoil(S.weapon,inv.weaponRank));if(inv.ammo===0)notify('MAGAZINE EMPTY · PRESS R');updateHud();}
@@ -101,6 +102,33 @@ export function createWeaponRuntime({level,view,run,state:S,combat}){
     effects.push({mesh:spoon,vel:velocity.clone().multiplyScalar(.35).addScaledVector(side,1.6).add(new T.Vector3(0,2.6,0)),life:2.4,max:2.4,type:'spoon',spin:new T.Vector3(17,9,4),rest:.004});
     tone(2600,.05,.012,'triangle',3400);
   }
+  // ---- The katana (v205): three slashes in turn, each cutting everything in the frontal
+  // arc within reach as the blade crosses the middle (katana.mjs). The view reads `swing`.
+  const swing={active:false,kind:0,time:0,hit:true,id:0,next:0,idle:Infinity};
+  function drawKatana(k){swing.active=false;swing.hit=true;swing.idle=Infinity;if(k==='katana'){tone(1900,.16,.018,'triangle',3100);noise(.05,.025,5200);}}
+  function slash(){
+    if(swing.idle>KATANA.combo)swing.next=0;
+    swing.kind=swing.next;swing.next=(swing.next+1)%SLASHES.length;
+    swing.active=true;swing.time=0;swing.hit=false;swing.id++;swing.idle=0;
+    S.shotTimer=KATANA.swing;S.shotId++;
+    noise(.15,.075,1300);tone(260,.13,.016,'sine',120);
+    {const r=run.shotRumble.katana;if(r)rumble(...r);}
+  }
+  function cut(){
+    const inv=S.inventory.katana,yaw=S.lookYaw;
+    const hits=slashTargets({player,yaw,zombies,blocked:(x,z,y,height)=>isBlocked(x,z,.04,colliders,undefined,y,height)});
+    const damage=KATANA.damage*(S.perkOwned.has('eye')?1.5:1)*forgeBonuses(inv.forgeRank).damageMultiplier*(S.doubleTime>0?2:1);
+    for(const {enemy} of hits){const impact=slashImpact(swing.kind,{player,yaw,enemy});combat.damageEnemy(enemy,damage,false,{...impact,shotId:S.shotId});combat.bloodBurst(impact.point,6);}
+    if(hits.length){tone(150,.09,.06,'sawtooth',70);noise(.07,.07,2600);rumble(.35,.5,90);}
+    return hits.length;
+  }
+  function updateMelee(dt){
+    if(!swing.active){swing.idle+=dt;return;}
+    swing.time+=dt;const s=SLASHES[swing.kind];
+    if(!swing.hit&&swing.time>=s.hitAt){swing.hit=true;if(S.weapon==='katana'&&S.mode==='playing')cut();}
+    if(swing.time>=s.length){swing.active=false;swing.idle=0;}
+  }
+  function meleeHeld(){return !!weapons[S.weapon].melee;}
   function grantPowerup(type){if(type==='ammo'){refillAmmo();notify('MAX AMMO · RESERVES RESTOCKED');}else if(type==='double'){S.doubleTime=POWERUPS.double.duration;notify('×2 · DOUBLE DAMAGE FOR 20s');}else if(type==='grenades'){S.grenadeTime=POWERUPS.grenades.duration;notify('INFINITE GRENADES · 12s · PRESS G');}}
-  return {ammoCapacity,freshInventory,restockTarget,restockWeapon,ammoFull,refillAmmo,shoot,reload,finishReload,holdToFire,buyWeaponRank,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,fireDualSide,selectWeapon,applyWeaponRanks,syncDualSmg,syncBushmasterSight,viewGun,bushDotOn,zoomOf,aimFovOf,aimHeight};
+  return {swing,updateMelee,meleeHeld,ammoCapacity,freshInventory,restockTarget,restockWeapon,ammoFull,refillAmmo,shoot,reload,finishReload,holdToFire,buyWeaponRank,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,fireDualSide,selectWeapon,applyWeaponRanks,syncDualSmg,syncBushmasterSight,viewGun,bushDotOn,zoomOf,aimFovOf,aimHeight};
 }

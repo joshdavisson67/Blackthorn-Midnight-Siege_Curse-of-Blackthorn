@@ -580,3 +580,5 @@ body.phone-ui #curseStart h2{font-size:24px;margin:6px 0}
 body.phone-ui #curseStart p{font-size:11px;line-height:1.45;margin:4px 0}
 body.phone-ui .curseStartList{margin:10px 0;gap:5px}
 body.phone-ui .curseOption{padding:7px 12px}
+/* v205: the katana shows MELEE where the ammunition count goes. */
+.weaponHud b.melee em{display:none}.weaponHud b.melee #ammo{font-size:.62em;letter-spacing:.16em;color:#dfe9e6}

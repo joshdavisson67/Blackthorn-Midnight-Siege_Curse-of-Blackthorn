@@ -1,5 +1,6 @@
 import * as T from './three.module.js';
 import {TOUCH} from './touch-controls.mjs?v=148';
+import {weapons} from './weapon-stats.mjs?v=205';
 
 // The play session (v200, Dead Tide step 1), for any mode: the session's own values
 // (mode, mouse capture, look angles, trigger and aim); capturing the mouse, pausing
@@ -11,7 +12,7 @@ import {TOUCH} from './touch-controls.mjs?v=148';
 // first) and passes the page, its play actions and its own pause wording (hooks);
 // the README's version 200 section lists every field.
 // The order touch and controller players cycle through the weapons they own.
-export const WEAPON_CYCLE=['glock','shotgun','smg','lmg','bushmaster','rifle'];
+export const WEAPON_CYCLE=['glock','shotgun','smg','lmg','bushmaster','rifle','katana'];
 export function createSession(){
   return {mode:'menu',pointer:false,mouseDown:false,aiming:false,lookYaw:0,lookPitch:0,capturePending:false,captureWanted:false,captureAttempt:0,captureTimer:null};
 }
@@ -20,6 +21,9 @@ export function createControls({page,session:S,state:R,act,ui,hooks}){
   const {shoot,reload,grenade,selectWeapon,zoomOf,interact,toggleFlashlight,openEstateMap,initAudio,fitTouchStick}=act;
   const clamp=T.MathUtils.clamp;
   function hasMouseLock(){return document.pointerLockElement===canvas;}
+  // v205: a blade has no sights. Aiming stays off while the katana is out.
+  function canAim(){return !weapons[R.weapon]?.melee;}
+  function equip(k){selectWeapon(k);if(!canAim())S.aiming=false;}
   function clearPlayInput(){S.mouseDown=false;S.aiming=false;keys.clear();ui.touchControls?.reset();}
   function finishCaptureRequest(){clearTimeout(S.captureTimer);S.captureTimer=null;S.capturePending=false;$('resume').disabled=false;$('restart').disabled=false;}
   function releaseMouse(){
@@ -122,7 +126,7 @@ export function createControls({page,session:S,state:R,act,ui,hooks}){
   function acceptConfirm(){const act=confirmAction;confirmAction=confirmReturn=null;showPausePage('main');act?.();}
   function resumeGame(){if(S.mode==='paused')requestPointer();}
   // Weapons in turn for touch and controller; touch look is as fast as the sensitivity setting.
-  function cycleWeapon(step=1){const owned=WEAPON_CYCLE.filter(k=>R.inventory[k]?.owned);if(owned.length<2)return;selectWeapon(owned[(owned.indexOf(R.weapon)+step+owned.length)%owned.length]);}
+  function cycleWeapon(step=1){const owned=WEAPON_CYCLE.filter(k=>R.inventory[k]?.owned);if(owned.length<2)return;equip(owned[(owned.indexOf(R.weapon)+step+owned.length)%owned.length]);}
   function touchLook(dx,dy){if(S.mode!=='playing')return;const sens=Number($('sensitivity').value)*TOUCH.lookSpeed*(S.aiming?.62/((zoomOf(R.weapon)||1)):1);S.lookYaw-=dx*sens;S.lookPitch=clamp(S.lookPitch-dy*sens,-1.3,1.3);}
   function directControls(){return ui.controlScheme.scheme==='touch'||ui.controlScheme.scheme==='controller';}
   function padPlay(){return ui.controlScheme.scheme==='controller';}
@@ -131,7 +135,7 @@ export function createControls({page,session:S,state:R,act,ui,hooks}){
     look:touchLook,
     fireStart(){if(S.mode!=='playing')return;if(!S.mouseDown){S.mouseDown=true;shoot();}},
     fireEnd(){S.mouseDown=false;},
-    aimToggle(){if(S.mode==='playing')S.aiming=!S.aiming;},
+    aimToggle(){if(S.mode==='playing')S.aiming=!S.aiming&&canAim();},
     jump(){if(S.mode==='playing'&&R.grounded){R.jumpV=4.2;R.grounded=false;}},
     reload(){if(S.mode==='playing')reload();},grenade(){if(S.mode==='playing')grenade();},interact(){if(S.mode==='playing')interact();},
     nextWeapon(){if(S.mode==='playing')cycleWeapon();},flashlight(){if(S.mode==='playing')toggleFlashlight();},
@@ -142,7 +146,7 @@ export function createControls({page,session:S,state:R,act,ui,hooks}){
     look(dx,dy){if(S.mode!=='playing')return;S.lookYaw-=dx;S.lookPitch=clamp(S.lookPitch-dy,-1.3,1.3);},
     fireStart(){if(S.mode!=='playing')return;if(!S.mouseDown){S.mouseDown=true;shoot();}},
     fireEnd(){S.mouseDown=false;},
-    aim(on){if(S.mode==='playing'||!on)S.aiming=on;},
+    aim(on){if(S.mode==='playing'||!on)S.aiming=on&&canAim();},
     jump(){if(S.mode==='playing'&&R.grounded){R.jumpV=4.2;R.grounded=false;}},
     reload(){if(S.mode==='playing')reload();},interact(){if(S.mode==='playing')interact();},grenade(){if(S.mode==='playing')grenade();},
     nextWeapon(){if(S.mode==='playing')cycleWeapon();},previousWeapon(){if(S.mode==='playing')cycleWeapon(-1);},
@@ -158,10 +162,10 @@ export function createControls({page,session:S,state:R,act,ui,hooks}){
   function onPointerLockError(){captureFailed(S.captureAttempt);}
   function onVisibilityChange(){if(document.hidden)pauseGame();}
   function onMouseMove(e){if(S.mode==='playing'&&S.pointer&&hasMouseLock()&&!hooks.lookBlocked()){const sens=Number($('sensitivity').value)*.002*(S.aiming?.62/((zoomOf(R.weapon)||1)):1);S.lookYaw-=e.movementX*sens;S.lookPitch=clamp(S.lookPitch-e.movementY*sens,-1.3,1.3);}}
-  function onMouseDown(e){if(S.mode!=='playing'||directControls())return;if(!hasMouseLock()){pauseGame();requestPointer();return;}e.preventDefault?.();if(e.button===0&&!S.mouseDown){S.mouseDown=true;shoot();}if(e.button===2)S.aiming=true;}
+  function onMouseDown(e){if(S.mode!=='playing'||directControls())return;if(!hasMouseLock()){pauseGame();requestPointer();return;}e.preventDefault?.();if(e.button===0&&!S.mouseDown){S.mouseDown=true;shoot();}if(e.button===2)S.aiming=canAim();}
   function onMouseUp(e){if(e.button===0)S.mouseDown=false;if(e.button===2)S.aiming=false;}
   // The play keys, once the mode has given its menus and overlays first refusal.
-  function playKey(e){if(e.code==='Escape'){pauseGame();return;}if(S.mode!=='playing'||!(hasMouseLock()||directControls()))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='KeyR')reload();if(e.code==='KeyE')interact();if(e.code==='KeyF')toggleFlashlight();if(e.code==='KeyG')grenade();if(e.code==='Digit1')selectWeapon('glock');if(e.code==='Digit2')selectWeapon('shotgun');if(e.code==='Digit3')selectWeapon('smg');if(e.code==='Digit4')selectWeapon('lmg');if(e.code==='Digit5')selectWeapon('bushmaster');if(e.code==='Digit6')selectWeapon('rifle');if(e.code==='Space'&&R.grounded){R.jumpV=4.2;R.grounded=false;}}
+  function playKey(e){if(e.code==='Escape'){pauseGame();return;}if(S.mode!=='playing'||!(hasMouseLock()||directControls()))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='KeyR')reload();if(e.code==='KeyE')interact();if(e.code==='KeyF')toggleFlashlight();if(e.code==='KeyG')grenade();if(e.code==='Digit1')equip('glock');if(e.code==='Digit2')equip('shotgun');if(e.code==='Digit3')equip('smg');if(e.code==='Digit4')equip('lmg');if(e.code==='Digit5')equip('bushmaster');if(e.code==='Digit6')equip('rifle');if(e.code==='Digit7')equip('katana');if(e.code==='Space'&&R.grounded){R.jumpV=4.2;R.grounded=false;}}
   function onKeyUp(e){keys.delete(e.code);}
   function onBlur(){if((S.mode==='playing'||S.mode==='curse')&&!S.capturePending)pauseGame();}
   return {hasMouseLock,clearPlayInput,releaseMouse,captureAcquired,captureFailed,requestPointer,startDirectPlay,resumeLabel,resumeHint,pauseGame,showPauseMenu,showPausePage,settingsOpen,openSettings,closeSettings,confirmOpen,askConfirm,cancelConfirm,acceptConfirm,resumeGame,

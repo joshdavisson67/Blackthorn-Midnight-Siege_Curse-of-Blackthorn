@@ -1,9 +1,9 @@
 import * as T from './three.module.js';
 import {BRUTE} from './brute.mjs?v=30';
-import {FERAL} from './feral.mjs?v=204';
+import {FERAL} from './feral.mjs?v=205';
 import {ENRAGE} from './enrage.mjs?v=130';
 import {SPREAD} from './crowd.mjs?v=123';
-import {advanceStagger} from './combat-feedback.mjs?v=184';
+import {advanceStagger} from './combat-feedback.mjs?v=205';
 import {animateZombieDog} from './zombie-dog.mjs?v=183';
 import {animateZombie,updateZombieDeath,CRAWL,LIMP} from './zombies.mjs?v=183';
 import {updateLife,settleLife} from './zombie-life.mjs?v=176';

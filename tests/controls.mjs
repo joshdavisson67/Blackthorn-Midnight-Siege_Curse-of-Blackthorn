@@ -12,7 +12,7 @@ export async function verifyControls(){
   const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),game=resolve(root,'public/game'),read=f=>readFileSync(resolve(game,f),'utf8');
   // ---- Isolation ------------------------------------------------------------------------
   const imports=f=>[...read(f).matchAll(/^import[^'"]*['"]\.\/([\w.-]+?)(?:\?v=\d+)?['"]/gm)].map(m=>m[1]);
-  assert.deepEqual(imports('controls.mjs'),['three.module.js','touch-controls.mjs'],'The session imports only three.js and the touch look speed');
+  assert.deepEqual(imports('controls.mjs'),['three.module.js','touch-controls.mjs','weapon-stats.mjs'],'The session imports only three.js, the touch look speed and (v205) the weapon table, to keep a blade from aiming');
   const src=read('game.js');
   for(const name of ['requestPointer','pauseGame','resumeGame','captureAcquired','openSettings','askConfirm','touchLook','cycleWeapon','directControls'])assert(!new RegExp(`function ${name}\\(`).test(src),`game.js no longer keeps its own ${name}`);
   const lets=[...src.matchAll(/^let ([^;]*);/gm)].flatMap(m=>m[1].split(',').map(d=>d.split('=')[0].trim()));

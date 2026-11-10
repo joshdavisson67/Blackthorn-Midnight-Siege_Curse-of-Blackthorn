@@ -7,12 +7,12 @@ import {fileURLToPath} from 'node:url';
 // the mansion's stand and how they look). The mansion's still behave
 // identically (scripts/golden-trace.mjs visits every one, early and late in a run);
 // this test runs the stations with a run, a player and stations of its own, including
-// a kind of station the module has never heard of (the slot Dead Tide's katana will use).
+// a kind of station the module has never heard of (v205: the katana is shared now, so a harpoon stands in).
 export async function verifySharedStations(){
   const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),game=resolve(root,'public/game'),read=f=>readFileSync(resolve(game,f),'utf8');
   // ---- Isolation ------------------------------------------------------------------------
   const imports=f=>[...read(f).matchAll(/^import[^'"]*['"]\.\/([\w.-]+?)(?:\?v=\d+)?['"]/gm)].map(m=>m[1]);
-  assert.deepEqual(imports('stations.mjs'),['weapon-ranks.mjs','armor.mjs','soul-forge.mjs','powerups.mjs'],'Stations import only the shared rank, armor, Forge and power-up rules');
+  assert.deepEqual(imports('stations.mjs'),['weapon-ranks.mjs','armor.mjs','soul-forge.mjs','powerups.mjs','weapon-stats.mjs','katana.mjs'],'Stations import only the shared rank, armor, Forge and power-up rules, and (v205) the weapon table and the katana');
   const closure=new Set(),walk=f=>{if(closure.has(f))return;closure.add(f);for(const g of imports(f))walk(g);};walk('stations.mjs');
   const mansion=['vertical.mjs','cellar-layout.mjs','cellar.mjs','graveyard.mjs','mansion-expansion.mjs','second-floor.mjs','facade.mjs','furnishings.mjs','grounds.mjs','estate-detail.mjs','shed.mjs','shed-layout.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','rotunda-bell.mjs','world-events.mjs','world-event-visuals.mjs','curse.mjs','curse-ui.mjs','camp-spawns.mjs','upper-shell.mjs','exterior-stairs.mjs','lighting.mjs','estate-layout.mjs'];
   assert.deepEqual([...closure].filter(f=>mansion.includes(f)),[],'Nothing the stations load builds or holds the mansion');
@@ -42,17 +42,17 @@ export async function verifySharedStations(){
   const at=(def,x,z,y=0)=>({...def,x,z,y});
   const S={perk:at({...PERKS[1],type:'perk'},0,0),iron:at({...PERKS[0],type:'perk'},30,0),ammo:at(rackStation('ammo','CRATE',350),10,0),bench:at(rackStation('glock','BENCH',250),20,0),smg:at(rackStation('smg','RAVEN SMG',1500),40,0),
     armorA:at(armor(),50,0),armorB:at(armor(),50,40),forgeA:at(forge(),60,0),forgeB:at(forge(),60,40),shrine:at(shrineStation('double'),70,0),upstairs:at(rackStation('ammo','UPPER CRATE',350),0,0,4.3),
-    katana:at({type:'katana',name:'THE KATANA',price:3000},80,0),gate:at({type:'gate',name:'LOCKED GATE',price:0,locked:true},90,0),spent:at({type:'relic',name:'SPENT RELIC',price:0,used:true},100,0),
+    harpoon:at({type:'harpoon',name:'THE HARPOON',price:3000},80,0),gate:at({type:'gate',name:'LOCKED GATE',price:0,locked:true},90,0),spent:at({type:'relic',name:'SPENT RELIC',price:0,used:true},100,0),
     ward:at({type:'relic',name:'GLOWING RELIC',price:0,used:true,glowing:true},110,0),hiddenCrate:at(rackStation('ammo','SECRET CRATE',350),120,0)};
   const stations=Object.values(S);
   const K=createStations({stations,player,state:R,isPlaying:()=>playing,arms,hud:{notify:t=>toasts.push(t),updateHud:()=>huds++},sound:{tone:(...a)=>log.push('tone '+a[0])},
     rules:{stillOpen:s=>s.glowing,hidden:s=>s.name==='SECRET CRATE',
-      // The slot a new kind of station uses (Dead Tide's katana will).
-      label:s=>s.type==='katana'?(R.inventory.katana?'OWNED':undefined):undefined,
-      describe:s=>s.type==='katana'?'A blade for close work':undefined,
-      use(s){if(s.type==='katana'&&!R.inventory.smg.owned){toasts.push('BUY THE SMG FIRST');return true;}},
-      equip(s){if(s.type==='katana'&&R.inventory.katana){arms.selectWeapon('katana');return true;}},
-      buy(s){if(s.type==='katana'){R.inventory.katana={owned:true};arms.selectWeapon('katana');toasts.push('KATANA ACQUIRED');return true;}}}});
+      // The slot a new kind of station uses (a mode's own weapon, say).
+      label:s=>s.type==='harpoon'?(R.inventory.harpoon?'OWNED':undefined):undefined,
+      describe:s=>s.type==='harpoon'?'A spear gun for the shallows':undefined,
+      use(s){if(s.type==='harpoon'&&!R.inventory.smg.owned){toasts.push('BUY THE SMG FIRST');return true;}},
+      equip(s){if(s.type==='harpoon'&&R.inventory.harpoon){arms.selectWeapon('harpoon');return true;}},
+      buy(s){if(s.type==='harpoon'){R.inventory.harpoon={owned:true};arms.selectWeapon('harpoon');toasts.push('HARPOON ACQUIRED');return true;}}}});
   const go=(s,dz=1.5)=>{player.x=s.x;player.y=s.y;player.z=s.z+dz;return K.closest();};
   const last=()=>toasts.at(-1),tag=s=>K.label(s);
   // Reach: within 2.3 m on the same floor; locked, used and hidden stations are skipped.
@@ -97,9 +97,9 @@ export async function verifySharedStations(){
   // The shrine.
   go(S.shrine);K.interact();assert.equal(log.filter(l=>l==='tone 440').length>0&&log.includes('power double'),true,'A shrine grants its power');
   // A kind of its own: the mode's label, description and every step of the purchase.
-  go(S.katana);R.inventory.smg.owned=false;K.interact();assert.equal(last(),'BUY THE SMG FIRST','The mode decides first');R.inventory.smg.owned=true;
-  assert.equal(K.prompt(S.katana,'USE'),'<strong>USE</strong> THE KATANA <span style="color:#d4b77a">3,000 ESSENCE</span><small>A blade for close work</small>','with its own description and the shared price tag');
-  const k=R.points;K.interact();assert(R.points===k-3000&&R.inventory.katana.owned&&R.weapon==='katana'&&last()==='KATANA ACQUIRED','the shared price check, then its own purchase');
-  R.weapon='glock';K.interact();assert(R.weapon==='katana'&&R.points===k-3000&&tag(S.katana)==='OWNED','and equipping it once owned');
-  console.log(`PASS: shared stations — imports only the rank, armor, Forge and power-up rules (${closure.size} files, none of them mansion builders or state), game.js keeps no copy; with stations of its own it finds the nearest within 2.3 m on the same floor (skipping locked, spent and hidden ones), prompts with key, name, price and effect, charges essence or says how much more, sells perks once (Ironheart doubling health and armor), restocks, sells the Glock's four ranks then 250 restocks, sells a rack's weapon then its ranks (handing it over when short), Aegis and all three Nano Shield ranks at both stations, three Forge ranks on the held weapon shown at every forge, and shrines; a kind of station it has never seen (a katana) plugs in through the mode's rules.`);
+  go(S.harpoon);R.inventory.smg.owned=false;K.interact();assert.equal(last(),'BUY THE SMG FIRST','The mode decides first');R.inventory.smg.owned=true;
+  assert.equal(K.prompt(S.harpoon,'USE'),'<strong>USE</strong> THE HARPOON <span style="color:#d4b77a">3,000 ESSENCE</span><small>A spear gun for the shallows</small>','with its own description and the shared price tag');
+  const k=R.points;K.interact();assert(R.points===k-3000&&R.inventory.harpoon.owned&&R.weapon==='harpoon'&&last()==='HARPOON ACQUIRED','the shared price check, then its own purchase');
+  R.weapon='glock';K.interact();assert(R.weapon==='harpoon'&&R.points===k-3000&&tag(S.harpoon)==='OWNED','and equipping it once owned');
+  console.log(`PASS: shared stations — imports only the rank, armor, Forge and power-up rules (${closure.size} files, none of them mansion builders or state), game.js keeps no copy; with stations of its own it finds the nearest within 2.3 m on the same floor (skipping locked, spent and hidden ones), prompts with key, name, price and effect, charges essence or says how much more, sells perks once (Ironheart doubling health and armor), restocks, sells the Glock's four ranks then 250 restocks, sells a rack's weapon then its ranks (handing it over when short), Aegis and all three Nano Shield ranks at both stations, three Forge ranks on the held weapon shown at every forge, and shrines; a kind of station it has never seen (a harpoon) plugs in through the mode's rules.`);
 }

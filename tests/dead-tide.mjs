@@ -99,7 +99,7 @@ writeFileSync(resolve(qaDir,'tide.mjs'),read('tide.mjs')+`
 export const qa={tick,keys,resetRun,returnToMenu,shoot,reload,grenade,selectWeapon,hurtPlayer,openControls,closeControls,explode:p=>combat.explode(p),
   setKeys(list){keys.clear();for(const k of list)keys.add(k);},setAim(yaw,pitch){session.lookYaw=yaw;session.lookPitch=pitch;},
   setPlayer(x,z,y=groundHeight(x,z)){player.set(x,y,z);runState.grounded=true;runState.jumpV=0;},
-  get(){return {mode:session.mode,pointer:session.pointer,player,run:runState,session,camera,island,zone,effects,firstPerson,gunRoot,renderer,scene,world,explosionFx,markPool,display};}};`);
+  get(){return {mode:session.mode,pointer:session.pointer,player,run:runState,session,camera,island,zone,effects,firstPerson,gunRoot,renderer,scene,world,explosionFx,markPool,display,swing};}};`);
 const {document,window:domWindow}=parseHTML(read('tide.html'));
 for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{configurable:true,get(){return (select.querySelector('option[selected]')||select.querySelector('option'))?.getAttribute('value')||'';},set(value){for(const option of select.querySelectorAll('option'))option.toggleAttribute('selected',option.getAttribute('value')===String(value));}});
 const ctx=new Proxy({createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};}},{get(o,k){return k in o?o[k]:(()=>{});},set(o,k,v){o[k]=v;return true;}});
@@ -160,6 +160,13 @@ try{
   frames(20);qa.reload();assert(G().run.reloadLeft>0,'R reloads');frames(130);assert.equal(G().run.inventory.glock.ammo,13,'back to a full magazine');assert.equal(G().run.inventory.glock.reserve,77);
   canvas.events.mousedown({button:0,preventDefault(){}});assert.equal(G().run.inventory.glock.ammo,12,'A click fires');listeners.mouseup({button:0});
   canvas.events.mousedown({button:2,preventDefault(){}});frames(40);assert(G().session.aiming&&G().camera.fov<70,'Right mouse aims down the sights');listeners.mouseup({button:2});frames(40);
+  // v205: the katana is shared. Owned, key 7 draws it; clicks play its three slashes in turn; it never aims.
+  G().run.inventory.katana.owned=true;key({code:'Digit7',repeat:false});assert.equal(G().run.weapon,'katana','Key 7 draws the katana on the island too');
+  assert(G().firstPerson.gunGroups.katana.visible&&!G().firstPerson.gunGroups.glock.visible&&$('ammo').textContent==='MELEE','in hand, with the HUD reading MELEE');
+  const cuts=[];for(let i=0;i<3;i++){qa.shoot();cuts.push(G().swing.kind);frames(12);assert(G().swing.active&&G().swing.hit,'Each slash lands');frames(30);}
+  assert.deepEqual(cuts,[0,1,2],'Its three slashes play in turn');
+  canvas.events.mousedown({button:2,preventDefault(){}});frames(20);assert(!G().session.aiming,'A blade does not aim');listeners.mouseup({button:2});
+  key({code:'Digit1',repeat:false});assert.equal(G().run.weapon,'glock');frames(5);
   // A grenade: thrown, it lands, bursts and scorches.
   const bursts=G().explosionFx.bursts;key({code:'KeyG'});listeners.keyup({code:'KeyG'});assert.equal(G().run.grenades,2,'G throws a grenade');
   frames(60*4);assert.equal(G().explosionFx.bursts,bursts+1,'It bursts on the island');assert(G().run.health===100,'far enough away to be safe');
@@ -175,6 +182,6 @@ try{
   $('resume').onclick();assert.equal(G().mode,'playing','Resume locks the mouse and plays on');
   key({code:'Escape'});$('mainMenuPause').onclick();assert(!$('pauseConfirm').classList.contains('hidden'));$('confirmYes').onclick();
   assert.equal(G().mode,'menu');assert(!$('menu').classList.contains('hidden')&&$('hud').classList.contains('hidden')&&!$('start').disabled,'Title Screen asks first, then returns to the title');
-  console.log('PASS: playing Dead Tide: it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, go into the shack by its door (its walls and roof hold), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
+  console.log('PASS: playing Dead Tide (v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, go into the shack by its door (its walls and roof hold), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
 }finally{Math.random=random;}
 process.exit(0);

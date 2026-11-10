@@ -1,5 +1,5 @@
 import * as T from './three.module.js';
-import {createOpticReticle} from './reticles.mjs?v=167';
+import {createOpticReticle} from './reticles.mjs?v=205';
 import {weaponSurfaceGeometry} from './weapon-surfaces.mjs?v=153';
 export const VISUAL_BRIGHTNESS=1.15;
 export function stabilizeTexture(t){t.minFilter=T.LinearMipmapLinearFilter;t.magFilter=T.LinearFilter;t.generateMipmaps=true;t.anisotropy=16;return t;}

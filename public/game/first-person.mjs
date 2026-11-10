@@ -1,7 +1,8 @@
 import * as T from './three.module.js';
-import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=187';
+import {createWeaponModel,updatePistolSlide} from './weapon-models.mjs?v=205';
 import {reloadPose} from './reload-pose.mjs?v=151';
-import {flashlightBeamTexture} from './graphics.mjs?v=187';
+import {flashlightBeamTexture} from './graphics.mjs?v=205';
+import {createKatanaModel,katanaPose,katanaRest} from './katana.mjs?v=205';
 
 // The first-person view (v203, Dead Tide step 2), for any mode: every gun in hand
 // (with scope masks, the Blood Moon dot sight and the Twin Ravens), the muzzle flash
@@ -11,7 +12,8 @@ import {flashlightBeamTexture} from './graphics.mjs?v=187';
 // poses. Moved from game.js unchanged; scripts/golden-trace.mjs records the pose of
 // every part of the guns every sample and checks the mansion's view is identical.
 // The guns are made first and the lights later (addLights), as the mansion always
-// has: the order objects are made in decides their ids.
+// has: the order objects are made in decides their ids. v205: the katana in hand, made
+// after the guns, and its three slashes.
 // A shaped torch beam: wider cone, soft rim, and a core that no longer clips the floor to white.
 // v182: 25% brighter, reaching 25% further and 15% wider than before (22, 28 m, 0.5 rad).
 export const FLASHLIGHT=Object.freeze({intensity:22*1.25,distance:28*1.25,angle:.5*1.15,penumbra:.35,decay:1.1});
@@ -34,9 +36,10 @@ export function createFirstPerson({camera,batchArticulated}){
     }
     // Batch the fixed gun by finish; the clear optic and reticle remain separate.
     batchArticulated(g.userData.body);
-    const viewMats=new Map();g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;if(!viewMats.has(o.material)){const vm=o.material.clone();vm.depthTest=true;vm.depthWrite=!vm.transparent&&!o.userData.reticle;viewMats.set(o.material,vm);}o.material=viewMats.get(o.material);o.renderOrder=o.userData.reticle?4:o.material.transparent?2:0;}});
+    viewMaterials(g);
     return g;
   }
+  function viewMaterials(g){const viewMats=new Map();g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;if(!viewMats.has(o.material)){const vm=o.material.clone();vm.depthTest=true;vm.depthWrite=!vm.transparent&&!o.userData.reticle;viewMats.set(o.material,vm);}o.material=viewMats.get(o.material);o.renderOrder=o.userData.reticle?4:o.material.transparent?2:0;}});}
   for(const k of ['glock','rifle','shotgun','smg','lmg','bushmaster'])gunGroups[k]=buildGun(k);
   // Blood Moon (v165, Bushmaster Rank I): the same rifle with a red dot on a
   // riser instead of the 10x scope. It replaces the scoped model while held.
@@ -46,10 +49,13 @@ export function createFirstPerson({camera,batchArticulated}){
   const smgDual=new T.Group();smgDual.name='Twin Ravens';smgDual.visible=false;gunRoot.add(smgDual);
   const dualGuns=[1,-1].map(side=>{const g=buildGun('smg',{optic:false});smgDual.add(g);g.position.set(side*.25,0,0);g.rotation.y=side*.04;g.visible=true;return {g,side,kick:0,muzzle:new T.Vector3()};});
   const dualMuzzle=new T.Vector3();
+  // v205: the katana in hand, held where the guns sit and posed by its slashes.
+  {const k=createKatanaModel();gunRoot.add(k);batchArticulated(k.userData.body);viewMaterials(k);const rest=katanaRest();k.position.copy(rest.p);k.quaternion.copy(rest.q);gunGroups.katana=k;}
+  const katanaFrom={p:new T.Vector3(),q:new T.Quaternion()},katanaNow={p:new T.Vector3(),q:new T.Quaternion()};let katanaSwing=-1;
   const scopedGuns=Object.entries(gunGroups).filter(([,g])=>g.userData.optic?.mask).map(([type,g])=>({type,sight:g.userData.optic}));
   let flash=null,muzzleLight=null,flashlight=null;
   // The run's values the view reads, joined once the weapon runtime exists (bind).
-  let S=null,session=null,player=null,weaponRecoil=null,grenadeThrow=null,aimFovOf=null,zoomOf=null,dualOn=null,aimHeight=null,viewGun=null;
+  let S=null,session=null,player=null,weaponRecoil=null,grenadeThrow=null,aimFovOf=null,zoomOf=null,dualOn=null,aimHeight=null,viewGun=null,swing=null;
   const view={gunRoot,gunGroups,bushDot,smgDual,dualGuns,dualMuzzle,scopedGuns,flash:null,muzzleLight:null,viewFill:null,viewKey:null,flashlight:null,
     // The view's own values: the held weapon's field of view, the kick of the last
     // shot, the muzzle flash's remaining time, the twin SMG firing next and the drop
@@ -62,7 +68,7 @@ export function createFirstPerson({camera,batchArticulated}){
     flashlight=new T.SpotLight(0xe2eddd,FLASHLIGHT.intensity,FLASHLIGHT.distance,FLASHLIGHT.angle,FLASHLIGHT.penumbra,FLASHLIGHT.decay);flashlight.map=flashlightBeamTexture();flashlight.position.set(.18,-.1,0);camera.add(flashlight);camera.add(flashlight.target);flashlight.target.position.set(0,0,-15);flashlight.visible=true;
     Object.assign(view,{flash,muzzleLight,viewFill,viewKey,flashlight});return view;
   }
-  function bind(rig){({player,state:S,session,weaponRecoil,grenadeThrow}=rig);({aimFovOf,zoomOf,dualOn,aimHeight,viewGun}=rig.arms);}
+  function bind(rig){({player,state:S,session,weaponRecoil,grenadeThrow}=rig);({aimFovOf,zoomOf,dualOn,aimHeight,viewGun,swing=null}=rig.arms);}
   // The eye: height and walking bob, look with recoil and throwing sway, and the
   // fields of view for aiming and sprinting.
   function pose(dt,{moving,sprint,aiming:aimingWeapon}){
@@ -71,11 +77,19 @@ export function createFirstPerson({camera,batchArticulated}){
   // The guns in hand, every frame of play; returns whether the sights are up.
   function updateGun(dt,{moving,sprint}){
     updatePistolSlide(gunGroups.glock,dt,S.inventory.glock.ammo);
-    const dual=dualOn(),ads=session.aiming&&!grenadeThrow.active&&S.reloadLeft===0&&!dual?1:0;gunRoot.position.y+=view.reloadDrop;gunRoot.position.x=T.MathUtils.lerp(gunRoot.position.x,ads||dual?0:.28,dt*14);if(dual)for(const d of dualGuns){d.kick=Math.max(0,d.kick-dt*14);d.g.position.z=d.kick*.045;d.g.rotation.x=d.kick*.06;}gunRoot.position.y=T.MathUtils.lerp(gunRoot.position.y,(ads?-aimHeight(S.weapon):-.26)-grenadeThrow.lower*.43,dt*14);gunRoot.position.z=T.MathUtils.lerp(gunRoot.position.z,(ads?(ADS_DEPTH[S.weapon]??-.34):-.48)+weaponRecoil.back*(ads?.6:1),dt*14)+view.recoil*dt*4;gunRoot.rotation.set((ads?0:weaponRecoil.lift+view.recoil*1.2)+grenadeThrow.lower*.25,0,zoomOf(S.weapon)&&ads?0:Math.sin(S.walkPhase*.5)*(moving?(ads?.001:.012):.001));{const pose=reloadPose(S.reloadLeft>0&&S.reloadDuration>0?1-S.reloadLeft/S.reloadDuration:0);view.reloadDrop=pose.drop;gunRoot.position.y-=pose.drop;gunRoot.rotation.z+=pose.roll;gunRoot.rotation.x+=pose.pitch;}if(sprint&&moving)gunRoot.rotation.z=-.25;for(const {type,sight} of scopedGuns){sight.mask.visible=S.weapon===type&&ads>0&&view.viewFov<(sight.viewFov??16)+1;
+    const melee=S.weapon==='katana',dual=dualOn(),ads=session.aiming&&!grenadeThrow.active&&S.reloadLeft===0&&!dual&&!melee?1:0;if(melee)poseKatana();gunRoot.position.y+=view.reloadDrop;gunRoot.position.x=T.MathUtils.lerp(gunRoot.position.x,ads||dual?0:.28,dt*14);if(dual)for(const d of dualGuns){d.kick=Math.max(0,d.kick-dt*14);d.g.position.z=d.kick*.045;d.g.rotation.x=d.kick*.06;}gunRoot.position.y=T.MathUtils.lerp(gunRoot.position.y,(ads?-aimHeight(S.weapon):-.26)-grenadeThrow.lower*.43,dt*14);gunRoot.position.z=T.MathUtils.lerp(gunRoot.position.z,(ads?(ADS_DEPTH[S.weapon]??-.34):-.48)+weaponRecoil.back*(ads?.6:1),dt*14)+view.recoil*dt*4;gunRoot.rotation.set((ads?0:weaponRecoil.lift+view.recoil*1.2)+grenadeThrow.lower*.25,0,zoomOf(S.weapon)&&ads?0:Math.sin(S.walkPhase*.5)*(moving?(ads?.001:.012):.001));{const pose=reloadPose(S.reloadLeft>0&&S.reloadDuration>0?1-S.reloadLeft/S.reloadDuration:0);view.reloadDrop=pose.drop;gunRoot.position.y-=pose.drop;gunRoot.rotation.z+=pose.roll;gunRoot.rotation.x+=pose.pitch;}if(sprint&&moving)gunRoot.rotation.z=-.25;for(const {type,sight} of scopedGuns){sight.mask.visible=S.weapon===type&&ads>0&&view.viewFov<(sight.viewFov??16)+1;
     // v167: once the mask covers the screen, only the lens window shows, so the
     // rifle and scope body are hidden; the tube interior and mounts can't intrude.
     gunGroups[type].userData.body.visible=sight.housing.visible=!sight.mask.visible;}
     return ads;
+  }
+  // The katana at rest, or through the slash under way (katana.mjs), starting from
+  // wherever the blade was when the slash began.
+  function poseKatana(){
+    const g=gunGroups.katana;
+    if(swing?.active){if(swing.id!==katanaSwing){katanaSwing=swing.id;katanaFrom.p.copy(g.position);katanaFrom.q.copy(g.quaternion);}katanaPose(swing.kind,swing.time,katanaFrom,katanaNow);}
+    else{const rest=katanaRest();katanaNow.p.copy(rest.p);katanaNow.q.copy(rest.q);}
+    g.position.copy(katanaNow.p);g.quaternion.copy(katanaNow.q);
   }
   function updateFlash(dt){view.recoil=Math.max(0,view.recoil-dt*.4);view.flashTime=Math.max(0,view.flashTime-dt);flash.visible=view.flashTime>0;muzzleLight.position.copy(dualOn()?dualMuzzle:viewGun(S.weapon).userData.muzzle);muzzleLight.intensity=view.flashTime>0?(S.weapon==='smg'?5:15):0;}
   function toggleFlashlight(){view.flashlightOn=!view.flashlightOn;view.flashlight.intensity=view.flashlightOn?FLASHLIGHT.intensity:0;}

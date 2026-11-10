@@ -1,7 +1,7 @@
 import {GRAVEYARD} from './graveyard-layout.mjs?v=28';
 import {ESTATE_BOUNDS} from './estate-layout.mjs?v=28';
 export const COLLISION_SKIN=.06;
-export {weapons,weaponAimFov} from './weapon-stats.mjs?v=204';
+export {weapons,weaponAimFov} from './weapon-stats.mjs?v=205';
 export function waveConfig(wave){return {count:6+wave*3,health:78+wave*15+Math.max(0,wave-8)*10,speed:Math.min(1.05+wave*.095,2.65),damage:Math.min(18+wave*1.5,40),interval:Math.max(.6,2.1-wave*.08)};}
 // Preserve brute priority. From wave 6, one in twenty spawn slots is a rare
 // Ashfang, replacing a normal dog slot; ordinary dogs remain more common.

@@ -4,8 +4,8 @@ import {RETICLES,reticleSvg,createOpticReticle} from '../public/game/reticles.mj
 import {createWeaponModel} from '../public/game/weapon-models.mjs';
 
 export function verifyReticles(qa,frames,listeners,elements,canvas){
-  const crosshair=elements.get('crosshair'),keys={glock:'Digit1',rifle:'Digit6',shotgun:'Digit2',smg:'Digit3',lmg:'Digit4',bushmaster:'Digit5'};
-  const nodes=[...crosshair.querySelectorAll('svg')];assert.equal(nodes.length,6);assert.equal(new Set(Object.keys(RETICLES).map(reticleSvg)).size,6);
+  const crosshair=elements.get('crosshair'),keys={glock:'Digit1',rifle:'Digit6',shotgun:'Digit2',smg:'Digit3',lmg:'Digit4',bushmaster:'Digit5',katana:'Digit7'};
+  const nodes=[...crosshair.querySelectorAll('svg')];assert.equal(nodes.length,7);assert.equal(new Set(Object.keys(RETICLES).map(reticleSvg)).size,7);
   const signatures=new Set();
   for(const [type,p] of Object.entries(RETICLES)){
     qa.start();qa.setHealth(100000);qa.holdSpawns();qa.get().inventory[type].owned=true;listeners.keydown({code:keys[type],repeat:false});
@@ -16,6 +16,8 @@ export function verifyReticles(qa,frames,listeners,elements,canvas){
     // The lower aiming marks leave the reticle-centered reload bar clear.
     const lower=Math.max(...p.segments.flatMap(([,y,,yy])=>[-y,-yy]),...p.arcs.map(([r])=>r),0)*p.size/56+p.stroke/2;
     assert(lower<26,'The reticle must not intrude on the reload progress bar');
+    // v205: a blade has no sights; right click leaves the katana's arc on screen and does not aim.
+    if(type==='katana'){frames(1);canvas.events.mousedown({button:2});frames(60);assert.equal(qa.get().aiming,false,'The katana cannot aim');assert.equal(Number(crosshair.style.opacity),1,'The blade arc stays up');listeners.mouseup({button:2});frames(2);continue;}
     frames(1);canvas.events.mousedown({button:2});frames(100);qa.get().scene.updateMatrixWorld(true);
     assert.equal(Number(crosshair.style.opacity),0,'Aiming removes the HUD mark in favor of the fitted weapon sight');
     const sight=qa.get().gunGroups[type].userData.optic;
@@ -51,5 +53,5 @@ export function verifyReticles(qa,frames,listeners,elements,canvas){
   }
   assert.equal(signatures.size,4,'All four optic patterns are distinct');
   qa.start();assert.equal(qa.get().reticleHud.weapon,'glock');listeners.keydown({code:'Digit4',repeat:false});assert.equal(qa.get().reticleHud.weapon,'glock','Locked weapon keys cannot change the reticle');
-  console.log('PASS: six distinct reusable HUD reticles, four unique cached/fitted optical patterns, Glock and shotgun iron sights, live weapon-key selection and actual hits, precise aim centers, clear reload-bar spacing, ADS/reload/pause/locked-switch/reset behavior; two meshes per optic with no added textures or lights.');
+  console.log('PASS: seven distinct reusable HUD reticles (v205: the katana’s blade arc, which stays up because a blade cannot aim), four unique cached/fitted optical patterns, Glock and shotgun iron sights, live weapon-key selection and actual hits, precise aim centers, clear reload-bar spacing, ADS/reload/pause/locked-switch/reset behavior; two meshes per optic with no added textures or lights.');
 }
