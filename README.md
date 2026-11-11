@@ -94,6 +94,12 @@ Before the stations go in, the island gets its layout: the design spec's landmar
   - In play: you walk in under the tent and out the far side, a jump clears its eaves, and its desk stops you.
   - The tests from before still pass on the new ground: every kind climbs Radio Hill, The Apocalypse fills to 45, and inland arrivals keep their rules.
   - **Dead Tide's golden trace** is re-baselined, since the island itself changed. A new `landmarks` scenario stands on each pad in turn. Two runs of this build are byte-identical.
+- **Release tiers:**
+  - **Mansion: quick.** Nothing it loads changed.
+  - **Dead Tide: full.** The map's cost is +24 KB, +86 ms building the world (the time to playable is within noise), +8 to +17 draw calls a view, +0.8 MB of heap, and no new shader programs. Frame logic is level.
+  - **Mode picker: standard, no differences.**
+
+  Numbers in `perf/README.md`.
 - **Looked at, in headless screenshots only:** the overviews, the summit and each landmark. The shapes read as intended there.
 - **Not verified:**
   - how any of it looks on a real GPU, or feels to walk and fight on;

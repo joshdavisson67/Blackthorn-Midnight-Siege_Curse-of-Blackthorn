@@ -483,6 +483,47 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v210 (the island's map) against main (v209)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. This release changes the island itself, so its costs are new content, reported here, not regressions to chase to zero.
+
+### Mansion: quick
+
+Nothing it loads changed; five files differ only in their version number.
+
+### Dead Tide: full protocol
+
+| | main (v209) | v210 |
+|---|---:|---:|
+| Files / KB before playable | 63 / 2,040 | 63 / 2,064 |
+| Time to playable (load phases, 20 pairs) | 7,581 ms | 7,679 ms (+98, SE 103) |
+| ↳ modules | 315 ms | 320 ms (+5, SE 15) |
+| ↳ world | 1,007 ms | 1,093 ms (+86, SE 34) |
+| ↳ shaders | 6,259 ms | 6,266 ms (+7, SE 83) |
+| Shader programs, at load and after play | 40 | 40 |
+| Geometries / textures | 212 / 24 | 222 / 24 |
+| Heap after load / after play, after a collection | 54.7 / 144.5 MB | 55.5 / 145.2 MB |
+| Frame logic, walking the empty island (24 pairs) | 0.269 ms | 0.270 ms (+0.001, SE 0.009) |
+| The 45-enemy fight: draw calls / triangles | 230–231 / 235K | 260–263 / 254K–259K |
+| The 45-enemy fight: render CPU | 7.8–10.0 ms | 9.0–10.0 ms |
+
+- **What the map costs:**
+  - **+24 KB** of code, no new files.
+  - **+86 ms building the world** (about 1% of the time to playable; the total is within noise). The ground's height now sums nine mounds and two coves, and there are about twice as many props to place. An earlier build of this release measured +110 ms; working the spawn network out once and a cheaper trail distance brought it down.
+  - **+8 to +17 draw calls and +4K to +6K triangles a view** (for example the landing spot 52 → 68 and 35K → 41K): the landmarks, merged by material into one group, and the brush.
+  - **+0.8 MB of heap.**
+  - **No new shader programs** (40) and no new lights.
+- **Frame logic is level**, although there are 135 colliders where there were about 80: a coarse grid now finds the few near a point. The same change made the 45-enemy fight's logic cheaper (three alternating runs: main 5.0–5.9 ms, v210 4.1–4.9 ms on this machine that day).
+- **The fixed views changed with the map** (the wreck's is now on the west shore, the shack's is the tent's, and the bunker and the ruin are new), in both builds' measurements alike.
+- **The golden trace** differs in every scenario, as it must: the island changed. Two runs of v210 are byte-identical.
+- **Not measured:** real GPUs, integrated graphics, or frame rates in a real browser.
+
+### Mode picker: standard, no differences
+
+Only its in-development line changed.
+
+Files: `v210-tide.jsonl`, `v210-tide-load-phases.jsonl`, `v210-tide-frame-logic.jsonl`, `v210-tier-summary.json`.
+
 ## v209 (the spawn network and the threat tracker) against main (v208)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering, and `scripts/tide-director-bench.mjs` (new), three runs of each build.
