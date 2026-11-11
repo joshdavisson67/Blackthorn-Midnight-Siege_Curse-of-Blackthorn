@@ -74,20 +74,116 @@ const T=await import('../public/game/three.module.js');
 }
 const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsland({scene,world});
 {
-  const S=ISLAND.shack,W=ISLAND.tower,H=ISLAND.hill,flat=(x,z)=>Math.hypot(x-H.x,z-H.z)<H.flat;
-  for(const [dx,dz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){assert(flat(S.x+dx*(S.w/2+.15),S.z+dz*(S.d/2+.15)),'The shack stands on the flat summit');assert(flat(W.x+dx*W.base/2,W.z+dz*W.base/2),'and so does the tower');}
+  const S=ISLAND.tent,W=ISLAND.tower,H=ISLAND.hill,flat=(x,z)=>Math.hypot(x-H.x,z-H.z)<H.flat;
+  for(const [dx,dz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){assert(flat(S.x+dx*(S.w/2+.15),S.z+dz*(S.d/2+.15)),'The radio tent stands on the flat summit');assert(flat(W.x+dx*W.base/2,W.z+dz*W.base/2),'and so does the tower');}
   const t=shoreFraction(I.wreckAt.x,I.wreckAt.z),h=groundHeight(I.wreckAt.x,I.wreckAt.z);assert(t>.9&&t<1.05&&h>-.6&&h<1.2,'The wreck lies on the beach, at the water’s edge');
   const sp=ISLAND.spawn,spawnY=groundHeight(sp.x,sp.z);assert(spawnY>.3&&!I.isBlocked(sp.x,sp.z,.32,I.colliders,null,spawnY,1.8)&&I.zoneAt(sp.x,sp.z)==='SOUTH BEACH','Runs start on dry sand on the south beach, in the open');
   for(const p of I.palms){assert(groundHeight(p.x,p.z)>.3,'Palms grow on land');assert(Math.hypot(p.x-sp.x,p.z-sp.z)>3,'clear of the landing spot');}
-  for(const r of I.rocks)assert(groundHeight(r.x,r.z)>-.4,'Rocks sit on land or in the shallows');
+  for(const r of I.rocks)assert(r.reef?groundHeight(r.x,r.z)<-ISLAND.wade-.4:groundHeight(r.x,r.z)>.5,'Rocks sit on land, or as reefs in water too deep to reach');
   assert(I.palms.length>=40&&I.rocks.length>=20,'The island has its palms and rocks');
   const names=new Set(world.children.map(o=>o.name));
-  for(const n of ['Island ground','The sea','Radio shack','Radio tower','Tower beacon','Wreck','Palm trunks','Palm crowns','Rocks'])assert(names.has(n),`The island has ${n.toLowerCase()}`);
+  for(const n of ['Island ground','The sea','Landmarks','Radio tower','Tower beacon','Wreck','Palm trunks','Palm crowns','Rocks','Brush'])assert(names.has(n),`The island has ${n.toLowerCase()}`);
   let meshes=0,triangles=0;world.traverse(o=>{if(o.isMesh){meshes++;const g=o.geometry;triangles+=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
   assert(meshes<80&&triangles<60000,`The grey-box island is light: ${meshes} meshes, ${Math.round(triangles/1000)}k triangles`);
   // The beacon blinks: on for 0.55 s of every 1.6 s.
   I.update(.1);assert(I.beaconLight.intensity>0);I.update(.9);assert.equal(I.beaconLight.intensity,0);I.update(1.7);assert(I.beaconLight.intensity>0,'The tower’s red beacon blinks');
-  console.log(`PASS: the island: a coast 50–75 m out, Radio Hill highest and flat-topped with the shack and tower on it, a sloping beach on every bearing, walkable everywhere you can stand, the wreck at the water’s edge, ${I.palms.length} palms and ${I.rocks.length} rocks on land, the south-beach landing spot clear, ${meshes} meshes and ${Math.round(triangles/1000)}k triangles, and a blinking beacon.`);
+  console.log(`PASS: the island: a coast 50–75 m out, Radio Hill highest and flat-topped with the radio tent and tower on it, a sloping beach on every bearing, walkable everywhere you can stand, the wreck at the water’s edge, ${I.palms.length} palms and ${I.rocks.length} rocks on land, the south-beach landing spot clear, ${meshes} meshes and ${Math.round(triangles/1000)}k triangles, and a blinking beacon.`);
+}
+
+// ---- 3b. The finished map (v210): landmarks, pads, trails, routes and the spawn network -------
+{
+  const {islandSites,shoreSpawns,SHORE,trailDistance,moundAt}=await import('../public/game/island.mjs'),{SPAWN_RULES}=await import('../public/game/tide-threat.mjs'),{enemyBody}=await import('../public/game/crowd.mjs');
+  const {sites,landmarks,stations,trails}=islandSites(),H=ISLAND.hill,brute=enemyBody({brute:true}),BR=Math.max(.44,brute.radius);
+  const bearingOf=(x,z)=>Math.atan2(z,x),near=(a,b,tol)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))<tol;
+  const open=(x,z,r=.44,h=1.8)=>groundHeight(x,z)>=-ISLAND.wade&&!I.isBlocked(x,z,r,I.colliders,null,I.supportBelow(x,z,groundHeight(x,z),ISLAND.step),h);
+  // a. The spec's landmarks, each in its part of the island (north is -z; a bearing of 0 is east).
+  const where={'BUNKER B-01':-Math.PI/4,'JUNGLE RUIN':-Math.PI*3/4,'SHIPWRECK COVE':Math.PI,'COASTAL CAMP':Math.PI*3/4,'SOUTH DOCK':Math.PI/2,'EAST COVE':Math.PI/4,'NORTH BEACH':-Math.PI/2};
+  for(const [name,bearing] of Object.entries(where)){const l=landmarks.find(l=>l.name===name);assert(l,`${name} is on the map`);assert(near(bearingOf(l.x,l.z),bearing,.5),`${name} is in its part of the island`);assert.equal(I.zoneAt(l.x,l.z),groundHeight(l.x,l.z)<0?'THE SHALLOWS':name,`and the HUD names it`);}
+  {const f=landmarks.find(l=>l.name==='SOUL FORGE');assert(f&&f.x>H.x+20&&Math.abs(f.z-H.z)<12&&Math.hypot(f.x-H.x,f.z-H.z)<H.foot+2,'The Soul Forge’s clearing is east of Radio Hill, by its foot');}
+  for(const name of ['SHIPWRECK COVE','SOUTH DOCK','NORTH BEACH'])assert(shoreFraction(...(l=>[l.x,l.z])(landmarks.find(l=>l.name===name)))>.8,`${name} is on the shore`);
+  for(const name of ['BUNKER B-01','JUNGLE RUIN','SOUL FORGE'])assert(shoreFraction(...(l=>[l.x,l.z])(landmarks.find(l=>l.name===name)))<.78,`${name} is inland`);
+  assert(near(bearingOf(I.wreckAt.x,I.wreckAt.z),Math.PI,.15),'The wreck lies on the west shore, in her cove');
+  // The coves are real: the coast is drawn in at each.
+  for(const [b,depth] of ISLAND.coast.coves)assert(coastRadius(b)<Math.min(coastRadius(b-.45),coastRadius(b+.45))-depth*.4,'A cove bites into the coast');
+  // The high ground: Radio Hill highest, then the ridge, the knoll, the bluff and the headland, each a real rise.
+  const rises=Object.fromEntries(['BUNKER RIDGE','RUIN KNOLL','CAMP BLUFF','COVE HEAD'].map(n=>{const m=moundAt(n);return [n,groundHeight(m.x,m.z)];}));
+  for(const [n,h] of Object.entries(rises))assert(h>4&&h<I.summit-5,`${n} is a hill of its own (${h.toFixed(1)} m), well under Radio Hill`);
+  {const w=moundAt('THE WASH'),px=-Math.sin(w.angle)*w.width,pz=Math.cos(w.angle)*w.width;assert(groundHeight(w.x,w.z)<groundHeight(w.x+px,w.z+pz)-.5&&groundHeight(w.x,w.z)<groundHeight(w.x-px,w.z-pz)-.5,'The wash is a gully: lower than the ground either side');}
+  // b. The pads: one for every weapon and the Forge, each on open, near-level ground at its landmark.
+  assert.deepEqual(stations.map(p=>p.id).sort(),['bushmaster','forge','glock','katana','lmg','rifle','shotgun','smg'],'Eight pads: every weapon, and the Forge');
+  const spec={bushmaster:'LOOKOUT COMPOUND',katana:'LOOKOUT COMPOUND',smg:'JUNGLE RUIN',shotgun:'SHIPWRECK COVE',rifle:'COASTAL CAMP',lmg:'SOUTH DOCK',glock:'EAST COVE',forge:'SOUL FORGE'};
+  for(const p of stations){
+    assert.equal(p.landmark,spec[p.id],`The ${p.id} pad is at ${spec[p.id]} (spec 4.1)`);
+    const zone=I.zoneAt(p.x,p.z);assert(p.landmark==='LOOKOUT COMPOUND'?zone.includes('SUMMIT'):zone===p.landmark,`and stands inside it (${zone})`);
+    const g=Math.hypot(groundHeight(p.x+1,p.z)-groundHeight(p.x-1,p.z),groundHeight(p.x,p.z+1)-groundHeight(p.x,p.z-1))/2;assert(g<.22,`on near-level ground (${g.toFixed(2)})`);
+    assert(open(p.x,p.z,BR,brute.height),'in the open');
+    // Reachable from several sides: a brute can walk 5 m straight out in at least five of eight directions.
+    let ways=0;for(let k=0;k<8;k++){const a=k*Math.PI/4;let ok=true;for(let d=.5;d<=5&&ok;d+=.5)ok=open(p.x+Math.cos(a)*d,p.z+Math.sin(a)*d,BR,brute.height);if(ok)ways++;}
+    assert(ways>=5,`The ${p.id} pad can be reached and left on at least five sides (${ways})`);
+  }
+  assert(stations.every(a=>stations.every(b=>a===b||Math.hypot(a.x-b.x,a.z-b.z)>5)),'No two pads crowd each other');
+  // c. Nothing that blocks can be climbed onto, and nothing you can stand on is above a step:
+  // a perch the dead could not reach would be a safe spot (spec 9.2).
+  let props=0;
+  for(const c of I.colliders){if(c.kind==='palm'||c.kind==='rock')continue;props++;
+    let ground=-Infinity;const ring=(c.r??Math.hypot(c.w,c.d)/2)+.4;for(let a=0;a<6.3;a+=.2)for(const f of [.4,.7,1]){const x=c.x+Math.cos(a)*ring*f,z=c.z+Math.sin(a)*ring*f;if(groundHeight(x,z)>=-ISLAND.wade)ground=Math.max(ground,groundHeight(x,z));}
+    if(ground>-Infinity)assert(c.top>=ground+1,`A ${c.kind} collider at ${c.x.toFixed(1)}, ${c.z.toFixed(1)} is too tall to jump onto (${(c.top-ground).toFixed(2)} m above the ground round it)`);}
+  for(const pf of I.platforms){if(pf.r!==undefined)continue;let low=Infinity;for(const [dx,dz] of [[-1,-1],[1,-1],[-1,1],[1,1],[0,0]]){const lx=dx*pf.w/2,lz=dz*pf.d/2;low=Math.min(low,groundHeight(pf.x+lx*pf.cos+lz*pf.sin,pf.z-lx*pf.sin+lz*pf.cos));}
+    assert(pf.top-low<=.45,`A slab you can stand on is a step, not a perch (${(pf.top-low).toFixed(2)} m)`);}
+  assert(I.colliders.every(c=>c.kind!=='tent'||c.r!==undefined||c.w<3),'The radio tent has no walls: poles and a desk');
+  // The grid that finds nearby colliders and platforms answers exactly as checking every one does.
+  {const touches=(c,x,z,r,y,h)=>{if(y+.06>=c.top||y+h<=c.bottom)return false;if(c.r!==undefined)return (x-c.x)**2+(z-c.z)**2<(r+c.r)**2;const dx=x-c.x,dz=z-c.z,lx=dx*c.cos-dz*c.sin,lz=dx*c.sin+dz*c.cos,nx=Math.max(-c.w/2,Math.min(lx,c.w/2)),nz=Math.max(-c.d/2,Math.min(lz,c.d/2));return (nx-lx)**2+(nz-lz)**2<r*r;};
+   const inP=(p,x,z)=>{if(p.r!==undefined)return (x-p.x)**2+(z-p.z)**2<p.r*p.r;const dx=x-p.x,dz=z-p.z,lx=dx*p.cos-dz*p.sin,lz=dx*p.sin+dz*p.cos;return Math.abs(lx)<=p.w/2&&Math.abs(lz)<=p.d/2;};
+   let seed=7,blocked=0,raised=0;const rnd=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;
+   for(let i=0;i<60000;i++){const near=i%3?I.colliders[Math.floor(rnd()*I.colliders.length)]:null,x=near?near.x+(rnd()-.5)*6:(rnd()-.5)*200,z=near?near.z+(rnd()-.5)*6:(rnd()-.5)*200,r=[.1,.32,.44,BR,1.5,2.5][i%6],y=groundHeight(x,z)+(i%5?0:rnd()*3);
+     const every=I.colliders.some(c=>touches(c,x,z,r,y,1.8));assert.equal(I.isBlocked(x,z,r,I.colliders,null,y,1.8),every,'Blocked, by the grid as by every collider');if(every)blocked++;
+     let h=groundHeight(x,z);for(const p of I.platforms)if(p.top>h&&p.top<=y+.31+1e-6&&inP(p,x,z))h=p.top;assert.equal(I.supportBelow(x,z,y,.31),h,'Held up, by the grid as by every platform');if(h>groundHeight(x,z))raised++;}
+   assert(blocked>5000&&raised>50,`(${blocked} blocked and ${raised} raised points among them)`);}
+  // d. Routes: every place anyone can stand has a way to everywhere else, for walkers and for
+  // brutes (no pockets, no cut-off corners), and a brute fits under the tent.
+  const nets={};
+  for(const [who,radius,height] of [['walker',.44,1.8],['brute',BR,brute.height]]){
+    const R=I.buildRoutes({radius,height});R.rebuild(H.x,H.z+1);let openCells=0,cut=0;
+    // (Not counted: a stray cell at the very edge of the wading depth, against the dock, and the
+    // tops of small rocks, which you climb onto and the dead walk round.)
+    const onRock=(x,z)=>I.platforms.some(p=>p.r!==undefined&&(x-p.x)**2+(z-p.z)**2<p.r*p.r);
+    for(let i=0;i<R.blocked.length;i++){if(R.blocked[i])continue;openCells++;const x=(i%R.w)*R.cell-84,z=Math.floor(i/R.w)*R.cell-84;if(R.distance[i]>=99999&&groundHeight(x,z)>-.6&&!onRock(x,z))cut++;}
+    assert.equal(cut,0,`Every open cell has a route to the summit for a ${who} (${cut} of ${openCells} cut off)`);nets[who]=R;
+  }
+  assert(nets.brute.direction(ISLAND.tent.x+1.7,ISLAND.tent.z,0)?.reachable&&!nets.brute.blocked[nets.brute.index(ISLAND.tent.x+1.7,ISLAND.tent.z)],'A brute walks under the radio tent');
+  // e. The perimeter loop: all the way round, a brute has a band of open beach at least 6 m wide.
+  let narrowest=Infinity,narrowAt=0;
+  for(let a=-Math.PI;a<Math.PI;a+=.02){const R=coastRadius(a);let run=0,best=0;for(let r=R*.66;r<=R*1.05;r+=.5){if(open(Math.cos(a)*r,Math.sin(a)*r,BR,brute.height)){run+=.5;best=Math.max(best,run);}else run=0;}
+    if(best<narrowest){narrowest=best;narrowAt=a;}}
+  assert(narrowest>=6,`The beach is open all the way round (narrowest ${narrowest.toFixed(1)} m at bearing ${narrowAt.toFixed(2)})`);
+  // f. Radio Hill: open from every side (spec 2.2 C asks for six broad approaches).
+  let approaches=0;for(let k=0;k<12;k++){const a=k*Math.PI/6;let lanes=0;for(const off of [-3,0,3]){let ok=true;for(let d=H.flat+.5;d<=28&&ok;d+=.5){const x=H.x+Math.cos(a)*d-Math.sin(a)*off,z=H.z+Math.sin(a)*d+Math.cos(a)*off;ok=open(x,z,BR,brute.height);}if(ok)lanes++;}if(lanes>=2)approaches++;}
+  assert(approaches>=8,`At least eight of twelve bearings give a broad, straight, clear climb to the summit (${approaches}); the spec asks for six`);
+  // g. The trails: nine of them, each clear to walk for a brute along its whole length, and joined up.
+  assert.equal(trails.length,9);let trailLength=0;
+  for(const t of trails)for(let k=1;k<t.points.length;k++){const [ax,az]=t.points[k-1],[bx,bz]=t.points[k],n=Math.ceil(Math.hypot(bx-ax,bz-az)/.5);trailLength+=Math.hypot(bx-ax,bz-az);
+    for(let j=0;j<=n;j++){const x=ax+(bx-ax)*j/n,z=az+(bz-az)*j/n;assert(groundHeight(x,z)>.3&&open(x,z,BR,brute.height),`${t.name} is clear at ${x.toFixed(1)}, ${z.toFixed(1)}`);}}
+  for(const p of I.palms)assert(trailDistance(p.x,p.z)>2.5,'No palm stands on a trail');
+  // h. The spawn network on this map (spec 5.2): 8 + 14 + 6 = 28 locations.
+  const net=shoreSpawns(),bunker=I.colliders.filter(c=>c.kind==='bunker');
+  assert.deepEqual(net.major.map(z=>z.name),['NORTH BEACH','NORTH-EAST REEF','EAST SHORE','SOUTH-EAST COVE','SOUTH DOCK SHORE','SOUTH-WEST BEACH','SHIPWRECK COVE','NORTH-WEST REEF'],'The eight major zones, by the spec’s names');
+  assert(net.minor.length===14&&net.interior.length===6&&net.major.every(z=>z.points.length===5)&&net.interior.every(z=>z.points.length===3),'14 minor points and 6 interior zones of three');
+  assert.equal(new Set([...net.major,...net.minor,...net.interior].map(z=>z.name)).size,28,'28 locations, each with its own name');
+  const walkers=nets.walker;let points=0;
+  for(const z of [...net.major,...net.minor,...net.interior])for(const [x,zz] of z.points){points++;const g=groundHeight(x,zz);
+    if(z.kind==='interior')assert(g>.6&&shoreFraction(x,zz)<.8,`${z.name} is on dry land, inland`);else assert(g<-.2&&g>=-ISLAND.wade,`${z.name} is in the shallows (${g.toFixed(2)} m)`);
+    assert(open(x,zz,.48),`${z.name} (${x}, ${zz}) is clear of everything`);assert(walkers.direction(x,zz,0)?.reachable,'with a route inland');
+    for(const p of stations)assert(Math.hypot(p.x-x,p.z-zz)>=SPAWN_RULES.stationClear,`${z.name} is ${SPAWN_RULES.stationClear} m or more from the ${p.id} pad`);
+    for(const c of bunker)assert(Math.hypot(c.x-x,c.z-zz)>6,'and nowhere near the bunker');}
+  for(const z of net.major){const xs=z.points.map(p=>p[0]),zs=z.points.map(p=>p[1]),span=Math.hypot(Math.max(...xs)-Math.min(...xs),Math.max(...zs)-Math.min(...zs));assert(span>6&&span<32,`${z.name} is a stretch of shore, not one spot (${span.toFixed(0)} m)`);}
+  {const d=sites.dock,w=sites.wreck,dockZone=net.major[4],wreckZone=net.major[6];assert(near(dockZone.bearing,d.bearing,.2)&&near(wreckZone.bearing,ISLAND.wreck.bearing,.01),'The dock’s and the wreck’s zones are theirs');
+   assert(wreckZone.points.some(p=>p[1]<w.z-3)&&wreckZone.points.some(p=>p[1]>w.z+3),'The dead rise on both sides of the wreck');}
+  // The spec's six interior places, in its order: NW ruin, north below the hill, NE by the bunker,
+  // east beyond the Forge, south by the hill's foot, SW between the camp and the hill.
+  {const [ruin,north,ne,east,south,sw]=net.interior.map(z=>z.points[0]),forge=landmarks.find(l=>l.name==='SOUL FORGE'),camp=sites.camp;
+   assert(Math.hypot(ruin[0]-sites.ruin.x,ruin[1]-sites.ruin.z)<18&&north[1]<H.z-28&&Math.abs(north[0]-H.x)<12&&Math.hypot(ne[0]-sites.bunker.x,ne[1]-sites.bunker.z)<18
+     &&east[0]>forge.x+8&&Math.abs(east[1]-forge.z)<10&&south[1]>H.z+28&&Math.abs(south[0]-H.x)<12&&sw[0]<H.x&&sw[0]>camp.x&&sw[1]>H.z&&sw[1]<camp.z,'The six interior zones are where the spec puts them');}
+  console.log(`PASS: the finished map (v210): the spec's landmarks each in their part of the island (the bunker north-east, the ruin north-west, the wreck in her cove on the west, the camp south-west, the dock south, East Cove south-east, the Forge east of the hill, North Beach), two coves bitten out of the coast, four hills of their own under Radio Hill (${Object.entries(rises).map(([n,h])=>`${n.toLowerCase()} ${h.toFixed(1)} m`).join(', ')}) and a gully; eight pads on open near-level ground, each reachable on five sides or more; ${props} prop colliders none of which can be climbed, every slab a step; every open cell routed to the summit for walkers and brutes; the beach at least ${narrowest.toFixed(1)} m wide all the way round for a brute; ${approaches} of 12 bearings a broad clear climb; nine trails (${Math.round(trailLength)} m) clear along their length; and ${points} spawn points in 28 named locations, all clear, routed, ${SPAWN_RULES.stationClear} m or more from every pad.`);
 }
 
 // ---- 4. Playing Dead Tide ---------------------------------------------------------------
@@ -99,7 +195,7 @@ try{
   assert(typeof enter==='function'&&$('loading').classList.contains('hidden')&&!$('menu').classList.contains('hidden')&&G().mode==='menu','The island loads to its title screen');
   assert(G().renderer.compileCalls?.length===2,'Every shader is compiled under the loading screen (world and weapon)');
   const top=new Set(G().world.children.map(o=>o.name));
-  assert.deepEqual([...top].sort(),['Blood particles','Bullet impact marks','Explosion effects','Island ground','Palm crowns','Palm trunks','Radio shack','Radio tower','Rocks','The sea','Tower beacon','Wreck'].sort(),'The world holds the island and the shared effects, nothing else');
+  assert.deepEqual([...top].sort(),['Blood particles','Brush','Bullet impact marks','Explosion effects','Island ground','Landmarks','Palm crowns','Palm trunks','Radio tower','Rocks','The sea','Tower beacon','Wreck'].sort(),'The world holds the island and the shared effects, nothing else');
   // v207: the dead are not built while loading. Behind the title screen they build a body a
   // frame, then their shaders compile in a scene of their own, lit by the island's, never drawn.
   assert(G().deadBuilt===false&&G().deadReady===false,'The dead are not built while loading');
@@ -135,14 +231,15 @@ try{
   let bearing=Math.PI/2;while(!clearLine(bearing))bearing+=.05;
   qa.setPlayer(H.x+Math.cos(bearing)*34,H.z+Math.sin(bearing)*34);qa.setAim(Math.atan2(Math.cos(bearing),Math.sin(bearing)),0);qa.setKeys(['KeyW','ShiftLeft']);let reached=false;for(let i=0;i<60*10&&!reached;i++){frames(1);if(G().zone.includes('SUMMIT'))reached=true;}qa.setKeys([]);
   assert(reached&&G().player.y>14,`Sprinting straight up Radio Hill reaches the summit (stopped at ${G().player.x.toFixed(1)},${G().player.z.toFixed(1)} ${G().player.y.toFixed(1)} m, ${G().zone})`);
-  // The shack: in through the door, never through a wall, and the roof stops a jump.
-  const S=ISLAND.shack,summitY=I.summit;
-  qa.setPlayer(S.x,S.z+S.d/2+2);qa.setAim(0,0);qa.setKeys(['KeyW']);frames(110);qa.setKeys([]);
-  assert(G().zone==='RADIO SHACK'&&Math.abs(G().player.y-(summitY+S.deck))<.02,'The door leads in, up onto the shack’s deck');
+  // The radio tent (v210): open on every side. You walk in under the canopy from the south, a
+  // jump clears its eaves, the desk stops you, and you walk straight out the far side.
+  const S=ISLAND.tent,summitY=I.summit;
+  qa.setPlayer(S.x+1.2,S.z+S.d/2+2.5);qa.setAim(0,0);qa.setKeys(['KeyW']);frames(60);qa.setKeys([]);
+  assert(G().zone.includes('RADIO TENT')&&Math.abs(G().player.y-summitY)<.02,'You walk in under the canopy, on the summit’s own ground');
   key({code:'Space'});peak=0;for(let i=0;i<60;i++){frames(1);peak=Math.max(peak,G().player.y);}listeners.keyup({code:'Space'});
-  assert(peak+1.8<=summitY+S.deck+S.wall+.01,'Jumping inside, the head stops under the roof');
-  qa.setKeys(['KeyW']);frames(240);qa.setKeys([]);assert(G().player.z>S.z-S.d/2+.3,'The back wall stops you');
-  qa.setPlayer(S.x+S.w/2+1.5,S.z);qa.setAim(Math.PI/2,0);qa.setKeys(['KeyW']);frames(120);qa.setKeys([]);assert(G().player.x>S.x+S.w/2,'and so does the side wall');
+  assert(peak>summitY+.6&&peak+1.8<=summitY+S.eave,'A jump inside clears the eaves');
+  qa.setKeys(['KeyW']);frames(200);qa.setKeys([]);assert(G().player.z<S.z-S.d/2-1&&!G().zone.includes('TENT'),'and you walk straight out the far side: it has no walls');
+  qa.setPlayer(S.x-.9,S.z+1.5);qa.setAim(0,0);qa.setKeys(['KeyW']);frames(120);qa.setKeys([]);assert(G().player.z>S.z-1.2+.4,'The radio desk stops you');
   // The sea: wade into the shallows, slower as it deepens, and no further.
   const a=Math.PI/2+.4,far=coastRadius(a)*1.4;qa.setPlayer(Math.cos(a)*coastRadius(a)*.9,Math.sin(a)*coastRadius(a)*.9);qa.setAim(Math.atan2(-Math.cos(a),-Math.sin(a)),0);
   qa.setKeys(['KeyW']);frames(60*12);qa.setKeys([]);p=G().player;
@@ -177,7 +274,7 @@ try{
   $('resume').onclick();assert.equal(G().mode,'playing','Resume locks the mouse and plays on');
   key({code:'Escape'});$('mainMenuPause').onclick();assert(!$('pauseConfirm').classList.contains('hidden'));$('confirmYes').onclick();
   assert.equal(G().mode,'menu');assert(!$('menu').classList.contains('hidden')&&$('hud').classList.contains('hidden')&&!$('start').disabled,'Title Screen asks first, then returns to the title');
-  console.log('PASS: playing Dead Tide (v207: the dead built behind its title screen, a body a frame, their shaders compiled off to the side; v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, go into the shack by its door (its walls and roof hold), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
+  console.log('PASS: playing Dead Tide (v207: the dead built behind its title screen, a body a frame, their shaders compiled off to the side; v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, walk in under the radio tent and out the far side (only its desk stops you), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
   // ---- 5. The dead come ashore (v206) ------------------------------------------------------
   const {SHORE_RULES:R}=await import('../public/game/tide-dead.mjs'),TT=await import('../public/game/tide-threat.mjs'),LIVING=TT.targetPopulation(1),STATS=TT.threatStats(1);
   const alive=()=>G().zombies.filter(e=>!e.dead),dist=e=>Math.hypot(e.walkPos.x-G().player.x,e.walkPos.z-G().player.z);
@@ -211,7 +308,9 @@ try{
    const points=G().run.points,kills=G().run.kills;let shots=0;while(!e.dead&&shots<40){aimAt(e.group.position.clone().add(new T.Vector3(0,1.15,0)));frames(1);if(G().run.inventory.glock.ammo===0){qa.reload();frames(130);}qa.shoot();shots++;frames(12);}
    assert(e.dead&&G().run.kills===kills+1&&G().run.points-points>=50,`Shots downhill land and kill (${shots} shots); the kill counts and pays`);}
   // The katana on a slope: a walker below you on the hillside, inside the arc, is cut.
-  {frames(120);const b=Math.PI*1.2,at=d=>[ISLAND.hill.x+Math.cos(b)*d,ISLAND.hill.z+Math.sin(b)*d];const [px,pz]=at(17),[ex,ez]=at(19.6);qa.setPlayer(px,pz);
+  {frames(120);const open=(x,z)=>!G().island.isBlocked(x,z,.7,G().island.colliders,null,groundHeight(x,z),1.8);let b=Math.PI*1.2;const at=d=>[ISLAND.hill.x+Math.cos(b)*d,ISLAND.hill.z+Math.sin(b)*d];
+   while(!(groundHeight(...at(17))-groundHeight(...at(19.6))>.9&&open(...at(17))&&open(...at(19.6))))b+=.1;   // a clear line down the flank (v210: the spur and rocks moved)
+   const [px,pz]=at(17),[ex,ez]=at(19.6);qa.setPlayer(px,pz);
    G().run.inventory.katana.owned=true;key({code:'Digit7',repeat:false});frames(30);const e=still(G().spawnKind('walker',ex,ez,0));
    assert(groundHeight(px,pz)-groundHeight(ex,ez)>.8,'(it stands lower)');aimAt(e.group.position.clone().add(new T.Vector3(0,1,0)));const hp=e.hp;qa.shoot();frames(30);
    assert(e.hp<hp,'The katana cuts a walker below you on the slope');key({code:'Digit1',repeat:false});frames(30);if(!e.dead)G().combat.damageEnemy(e,1e4,false,{part:'torso',direction:new T.Vector3(0,0,1),source:'glock'});}

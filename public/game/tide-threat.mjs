@@ -97,6 +97,7 @@ export const SPAWN_RULES=Object.freeze({
   minor:Object.freeze([.12,.22,.32,.4]),follow:Object.freeze([.25,.35,.45,.5]),followFor:6,
   interior:Object.freeze({open:Object.freeze([0,0,2,4]),share:Object.freeze([0,0,.1,.18]),rotate:30,near:28,halfAngle:Math.PI*80/180}),
   batch:Object.freeze([1,2,2,3]),
+  stationClear:6,                                // v210: no one rises this close to a station's pad (m)
   weights:Object.freeze({
     moving:.8,                                   // m/s: slower than this, you are standing
     travel:Object.freeze({ahead:.2,aheadFar:.55,far:40,side:.9,behind:1}),
