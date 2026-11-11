@@ -493,27 +493,37 @@ Nothing it loads changed; five files differ only in their version number.
 
 ### Dead Tide: full protocol
 
+This is the final v212: the stations set into the reworked landmarks, with one ammunition station.
+
 | | main (v211) | v212 |
 |---|---:|---:|
-| Files / KB before playable | 63 / 2,069 | 65 / 2,096 |
-| Time to playable (load phases, 20 pairs) | 7,536 ms | 10,200 ms (+2,664, SE 210) |
-| ↳ modules | 334 ms | 314 ms (−20, SE 11) |
-| ↳ world | 1,061 ms | 1,661 ms (+600, SE 29) |
-| ↳ shaders | 6,142 ms | 8,225 ms (+2,083, SE 195) |
+| Files / KB before playable | 63 / 2,069 | 65 / 2,109 |
+| Time to playable (load phases, 20 pairs) | 6,568 ms | 8,842 ms (+2,274, SE 76) |
+| ↳ modules | 285 ms | 288 ms (+3, SE 11) |
+| ↳ world | 943 ms | 1,415 ms (+472, SE 25) |
+| ↳ shaders | 5,340 ms | 7,139 ms (+1,800, SE 65) |
 | Shader programs, at load and after play | 40 | 48 |
-| Geometries / textures | 223 / 24 | 274 / 29 |
-| Heap after load / after play, after a collection | 55.5 / 145.2 MB | 64.7 / 154.5 MB |
-| Draw calls in the fixed views | 32–115 | 32–163 (title 66 → 143) |
-| Triangles in the title view | 41K | 134K |
-| Frame logic, walking the empty island (24 pairs) | 0.276 ms | 0.330 ms (+0.054, SE 0.015) |
-| The 45-enemy fight: draw calls / triangles | 262–264 / 253K–257K | 306–310 / 318K–324K |
+| Geometries / textures | 223 / 24 | 277 / 29 |
+| Heap after load / after play, after a collection | 55.5 / 145.3 MB | 64.7 / 154.5 MB |
+| Draw calls in the fixed views | 32–115 | 30–158 (title 66 → 149) |
+| Triangles in the title view | 41K | 133K |
+| Frame logic, walking the empty island (24 pairs) | 0.233 ms | 0.294 ms (+0.061, SE 0.005) |
+| The 45-enemy fight: draw calls / triangles | 262–264 / 253K–257K | 302 / 306K |
 
 - **What the first build cost**, before the merging (one standard run): 1,653 draw calls in the title view, 52 textures, 50 shader programs, 505 geometries, frame logic 0.25 → 0.60 ms.
-- **What was done** (`tide-palette.mjs`, Dead Tide only): untextured parts baked into one vertex-coloured material; everything still merged by material in 48 m cells, indexed; the plaques packed into one atlas; the armour models merged within themselves; the soul stone's flat-shading flag and the seams' line material dropped (two shaders fewer each); bullets test collider boxes, not merged triangles; the stations' matrices frozen once built.
-- **What is left is the models themselves.** The mansion's racks hold first-person-quality guns (about 60K of the 93K new triangles), and building seventeen stations takes about 0.25 s of JavaScript (most of the world phase's +600 ms; merging adds about 0.1 s).
-- **The shaders phase (+2.1 s)** does not follow the program count: it was the same with 54 programs and with 48, and still +0.7 s with the stations built but hidden. It includes the first frame drawn in software, the new buffers and textures uploaded, and collection of the build's garbage. A real GPU does this work far faster; that was not measured here.
-- **Frame logic +0.054 ms:** the per-frame station checks (nearest station, prompt, Forge rank), the station colliders and bullets' box tests.
-- **The golden trace** differs where the stations stand and are bought, as it must. Two runs of v212 are byte-identical.
+- **What was done** (`tide-palette.mjs`, Dead Tide only):
+  - untextured parts baked into one vertex-coloured material;
+  - everything still merged by material in 48 m cells, indexed;
+  - the plaques packed into one atlas;
+  - the armour models merged within themselves;
+  - the soul stone's flat-shading flag and the seams' line material dropped (two shaders fewer each);
+  - bullets test collider boxes, not merged triangles;
+  - the stations' matrices frozen once built.
+- **The reworked landmarks** (bigger wreck, camp, boathouse, ruin walls) add a few draw calls of their own: the island's props are merged by material, and the boathouse door's two leaves are drawn apart so they can swing.
+- **What is left is the models themselves.** The mansion's racks hold first-person-quality guns (most of the +92K triangles), and building the stations takes about 0.25 s of JavaScript (most of the world phase's +472 ms; merging adds about 0.1 s).
+- **The shaders phase (+1.8 s)** does not follow the program count: it was the same with 54 programs and with 48, and still +0.7 s with the stations built but hidden. It includes the first frame drawn in software, the new buffers and textures uploaded, and collection of the build's garbage. A real GPU does this work far faster; that was not measured here.
+- **Frame logic +0.061 ms:** the per-frame station checks (nearest station, prompt, Forge rank, the boathouse's lock), the station colliders and bullets' box tests.
+- **The golden trace** differs where the landmarks and stations changed, as it must. Two runs of v212 are byte-identical.
 - **Not measured:** real GPUs, integrated graphics, or frame rates in a real browser.
 - **If the load time matters more than the stations being ready at once:** they could be built behind the title, as the dead are (v207), which would take most of the world and shader cost out of the time to playable.
 

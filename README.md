@@ -108,9 +108,9 @@ Dead Tide step 5: the island's stations, set into the landmarks round them. They
 - **Release tiers:**
   - **Mansion: quick.** Nothing it loads changed.
   - **Dead Tide: full.** The stations are new content, and they cost:
-    - load time: +2.7 s to playable under software rendering (world +0.6 s, shaders +2.1 s);
-    - rendering: title draw calls 66 → 143 and 134K triangles (+93K, most of them the racks' guns); 8 more shader programs, 5 more textures and +9 MB of heap;
-    - frame logic: +0.054 ms.
+    - load time: +2.3 s to playable under software rendering (world +0.5 s, shaders +1.8 s);
+    - rendering: title draw calls 66 → 149 and 133K triangles (+92K, most of them the racks' guns); 8 more shader programs, 5 more textures and +9 MB of heap;
+    - frame logic: +0.061 ms.
     The first build drew 1,653 calls in the title view and doubled frame logic; the merging above brought it to this. Building the stations behind the title, as the dead are, would take most of the load cost out of the time to playable. Details in `perf/README.md`.
   - **Mode picker: standard,** no differences.
 - **Not verified:**

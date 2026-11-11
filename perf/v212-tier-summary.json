@@ -1,6 +1,6 @@
 {
   "base": "origin/main",
-  "commit": "61e05f142a5255348618c02c58a58a4f70596c3d",
+  "commit": "4b2487fc7a2f313a65120163c5938ac12d68a527",
   "modes": {
     "mansion": {
       "changed": [],
@@ -31,6 +31,11 @@
     "tooling": [
       ".openai/release-state.json",
       "README.md",
+      "perf/README.md",
+      "perf/v212-tide-frame-logic.jsonl",
+      "perf/v212-tide-load-phases.jsonl",
+      "perf/v212-tide.jsonl",
+      "perf/v212-tier-summary.json",
       "scripts/tide-golden-trace.mjs",
       "scripts/tide-shots.mjs",
       "tests/dead-tide.mjs",
@@ -43,110 +48,114 @@
       "standard": {
         "differences": [
           "files before playable: 63 → 65",
-          "KB before playable: 2069 → 2096",
+          "KB before playable: 2069 → 2109",
           "shaderPrograms: 40 → 48",
-          "geometries: 223 → 274",
+          "geometries: 223 → 277",
           "textures: 24 → 29",
           "shaderProgramsAfterPlay: 40 → 48",
-          "title draw calls: 66 → 143",
-          "title triangles (K): 41 → 134",
-          "spawn draw calls: 70 → 118",
-          "spawn triangles (K): 40 → 112",
-          "summit draw calls: 54 → 77",
-          "summit triangles (K): 33 → 82",
-          "wreck draw calls: 44 → 51",
-          "wreck triangles (K): 26 → 48",
-          "sea triangles (K): 21 → 22",
-          "tent draw calls: 52 → 79",
+          "title draw calls: 66 → 149",
+          "title triangles (K): 41 → 133",
+          "spawn draw calls: 70 → 114",
+          "spawn triangles (K): 40 → 94",
+          "summit draw calls: 54 → 78",
+          "summit triangles (K): 33 → 75",
+          "wreck draw calls: 44 → 53",
+          "wreck triangles (K): 26 → 52",
+          "sea draw calls: 32 → 30",
+          "sea triangles (K): 21 → 23",
+          "tent draw calls: 52 → 75",
           "tent triangles (K): 33 → 72",
           "bunker draw calls: 37 → 42",
           "bunker triangles (K): 26 → 31",
           "ruin draw calls: 36 → 47",
-          "ruin triangles (K): 27 → 49",
-          "blast draw calls: 115 → 163",
-          "blast triangles (K): 40 → 112",
-          "fight drawCalls: 264 → 310",
-          "fight trianglesK: 257 → 324",
+          "ruin triangles (K): 27 → 50",
+          "blast draw calls: 115 → 158",
+          "blast triangles (K): 40 → 94",
+          "fight drawCalls: 262 → 302",
+          "fight trianglesK: 253 → 306",
           "heap after load (MB): 55.5 → 64.7",
-          "heap after the fight (MB): 145.2 → 154.5",
-          "heap after play (MB): 145.2 → 154.5",
-          "JavaScript loading, modules + world (ms): 1232 → 1658"
+          "heap after the fight (MB): 145.3 → 154.5",
+          "heap after play (MB): 145.3 → 154.5",
+          "JavaScript loading, modules + world (ms): 1233 → 1886",
+          "frame logic: 0.260 → 0.305 ms (+0.045, SE 0.020)"
         ],
         "frameLogic": {
           "n": 6,
-          "mean": 0.03500000000000001,
-          "se": 0.03153199433379797,
-          "base": 0.32899999999999996,
-          "head": 0.36400000000000005
+          "mean": 0.04450000000000002,
+          "se": 0.02029901475441604,
+          "base": 0.2603333333333333,
+          "head": 0.3048333333333333
         },
         "golden": {
           "identical": false,
-          "compare": "36 gameplay channel difference(s)"
+          "compare": "40 gameplay channel difference(s)"
         }
       },
       "full": {
         "perf": [
           [
             "files before playable: 63 → 65",
-            "KB before playable: 2069 → 2096",
+            "KB before playable: 2069 → 2109",
             "shaderPrograms: 40 → 48",
-            "geometries: 223 → 274",
+            "geometries: 223 → 277",
             "textures: 24 → 29",
             "shaderProgramsAfterPlay: 40 → 48",
-            "title draw calls: 66 → 143",
-            "title triangles (K): 41 → 134",
-            "spawn draw calls: 70 → 118",
-            "spawn triangles (K): 40 → 112",
-            "summit draw calls: 54 → 77",
-            "summit triangles (K): 33 → 82",
-            "wreck draw calls: 44 → 51",
-            "wreck triangles (K): 26 → 48",
-            "sea triangles (K): 21 → 22",
-            "tent draw calls: 52 → 79",
+            "title draw calls: 66 → 149",
+            "title triangles (K): 41 → 133",
+            "spawn draw calls: 70 → 114",
+            "spawn triangles (K): 40 → 94",
+            "summit draw calls: 54 → 78",
+            "summit triangles (K): 33 → 75",
+            "wreck draw calls: 44 → 53",
+            "wreck triangles (K): 26 → 52",
+            "sea draw calls: 32 → 30",
+            "sea triangles (K): 21 → 23",
+            "tent draw calls: 52 → 75",
             "tent triangles (K): 33 → 72",
             "bunker draw calls: 37 → 42",
             "bunker triangles (K): 26 → 31",
             "ruin draw calls: 36 → 47",
-            "ruin triangles (K): 27 → 49",
-            "blast draw calls: 115 → 163",
-            "blast triangles (K): 40 → 112",
-            "fight drawCalls: 262 → 306",
-            "fight trianglesK: 253 → 318",
+            "ruin triangles (K): 27 → 50",
+            "blast draw calls: 115 → 158",
+            "blast triangles (K): 40 → 94",
+            "fight drawCalls: 263 → 302",
+            "fight trianglesK: 255 → 306",
             "heap after load (MB): 55.5 → 64.7",
-            "heap after the fight (MB): 145.2 → 154.5",
+            "heap after the fight (MB): 145.3 → 154.5",
             "heap after play (MB): 145.3 → 154.5",
-            "JavaScript loading, modules + world (ms): 1333 → 2031"
+            "JavaScript loading, modules + world (ms): 1229 → 1661"
           ],
           [
             "files before playable: 63 → 65",
-            "KB before playable: 2069 → 2096",
+            "KB before playable: 2069 → 2109",
             "shaderPrograms: 40 → 48",
-            "geometries: 223 → 274",
+            "geometries: 223 → 277",
             "textures: 24 → 29",
             "shaderProgramsAfterPlay: 40 → 48",
-            "title draw calls: 66 → 143",
-            "title triangles (K): 41 → 134",
-            "spawn draw calls: 70 → 118",
-            "spawn triangles (K): 40 → 112",
-            "summit draw calls: 54 → 77",
-            "summit triangles (K): 33 → 82",
-            "wreck draw calls: 44 → 51",
-            "wreck triangles (K): 26 → 48",
-            "sea triangles (K): 21 → 22",
-            "tent draw calls: 52 → 79",
+            "title draw calls: 66 → 149",
+            "title triangles (K): 41 → 133",
+            "spawn draw calls: 70 → 114",
+            "spawn triangles (K): 40 → 94",
+            "summit draw calls: 54 → 78",
+            "summit triangles (K): 33 → 75",
+            "wreck draw calls: 44 → 53",
+            "wreck triangles (K): 26 → 52",
+            "sea draw calls: 32 → 30",
+            "sea triangles (K): 21 → 23",
+            "tent draw calls: 52 → 75",
             "tent triangles (K): 33 → 72",
             "bunker draw calls: 37 → 42",
             "bunker triangles (K): 26 → 31",
             "ruin draw calls: 36 → 47",
-            "ruin triangles (K): 27 → 49",
-            "blast draw calls: 115 → 163",
-            "blast triangles (K): 40 → 112",
-            "fight drawCalls: 263 → 310",
-            "fight trianglesK: 256 → 324",
+            "ruin triangles (K): 27 → 50",
+            "blast draw calls: 115 → 158",
+            "blast triangles (K): 40 → 94",
+            "fight drawCalls: 264 → 302",
+            "fight trianglesK: 257 → 306",
             "heap after load (MB): 55.5 → 64.7",
-            "heap after the fight (MB): 145.2 → 154.5",
-            "heap after play (MB): 145.2 → 154.5",
-            "JavaScript loading, modules + world (ms): 1488 → 1832"
+            "heap after the fight (MB): 145.3 → 154.5",
+            "heap after play (MB): 145.3 → 154.5",
+            "JavaScript loading, modules + world (ms): 1226 → 1686"
           ]
         ],
         "measured": {
@@ -154,10 +163,10 @@
             {
               "label": "tide base",
               "page": "tide.html",
-              "date": "2026-11-11T19:33:33.936Z",
+              "date": "2026-11-11T21:34:37.388Z",
               "note": "Headless Chromium; frame times are relative to this machine only.",
               "load": {
-                "timeToPlayableMs": 8550,
+                "timeToPlayableMs": 6552,
                 "untilPlayable": {
                   "requests": 63,
                   "kb": 2069
@@ -166,22 +175,22 @@
                   "requests": 63,
                   "kb": 2069
                 },
-                "heapMB": 85,
+                "heapMB": 90.9,
                 "heapAfterGcMB": 55.5,
                 "phases": {
-                  "modulesMs": 326,
-                  "worldMs": 1007,
-                  "shadersMs": 7207
+                  "modulesMs": 236,
+                  "worldMs": 993,
+                  "shadersMs": 5317
                 },
                 "files": [
                   "/tide.html",
                   "/style.css",
                   "/tide.css",
                   "/tide-boot.js",
+                  "/tide.mjs",
                   "/body.woff2",
                   "/condensed.woff2",
                   "/title.woff2",
-                  "/tide.mjs",
                   "/three.module.js",
                   "/display.mjs",
                   "/audio.mjs",
@@ -218,8 +227,8 @@
                   "/gun-audio.mjs",
                   "/weapon-models.mjs",
                   "/reload-pose.mjs",
-                  "/weapon-ranks.mjs",
                   "/armor.mjs",
+                  "/weapon-ranks.mjs",
                   "/zombie-injuries.mjs",
                   "/soul-forge.mjs",
                   "/zombies.mjs",
@@ -239,7 +248,7 @@
                   "/minimap.mjs"
                 ],
                 "mansionFiles": [],
-                "deadReadyMs": 17140,
+                "deadReadyMs": 13862,
                 "heapAfterDeadMB": 141.7
               },
               "gpu": {
@@ -252,88 +261,88 @@
                 "title": {
                   "drawCalls": 66,
                   "trianglesK": 41,
-                  "renderCpuMs": 5.66,
-                  "avgMs": 183.53,
-                  "p95Ms": 192.9,
-                  "maxMs": 192.9
+                  "renderCpuMs": 1.66,
+                  "avgMs": 162.34,
+                  "p95Ms": 183.7,
+                  "maxMs": 183.7
                 },
                 "spawn": {
                   "drawCalls": 70,
                   "trianglesK": 40,
-                  "renderCpuMs": 3.99,
-                  "avgMs": 212.84,
-                  "p95Ms": 234.8,
-                  "maxMs": 234.8
+                  "renderCpuMs": 5.17,
+                  "avgMs": 192.3,
+                  "p95Ms": 243.3,
+                  "maxMs": 243.3
                 },
                 "summit": {
                   "drawCalls": 54,
                   "trianglesK": 33,
-                  "renderCpuMs": 3.79,
-                  "avgMs": 247.21,
-                  "p95Ms": 272,
-                  "maxMs": 272
+                  "renderCpuMs": 1.8,
+                  "avgMs": 186.76,
+                  "p95Ms": 201.4,
+                  "maxMs": 201.4
                 },
                 "wreck": {
                   "drawCalls": 44,
                   "trianglesK": 26,
-                  "renderCpuMs": 5.4,
-                  "avgMs": 194.78,
-                  "p95Ms": 253.5,
-                  "maxMs": 253.5
+                  "renderCpuMs": 3.59,
+                  "avgMs": 163.47,
+                  "p95Ms": 179.9,
+                  "maxMs": 179.9
                 },
                 "sea": {
                   "drawCalls": 32,
                   "trianglesK": 21,
-                  "renderCpuMs": 2.54,
-                  "avgMs": 179.64,
-                  "p95Ms": 201.1,
-                  "maxMs": 201.1
+                  "renderCpuMs": 3.7,
+                  "avgMs": 135.96,
+                  "p95Ms": 144.9,
+                  "maxMs": 144.9
                 },
                 "tent": {
                   "drawCalls": 52,
                   "trianglesK": 33,
-                  "renderCpuMs": 4.92,
-                  "avgMs": 227.14,
-                  "p95Ms": 255.4,
-                  "maxMs": 255.4
+                  "renderCpuMs": 2.67,
+                  "avgMs": 197.88,
+                  "p95Ms": 214.9,
+                  "maxMs": 214.9
                 },
                 "bunker": {
                   "drawCalls": 37,
                   "trianglesK": 26,
-                  "renderCpuMs": 1.78,
-                  "avgMs": 183.66,
-                  "p95Ms": 199.5,
-                  "maxMs": 199.5
+                  "renderCpuMs": 2.19,
+                  "avgMs": 172.7,
+                  "p95Ms": 194.3,
+                  "maxMs": 194.3
                 },
                 "ruin": {
                   "drawCalls": 36,
                   "trianglesK": 27,
-                  "renderCpuMs": 4.8,
-                  "avgMs": 198.93,
-                  "p95Ms": 222.3,
-                  "maxMs": 222.3
+                  "renderCpuMs": 4.17,
+                  "avgMs": 177.61,
+                  "p95Ms": 212.3,
+                  "maxMs": 212.3
                 },
                 "blast": {
                   "drawCalls": 115,
                   "trianglesK": 40,
-                  "renderCpuMs": 6.5,
-                  "avgMs": 232.61,
-                  "p95Ms": 255,
-                  "maxMs": 255
+                  "renderCpuMs": 5.91,
+                  "avgMs": 201.34,
+                  "p95Ms": 218,
+                  "maxMs": 218
                 }
               },
               "fight": {
                 "enemies": 45,
                 "stillAlive": 45,
-                "firstFramesMaxMs": 762.2,
-                "drawCalls": 262,
-                "trianglesK": 253,
-                "renderCpuMs": 9.31,
-                "avgMs": 846.64,
-                "p95Ms": 1096.9,
-                "maxMs": 1297.1,
-                "heapMB": 148.6,
-                "heapAfterGcMB": 145.2
+                "firstFramesMaxMs": 657.4,
+                "drawCalls": 263,
+                "trianglesK": 255,
+                "renderCpuMs": 7.55,
+                "avgMs": 727.03,
+                "p95Ms": 946.7,
+                "maxMs": 990.2,
+                "heapMB": 145.5,
+                "heapAfterGcMB": 145.3
               },
               "heapAfterPlayMB": 145.3,
               "heapAfterPlayAfterGcMB": 145.3,
@@ -342,10 +351,10 @@
             {
               "label": "tide base",
               "page": "tide.html",
-              "date": "2026-11-11T19:38:12.132Z",
+              "date": "2026-11-11T21:38:45.929Z",
               "note": "Headless Chromium; frame times are relative to this machine only.",
               "load": {
-                "timeToPlayableMs": 7112,
+                "timeToPlayableMs": 6619,
                 "untilPlayable": {
                   "requests": 63,
                   "kb": 2069
@@ -354,34 +363,34 @@
                   "requests": 63,
                   "kb": 2069
                 },
-                "heapMB": 101.1,
+                "heapMB": 113.2,
                 "heapAfterGcMB": 55.5,
                 "phases": {
-                  "modulesMs": 270,
-                  "worldMs": 1218,
-                  "shadersMs": 5619
+                  "modulesMs": 267,
+                  "worldMs": 959,
+                  "shadersMs": 5386
                 },
                 "files": [
                   "/tide.html",
                   "/style.css",
                   "/tide.css",
                   "/tide-boot.js",
+                  "/tide.mjs",
                   "/body.woff2",
                   "/condensed.woff2",
                   "/title.woff2",
-                  "/tide.mjs",
                   "/three.module.js",
                   "/display.mjs",
-                  "/audio.mjs",
-                  "/batching.mjs",
-                  "/first-person.mjs",
-                  "/grenade-throw.mjs",
                   "/explosion-fx.mjs",
                   "/effect-pool.mjs",
+                  "/audio.mjs",
                   "/combat-feedback.mjs",
                   "/reticles.mjs",
                   "/weapon-surfaces.mjs",
+                  "/batching.mjs",
                   "/katana.mjs",
+                  "/first-person.mjs",
+                  "/grenade-throw.mjs",
                   "/graphics.mjs",
                   "/weapon-stats.mjs",
                   "/player.mjs",
@@ -402,17 +411,17 @@
                   "/drop-fade.mjs",
                   "/tide-dead.mjs",
                   "/tide-threat.mjs",
-                  "/render-scale.mjs",
                   "/gun-audio.mjs",
+                  "/render-scale.mjs",
                   "/weapon-models.mjs",
                   "/reload-pose.mjs",
                   "/armor.mjs",
                   "/weapon-ranks.mjs",
+                  "/zombie-injuries.mjs",
+                  "/soul-forge.mjs",
                   "/zombies.mjs",
                   "/enrage.mjs",
                   "/lurker.mjs",
-                  "/soul-forge.mjs",
-                  "/zombie-injuries.mjs",
                   "/brute.mjs",
                   "/zombie-dog.mjs",
                   "/zombie-faces.mjs",
@@ -427,7 +436,7 @@
                   "/minimap.mjs"
                 ],
                 "mansionFiles": [],
-                "deadReadyMs": 14888,
+                "deadReadyMs": 14216,
                 "heapAfterDeadMB": 141.7
               },
               "gpu": {
@@ -440,91 +449,91 @@
                 "title": {
                   "drawCalls": 66,
                   "trianglesK": 41,
-                  "renderCpuMs": 1.09,
-                  "avgMs": 176.41,
-                  "p95Ms": 197.7,
-                  "maxMs": 197.7
+                  "renderCpuMs": 3.63,
+                  "avgMs": 167.06,
+                  "p95Ms": 192,
+                  "maxMs": 192
                 },
                 "spawn": {
                   "drawCalls": 70,
                   "trianglesK": 40,
-                  "renderCpuMs": 4.95,
-                  "avgMs": 186.45,
-                  "p95Ms": 201.7,
-                  "maxMs": 201.7
+                  "renderCpuMs": 4.27,
+                  "avgMs": 189.39,
+                  "p95Ms": 232.4,
+                  "maxMs": 232.4
                 },
                 "summit": {
                   "drawCalls": 54,
                   "trianglesK": 33,
-                  "renderCpuMs": 2.22,
-                  "avgMs": 194.64,
-                  "p95Ms": 216.8,
-                  "maxMs": 216.8
+                  "renderCpuMs": 3.68,
+                  "avgMs": 197.59,
+                  "p95Ms": 216.1,
+                  "maxMs": 216.1
                 },
                 "wreck": {
                   "drawCalls": 44,
                   "trianglesK": 26,
-                  "renderCpuMs": 2.81,
-                  "avgMs": 155.56,
-                  "p95Ms": 170.1,
-                  "maxMs": 170.1
+                  "renderCpuMs": 4.5,
+                  "avgMs": 169.85,
+                  "p95Ms": 196.9,
+                  "maxMs": 196.9
                 },
                 "sea": {
                   "drawCalls": 32,
                   "trianglesK": 21,
-                  "renderCpuMs": 2.82,
-                  "avgMs": 144.76,
-                  "p95Ms": 156.2,
-                  "maxMs": 156.2
+                  "renderCpuMs": 2.84,
+                  "avgMs": 159.91,
+                  "p95Ms": 189.7,
+                  "maxMs": 189.7
                 },
                 "tent": {
                   "drawCalls": 52,
                   "trianglesK": 33,
-                  "renderCpuMs": 2.48,
-                  "avgMs": 210.39,
-                  "p95Ms": 236.7,
-                  "maxMs": 236.7
+                  "renderCpuMs": 3.25,
+                  "avgMs": 207.31,
+                  "p95Ms": 238.3,
+                  "maxMs": 238.3
                 },
                 "bunker": {
                   "drawCalls": 37,
                   "trianglesK": 26,
-                  "renderCpuMs": 3.03,
-                  "avgMs": 177.36,
-                  "p95Ms": 197.4,
-                  "maxMs": 197.4
+                  "renderCpuMs": 3.61,
+                  "avgMs": 169.45,
+                  "p95Ms": 180.5,
+                  "maxMs": 180.5
                 },
                 "ruin": {
                   "drawCalls": 36,
                   "trianglesK": 27,
-                  "renderCpuMs": 1.51,
-                  "avgMs": 208.44,
-                  "p95Ms": 222.5,
-                  "maxMs": 222.5
+                  "renderCpuMs": 1.37,
+                  "avgMs": 168.67,
+                  "p95Ms": 178.9,
+                  "maxMs": 178.9
                 },
                 "blast": {
                   "drawCalls": 115,
                   "trianglesK": 40,
-                  "renderCpuMs": 3.8,
-                  "avgMs": 205.91,
-                  "p95Ms": 223.2,
-                  "maxMs": 223.2
+                  "renderCpuMs": 6.51,
+                  "avgMs": 206.41,
+                  "p95Ms": 256.9,
+                  "maxMs": 256.9
                 }
               },
               "fight": {
                 "enemies": 45,
                 "stillAlive": 45,
-                "firstFramesMaxMs": 717.2,
-                "drawCalls": 263,
-                "trianglesK": 256,
-                "renderCpuMs": 7.86,
-                "avgMs": 762.8,
-                "p95Ms": 1028.1,
-                "maxMs": 1051.7,
-                "heapMB": 146.3,
-                "heapAfterGcMB": 145.2
+                "firstFramesMaxMs": 657.1,
+                "drawCalls": 264,
+                "trianglesK": 257,
+                "renderCpuMs": 8.01,
+                "avgMs": 738.68,
+                "p95Ms": 949.2,
+                "maxMs": 1054.5,
+                "heapMB": 145.9,
+                "heapAfterGcMB": 145.3
               },
-              "heapAfterPlayMB": 145.2,
-              "heapAfterPlayAfterGcMB": 145.2,
+              "heapAfterPlayMB": 145.4,
+              "heapAfterPlayAfterGcMB": 145.3,
               "errors": []
             }
           ],
@@ -532,44 +541,44 @@
             {
               "label": "tide head",
               "page": "tide.html",
-              "date": "2026-11-11T19:35:04.399Z",
+              "date": "2026-11-11T21:35:54.755Z",
               "note": "Headless Chromium; frame times are relative to this machine only.",
               "load": {
-                "timeToPlayableMs": 10053,
+                "timeToPlayableMs": 9274,
                 "untilPlayable": {
                   "requests": 65,
-                  "kb": 2096
+                  "kb": 2109
                 },
                 "total": {
                   "requests": 65,
-                  "kb": 2096
+                  "kb": 2109
                 },
-                "heapMB": 112.4,
+                "heapMB": 109.5,
                 "heapAfterGcMB": 64.7,
                 "phases": {
-                  "modulesMs": 297,
-                  "worldMs": 1734,
-                  "shadersMs": 8016
+                  "modulesMs": 276,
+                  "worldMs": 1385,
+                  "shadersMs": 7607
                 },
                 "files": [
                   "/tide.html",
                   "/style.css",
                   "/tide.css",
                   "/tide-boot.js",
-                  "/tide.mjs",
                   "/body.woff2",
                   "/condensed.woff2",
                   "/title.woff2",
+                  "/tide.mjs",
                   "/three.module.js",
                   "/display.mjs",
                   "/audio.mjs",
                   "/batching.mjs",
                   "/tide-palette.mjs",
                   "/first-person.mjs",
-                  "/combat-feedback.mjs",
-                  "/effect-pool.mjs",
                   "/grenade-throw.mjs",
                   "/explosion-fx.mjs",
+                  "/effect-pool.mjs",
+                  "/combat-feedback.mjs",
                   "/reticles.mjs",
                   "/weapon-surfaces.mjs",
                   "/katana.mjs",
@@ -601,18 +610,18 @@
                   "/reload-pose.mjs",
                   "/armor.mjs",
                   "/weapon-ranks.mjs",
-                  "/zombie-injuries.mjs",
+                  "/minimap.mjs",
                   "/soul-forge.mjs",
+                  "/zombie-injuries.mjs",
                   "/zombies.mjs",
                   "/enrage.mjs",
                   "/lurker.mjs",
-                  "/minimap.mjs",
                   "/brute.mjs",
                   "/zombie-dog.mjs",
-                  "/zombie-life.mjs",
                   "/zombie-faces.mjs",
                   "/enemy-surfaces.mjs",
                   "/feral.mjs",
+                  "/zombie-life.mjs",
                   "/zombie-build.mjs",
                   "/glock-model-parts.mjs",
                   "/enemy-faces.mjs",
@@ -621,100 +630,100 @@
                 "mansionFiles": [
                   "/signage.mjs"
                 ],
-                "deadReadyMs": 19410,
+                "deadReadyMs": 17128,
                 "heapAfterDeadMB": 150.9
               },
               "gpu": {
                 "shaderPrograms": 48,
-                "geometries": 274,
+                "geometries": 277,
                 "textures": 29,
                 "shaderProgramsAfterPlay": 48
               },
               "views": {
                 "title": {
-                  "drawCalls": 143,
-                  "trianglesK": 134,
-                  "renderCpuMs": 8.04,
-                  "avgMs": 236.56,
-                  "p95Ms": 254.3,
-                  "maxMs": 254.3
+                  "drawCalls": 149,
+                  "trianglesK": 133,
+                  "renderCpuMs": 5.58,
+                  "avgMs": 211.01,
+                  "p95Ms": 276.3,
+                  "maxMs": 276.3
                 },
                 "spawn": {
-                  "drawCalls": 118,
-                  "trianglesK": 112,
-                  "renderCpuMs": 5.45,
-                  "avgMs": 237.46,
-                  "p95Ms": 280.5,
-                  "maxMs": 280.5
+                  "drawCalls": 114,
+                  "trianglesK": 94,
+                  "renderCpuMs": 5.5,
+                  "avgMs": 204.9,
+                  "p95Ms": 225,
+                  "maxMs": 225
                 },
                 "summit": {
-                  "drawCalls": 77,
-                  "trianglesK": 82,
-                  "renderCpuMs": 4.94,
-                  "avgMs": 263.76,
-                  "p95Ms": 318.2,
-                  "maxMs": 318.2
+                  "drawCalls": 78,
+                  "trianglesK": 75,
+                  "renderCpuMs": 5.5,
+                  "avgMs": 230.75,
+                  "p95Ms": 261.2,
+                  "maxMs": 261.2
                 },
                 "wreck": {
-                  "drawCalls": 51,
-                  "trianglesK": 48,
-                  "renderCpuMs": 6.2,
-                  "avgMs": 196.95,
-                  "p95Ms": 229.4,
-                  "maxMs": 229.4
+                  "drawCalls": 53,
+                  "trianglesK": 52,
+                  "renderCpuMs": 5.03,
+                  "avgMs": 206.85,
+                  "p95Ms": 232.6,
+                  "maxMs": 232.6
                 },
                 "sea": {
-                  "drawCalls": 32,
-                  "trianglesK": 22,
-                  "renderCpuMs": 4.46,
-                  "avgMs": 180.3,
-                  "p95Ms": 198.9,
-                  "maxMs": 198.9
+                  "drawCalls": 30,
+                  "trianglesK": 23,
+                  "renderCpuMs": 2.59,
+                  "avgMs": 152.97,
+                  "p95Ms": 165,
+                  "maxMs": 165
                 },
                 "tent": {
-                  "drawCalls": 79,
+                  "drawCalls": 75,
                   "trianglesK": 72,
-                  "renderCpuMs": 6.91,
-                  "avgMs": 268.88,
-                  "p95Ms": 320.3,
-                  "maxMs": 320.3
+                  "renderCpuMs": 3.97,
+                  "avgMs": 250.03,
+                  "p95Ms": 263.9,
+                  "maxMs": 263.9
                 },
                 "bunker": {
                   "drawCalls": 42,
                   "trianglesK": 31,
-                  "renderCpuMs": 4.69,
-                  "avgMs": 212.88,
-                  "p95Ms": 228.5,
-                  "maxMs": 228.5
+                  "renderCpuMs": 4.11,
+                  "avgMs": 181.5,
+                  "p95Ms": 214.6,
+                  "maxMs": 214.6
                 },
                 "ruin": {
                   "drawCalls": 47,
-                  "trianglesK": 49,
-                  "renderCpuMs": 4.62,
-                  "avgMs": 234.99,
-                  "p95Ms": 279.8,
-                  "maxMs": 279.8
+                  "trianglesK": 50,
+                  "renderCpuMs": 3.8,
+                  "avgMs": 199.18,
+                  "p95Ms": 243.6,
+                  "maxMs": 243.6
                 },
                 "blast": {
-                  "drawCalls": 163,
-                  "trianglesK": 112,
-                  "renderCpuMs": 11.51,
-                  "avgMs": 277.6,
-                  "p95Ms": 305,
-                  "maxMs": 305
+                  "drawCalls": 158,
+                  "trianglesK": 94,
+                  "renderCpuMs": 6.9,
+                  "avgMs": 241.94,
+                  "p95Ms": 267,
+                  "maxMs": 267
                 }
               },
               "fight": {
                 "enemies": 45,
                 "stillAlive": 45,
-                "firstFramesMaxMs": 968.3,
-                "drawCalls": 306,
-                "trianglesK": 318,
-                "renderCpuMs": 9.61,
-                "avgMs": 823.28,
-                "p95Ms": 1065.4,
-                "maxMs": 1113,
-                "heapMB": 156.3,
+                "firstFramesMaxMs": 739.4,
+                "drawCalls": 302,
+                "trianglesK": 306,
+                "renderCpuMs": 9.76,
+                "avgMs": 743.52,
+                "p95Ms": 946,
+                "maxMs": 1083.2,
+                "heapMB": 159,
                 "heapAfterGcMB": 154.5
               },
               "heapAfterPlayMB": 154.5,
@@ -724,34 +733,34 @@
             {
               "label": "tide head",
               "page": "tide.html",
-              "date": "2026-11-11T19:36:38.626Z",
+              "date": "2026-11-11T21:37:19.738Z",
               "note": "Headless Chromium; frame times are relative to this machine only.",
               "load": {
-                "timeToPlayableMs": 10257,
+                "timeToPlayableMs": 9067,
                 "untilPlayable": {
                   "requests": 65,
-                  "kb": 2096
+                  "kb": 2109
                 },
                 "total": {
                   "requests": 65,
-                  "kb": 2096
+                  "kb": 2109
                 },
-                "heapMB": 122.1,
+                "heapMB": 132.5,
                 "heapAfterGcMB": 64.7,
                 "phases": {
-                  "modulesMs": 303,
-                  "worldMs": 1529,
-                  "shadersMs": 8418
+                  "modulesMs": 319,
+                  "worldMs": 1367,
+                  "shadersMs": 7372
                 },
                 "files": [
                   "/tide.html",
                   "/style.css",
                   "/tide.css",
                   "/tide-boot.js",
-                  "/tide.mjs",
                   "/body.woff2",
                   "/condensed.woff2",
                   "/title.woff2",
+                  "/tide.mjs",
                   "/three.module.js",
                   "/display.mjs",
                   "/audio.mjs",
@@ -787,8 +796,8 @@
                   "/drop-fade.mjs",
                   "/tide-dead.mjs",
                   "/tide-threat.mjs",
-                  "/render-scale.mjs",
                   "/gun-audio.mjs",
+                  "/render-scale.mjs",
                   "/weapon-models.mjs",
                   "/reload-pose.mjs",
                   "/armor.mjs",
@@ -813,100 +822,100 @@
                 "mansionFiles": [
                   "/signage.mjs"
                 ],
-                "deadReadyMs": 19740,
+                "deadReadyMs": 16821,
                 "heapAfterDeadMB": 150.9
               },
               "gpu": {
                 "shaderPrograms": 48,
-                "geometries": 274,
+                "geometries": 277,
                 "textures": 29,
                 "shaderProgramsAfterPlay": 48
               },
               "views": {
                 "title": {
-                  "drawCalls": 143,
-                  "trianglesK": 134,
-                  "renderCpuMs": 2.59,
-                  "avgMs": 215.72,
-                  "p95Ms": 237,
-                  "maxMs": 237
+                  "drawCalls": 149,
+                  "trianglesK": 133,
+                  "renderCpuMs": 9.81,
+                  "avgMs": 209.88,
+                  "p95Ms": 224.3,
+                  "maxMs": 224.3
                 },
                 "spawn": {
-                  "drawCalls": 118,
-                  "trianglesK": 112,
-                  "renderCpuMs": 5.21,
-                  "avgMs": 254.09,
-                  "p95Ms": 282,
-                  "maxMs": 282
+                  "drawCalls": 114,
+                  "trianglesK": 94,
+                  "renderCpuMs": 4.66,
+                  "avgMs": 216.67,
+                  "p95Ms": 252.9,
+                  "maxMs": 252.9
                 },
                 "summit": {
-                  "drawCalls": 77,
-                  "trianglesK": 82,
-                  "renderCpuMs": 6.39,
-                  "avgMs": 244.42,
-                  "p95Ms": 290.6,
-                  "maxMs": 290.6
+                  "drawCalls": 78,
+                  "trianglesK": 75,
+                  "renderCpuMs": 4.8,
+                  "avgMs": 201.74,
+                  "p95Ms": 213.5,
+                  "maxMs": 213.5
                 },
                 "wreck": {
-                  "drawCalls": 51,
-                  "trianglesK": 48,
-                  "renderCpuMs": 4.69,
-                  "avgMs": 203,
-                  "p95Ms": 232.3,
-                  "maxMs": 232.3
+                  "drawCalls": 53,
+                  "trianglesK": 52,
+                  "renderCpuMs": 6.11,
+                  "avgMs": 221.92,
+                  "p95Ms": 249.7,
+                  "maxMs": 249.7
                 },
                 "sea": {
-                  "drawCalls": 32,
-                  "trianglesK": 22,
-                  "renderCpuMs": 5.85,
-                  "avgMs": 170.49,
-                  "p95Ms": 207.6,
-                  "maxMs": 207.6
+                  "drawCalls": 30,
+                  "trianglesK": 23,
+                  "renderCpuMs": 2.94,
+                  "avgMs": 151.13,
+                  "p95Ms": 165.9,
+                  "maxMs": 165.9
                 },
                 "tent": {
-                  "drawCalls": 79,
+                  "drawCalls": 75,
                   "trianglesK": 72,
-                  "renderCpuMs": 4.25,
-                  "avgMs": 222.11,
-                  "p95Ms": 261.8,
-                  "maxMs": 261.8
+                  "renderCpuMs": 5.47,
+                  "avgMs": 247.7,
+                  "p95Ms": 280.7,
+                  "maxMs": 280.7
                 },
                 "bunker": {
                   "drawCalls": 42,
                   "trianglesK": 31,
-                  "renderCpuMs": 2.91,
-                  "avgMs": 179.89,
-                  "p95Ms": 191.2,
-                  "maxMs": 191.2
+                  "renderCpuMs": 2.56,
+                  "avgMs": 193.97,
+                  "p95Ms": 231.7,
+                  "maxMs": 231.7
                 },
                 "ruin": {
                   "drawCalls": 47,
-                  "trianglesK": 49,
-                  "renderCpuMs": 4.06,
-                  "avgMs": 212.65,
-                  "p95Ms": 238.9,
-                  "maxMs": 238.9
+                  "trianglesK": 50,
+                  "renderCpuMs": 4.19,
+                  "avgMs": 206.97,
+                  "p95Ms": 250.9,
+                  "maxMs": 250.9
                 },
                 "blast": {
-                  "drawCalls": 163,
-                  "trianglesK": 112,
-                  "renderCpuMs": 6.11,
-                  "avgMs": 241.6,
-                  "p95Ms": 260.8,
-                  "maxMs": 260.8
+                  "drawCalls": 158,
+                  "trianglesK": 94,
+                  "renderCpuMs": 5.86,
+                  "avgMs": 225.76,
+                  "p95Ms": 246.7,
+                  "maxMs": 246.7
                 }
               },
               "fight": {
                 "enemies": 45,
                 "stillAlive": 45,
-                "firstFramesMaxMs": 1049.9,
-                "drawCalls": 310,
-                "trianglesK": 324,
-                "renderCpuMs": 11.45,
-                "avgMs": 829.45,
-                "p95Ms": 1087.3,
-                "maxMs": 1321,
-                "heapMB": 159.1,
+                "firstFramesMaxMs": 863.5,
+                "drawCalls": 302,
+                "trianglesK": 306,
+                "renderCpuMs": 8.75,
+                "avgMs": 775.01,
+                "p95Ms": 1041.1,
+                "maxMs": 1045.5,
+                "heapMB": 157.6,
                 "heapAfterGcMB": 154.5
               },
               "heapAfterPlayMB": 154.5,
@@ -918,76 +927,76 @@
         "loadPhases": {
           "modules": {
             "n": 20,
-            "mean": -19.8,
-            "se": 11.461055338566522,
-            "base": 333.6,
-            "head": 313.8
+            "mean": 2.55,
+            "se": 10.523776338418287,
+            "base": 285,
+            "head": 287.55
           },
           "world": {
             "n": 20,
-            "mean": 600.1,
-            "se": 28.668146636623504,
-            "base": 1061.1,
-            "head": 1661.2
+            "mean": 471.6,
+            "se": 24.817269029957004,
+            "base": 943.15,
+            "head": 1414.75
           },
           "shaders": {
             "n": 20,
-            "mean": 2083.45,
-            "se": 194.56836810854185,
-            "base": 6141.5,
-            "head": 8224.95
+            "mean": 1799.7,
+            "se": 65.21495227323256,
+            "base": 5339.6,
+            "head": 7139.3
           },
           "total": {
             "n": 20,
-            "mean": 2663.85,
-            "se": 209.6429706228638,
-            "base": 7536.05,
-            "head": 10199.9
+            "mean": 2274,
+            "se": 75.62633208918146,
+            "base": 6567.55,
+            "head": 8841.55
           }
         },
         "frameLogic": {
           "n": 24,
-          "mean": 0.053875,
-          "se": 0.01471323870247275,
-          "base": 0.27591666666666664,
-          "head": 0.3297916666666666
+          "mean": 0.06145833333333333,
+          "se": 0.004715061884522749,
+          "base": 0.23275000000000004,
+          "head": 0.29420833333333335
         },
         "differences": [
           "files before playable: 63 → 65",
-          "KB before playable: 2069 → 2096",
+          "KB before playable: 2069 → 2109",
           "shaderPrograms: 40 → 48",
-          "geometries: 223 → 274",
+          "geometries: 223 → 277",
           "textures: 24 → 29",
           "shaderProgramsAfterPlay: 40 → 48",
-          "title draw calls: 66 → 143",
-          "title triangles (K): 41 → 134",
-          "spawn draw calls: 70 → 118",
-          "spawn triangles (K): 40 → 112",
-          "summit draw calls: 54 → 77",
-          "summit triangles (K): 33 → 82",
-          "wreck draw calls: 44 → 51",
-          "wreck triangles (K): 26 → 48",
-          "sea triangles (K): 21 → 22",
-          "tent draw calls: 52 → 79",
+          "title draw calls: 66 → 149",
+          "title triangles (K): 41 → 133",
+          "spawn draw calls: 70 → 114",
+          "spawn triangles (K): 40 → 94",
+          "summit draw calls: 54 → 78",
+          "summit triangles (K): 33 → 75",
+          "wreck draw calls: 44 → 53",
+          "wreck triangles (K): 26 → 52",
+          "sea draw calls: 32 → 30",
+          "sea triangles (K): 21 → 23",
+          "tent draw calls: 52 → 75",
           "tent triangles (K): 33 → 72",
           "bunker draw calls: 37 → 42",
           "bunker triangles (K): 26 → 31",
           "ruin draw calls: 36 → 47",
-          "ruin triangles (K): 27 → 49",
-          "blast draw calls: 115 → 163",
-          "blast triangles (K): 40 → 112",
-          "fight drawCalls: 262 → 306",
-          "fight trianglesK: 253 → 318",
+          "ruin triangles (K): 27 → 50",
+          "blast draw calls: 115 → 158",
+          "blast triangles (K): 40 → 94",
+          "fight drawCalls: 263 → 302",
+          "fight trianglesK: 255 → 306",
           "heap after load (MB): 55.5 → 64.7",
-          "heap after the fight (MB): 145.2 → 154.5",
+          "heap after the fight (MB): 145.3 → 154.5",
           "heap after play (MB): 145.3 → 154.5",
-          "JavaScript loading, modules + world (ms): 1333 → 2031",
-          "fight drawCalls: 263 → 310",
-          "fight trianglesK: 256 → 324",
-          "heap after play (MB): 145.2 → 154.5",
-          "JavaScript loading, modules + world (ms): 1488 → 1832",
-          "loading total: 7536.05 → 10199.90 ms (+2663.85, SE 209.64)",
-          "frame logic: 0.276 → 0.330 ms (+0.054, SE 0.015)"
+          "JavaScript loading, modules + world (ms): 1229 → 1661",
+          "fight drawCalls: 264 → 302",
+          "fight trianglesK: 257 → 306",
+          "JavaScript loading, modules + world (ms): 1226 → 1686",
+          "loading total: 6567.55 → 8841.55 ms (+2274.00, SE 75.63)",
+          "frame logic: 0.233 → 0.294 ms (+0.061, SE 0.005)"
         ]
       }
     },
