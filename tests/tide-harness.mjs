@@ -31,7 +31,8 @@ export const qa={tick,keys,resetRun,returnToMenu,shoot,reload,grenade,selectWeap
   get(){return {mode:session.mode,pointer:session.pointer,player,run:runState,session,camera,island,zone,effects,firstPerson,gunRoot,renderer,scene,world,explosionFx,markPool,display,swing:typeof swing==='undefined'?undefined:swing,
     zombies,pickups,weaponRecoil,flash,grenadeThrow,keys,shore:typeof shore==='undefined'?undefined:shore,hunter:typeof hunter==='undefined'?undefined:hunter,routes:typeof routes==='undefined'?undefined:routes,
     updateEnemies:typeof updateEnemies==='undefined'?undefined:updateEnemies,spawnKind:typeof spawnKind==='undefined'?undefined:spawnKind,combat,
-    deadBuilt:typeof enemyReal==='undefined'?undefined:!!enemyReal,deadReady:typeof deadReady==='undefined'?undefined:deadReady};}};`);
+    deadBuilt:typeof enemyReal==='undefined'?undefined:!!enemyReal,deadReady:typeof deadReady==='undefined'?undefined:deadReady,
+    threat:typeof threatTracker==='undefined'?undefined:threatTracker,bruteRoutesReady:typeof bruteRoutes==='undefined'?undefined:!!bruteRoutes};}};`);
 const {document,window:domWindow}=parseHTML(read('tide.html'));
 for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{configurable:true,get(){return (select.querySelector('option[selected]')||select.querySelector('option'))?.getAttribute('value')||'';},set(value){for(const option of select.querySelectorAll('option'))option.toggleAttribute('selected',option.getAttribute('value')===String(value));}});
 const ctx=new Proxy({createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};}},{get(o,k){return k in o?o[k]:(()=>{});},set(o,k,v){o[k]=v;return true;}});

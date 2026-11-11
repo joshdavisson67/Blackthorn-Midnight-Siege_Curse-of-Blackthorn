@@ -483,6 +483,56 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v209 (the spawn network and the threat tracker) against main (v208)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering, and `scripts/tide-director-bench.mjs` (new), three runs of each build.
+
+### Mansion: quick
+
+Nothing it loads changed; five files differ only in their version number.
+
+### Dead Tide: full protocol, no regression
+
+| | main (v208) | v209 |
+|---|---:|---:|
+| Files / KB before playable | 63 / 2,025 | 63 / 2,040 |
+| Time to playable (load phases, 20 pairs) | 5,366 ms | 5,356 ms (−10, SE 27) |
+| ↳ modules | 264 ms | 251 ms (−13, SE 9) |
+| ↳ world | 713 ms | 684 ms (−29, SE 14) |
+| ↳ shaders | 4,390 ms | 4,422 ms (+32, SE 25) |
+| Shader programs, at load and after play | 40 | 40 |
+| Geometries / textures | 212 / 24 | 212 / 24 |
+| Heap after load / after play, after a collection | 54.7 / 144.3 MB | 54.7 / 144.4 MB |
+| The dead ready behind the title, Play untouched | 11.4–11.8 s | 11.5–11.7 s |
+| Frame logic, walking the empty island (24 pairs) | 0.241 ms | 0.242 ms (+0.000, SE 0.006) |
+
+- **The extra 15 KB** is the director's spawn network, the tracker's markup and styles, and the tracker's code. No new files.
+- **After play, +0.1 MB:** the brutes' wider routes, now built behind the title screen (main built them when the first brute was rolled).
+- Every load phase is within two standard errors.
+- **The 45-enemy fight with the full mix:** all 45 alive. 229–232 draw calls and 233K–237K triangles in both builds, varying from run to run (timing). 7.3–7.9 ms of render CPU.
+- **The golden trace:** the island's seven scenarios match main in every gameplay channel; only the page differs (the tracker). `fight`, `summit` and the three escalation scenarios change, as they should, since the dead now come from the open zones. Two runs of this build are byte-identical.
+
+### Dead Tide: the director's own cost (new)
+
+The frame-logic fight holds the shore, so `scripts/tide-director-bench.mjs` measures the director: time inside its update over 120 s at The Apocalypse, the island culled every 5 s so it keeps sending.
+
+| | main (v208) | v209 |
+|---|---:|---:|
+| Arrivals in 120 s | 83 | 179 (batches refill faster after a cull) |
+| Cost an arrival | 1.89–2.08 ms | 0.61 ms |
+| Average a frame | 0.022 ms | 0.015 ms |
+| Worst frame | 78–95 ms | 4.7–6.5 ms |
+| Frames over 16 ms | 1 | 0 |
+
+- **Main's worst frame** is the first brute: its wider route grid (about 0.1 s) was built when one was first rolled.
+- **v209's worst frame** is a batch of three coming ashore together, one of them a brute.
+
+### Mode picker: standard, no differences
+
+Only its in-development line changed.
+
+Files: `v209-tide.jsonl`, `v209-tide-load-phases.jsonl`, `v209-tide-frame-logic.jsonl`, `v209-tide-director.txt`, `v209-tier-summary.json`.
+
 ## v208 (the threat director's core) against main (v207)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide: two measured pairs, 20 load-phase pairs, 24 frame-logic pairs) on one machine, headless Chromium with software rendering. This machine is slower than v207's: main itself takes about 6.5 s to playable here, against 4.6 s in v207's notes.

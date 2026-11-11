@@ -10,9 +10,30 @@ body.deadTide{--gold:#7fd3c7;--tide:#7fd3c7;--tide-dim:#a7cdc8;background:#04101
 .deadTide #loading{background:#041012;color:var(--tide)}
 .deadTide #error{background:#041012}
 .deadTide #location span{color:var(--tide-dim)}
-/* No wave counter: a quiet note in its place says what this build is. */
-#previewTag{position:absolute;top:var(--hud-top-inset,30px);left:38px;font:600 10px/1.4 Barlow,Arial,sans-serif;letter-spacing:3px;color:var(--tide-dim);opacity:.7;pointer-events:none}
-/* On phones the touch buttons take that corner; the title screen already says it. */
-body.phone-ui #previewTag{display:none}
+/* v209: the threat tracker, top left in the wave counter's place and style (the shared .topHud
+   and .round), with restrained red for the progress and the later ranks. The number pulses at
+   each new level; the rank glows when it changes. Nothing is centred, nothing pauses. */
+.threatHud .round{min-width:172px}
+.threatHud .round b{display:inline-block;transform-origin:left 70%;font-variant-numeric:tabular-nums}
+.threatHud .round>span{color:var(--tide-dim);transition:color .6s}
+.threatHud[data-rank="1"] .round>span{color:#d9b27c}
+.threatHud[data-rank="2"] .round>span{color:#e27a68}
+.threatHud[data-rank="3"] .round>span{color:#ff5d4a;text-shadow:0 0 10px #ff3b2a59}
+.threatStats{margin:10px 0 0;display:grid;gap:5px}
+.threatStats div{display:flex;justify-content:space-between;gap:18px;font-size:9px;letter-spacing:2px}
+.threatStats dt{color:#8ea6a2}
+.threatStats dd{margin:0;color:var(--ivory);font-variant-numeric:tabular-nums}
+.threatBar{position:relative;margin-top:9px;height:3px;background:#ffffff1c}
+.threatBar i{display:block;height:100%;width:0;background:#b8352c;box-shadow:0 0 6px #b8352c80;transition:width .25s}
+/* Twenty segments, one a kill. */
+.threatBar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(5% - 1px),#041012 calc(5% - 1px) 5%)}
+.threatHud.pulse .round b{animation:threatPulse .9s ease-out}
+.threatHud.rankUp .round>span{animation:threatRank 1.6s ease-out}
+@keyframes threatPulse{0%{color:#ff7563;text-shadow:0 0 18px #ff3b2acc;transform:scale(1.12)}100%{transform:none}}
+@keyframes threatRank{0%{color:#ff7563;text-shadow:0 0 16px #ff3b2acc;letter-spacing:4px}100%{letter-spacing:2px}}
+@media (prefers-reduced-motion:reduce){.threatHud.pulse .round b,.threatHud.rankUp .round>span{animation:none}.threatBar i{transition:none}}
+/* Touch play: the level, rank and bar only (the kills are top right already). */
+body.touch-playing .threatStats{display:none}
+body.touch-playing .threatHud .round{min-width:120px}
 /* No map yet, so touch play has no MAP button. */
 .deadTide #touchMap{display:none}

@@ -6,7 +6,7 @@ An original, single-player, first-person zombie survival game for desktop browse
 
 **Play in your browser:** https://joshdavisson67.github.io/Blackthorn-Midnight-Siege-v119-source/ (published automatically from `main` by `.github/workflows/pages.yml`). This copy's shared leaderboard is stored in Supabase; see below.
 
-**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the grey-box island with the dead coming ashore and the threat rising every 20 kills (version 208), before its threat tracker, rotating spawn zones, stations and leaderboard. `modes.html` is the mode picker.
+**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the grey-box island with the dead coming ashore, the threat rising every 20 kills and its tracker top left (version 209), before its stations and leaderboard. `modes.html` is the mode picker.
 
 
 Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1–6 switch owned guns and 7 draws the katana (version 205), M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
@@ -28,6 +28,78 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## The spawn network and the threat tracker (version 209)
+
+Dead Tide step 3b finishes the threat director: where the dead come from now changes with the threat, and a tracker top left shows it. Still no waves, banners or pauses. The mansion is unchanged.
+
+- **Only part of the island's 28 spawn locations is live at once** (spec 5.4; `SPAWN_RULES` in `tide-threat.mjs`):
+
+  | Rank | Major shoreline zones open | Minor points (share of arrivals) | Interior zones | Most at once from one zone |
+  |---|---|---|---|---|
+  | The Unease | 3, then 4 | 12% | shut | 1 |
+  | The Hunt | 4 rising to 6 | 22% | shut | 2 |
+  | The Swarm | 6 rising to 7 | 32% | 2 open, 10% | 2 |
+  | The Apocalypse | 7, all 8 from level 28 | 40% | 4 open, 18% | 3 |
+
+  - The number of open zones never falls as the level rises. The Swarm opens at 6 of the spec's 5–7, so that no zone closes when The Hunt ends at 6.
+  - **Rotation:** every 40 s one open major zone closes and a closed one opens; the interior's open zones turn over every 30 s.
+  - **Minor points** send one, and sometimes a second from the same point once the first has cleared it (25% of the time in The Unease, rising to 50%).
+  - **Interior zones** never open before The Swarm. An inland arrival is never within 28 m of you, nor anywhere in a 160° cone of your view at any distance. Every interior point is on land with a route to the summit.
+  - **The shore's own rules are unchanged:** never within 18 m, never in view within 40 m, only where a route reaches you, and the cap of 45.
+- **How a point is chosen:** each safe point is weighed, then one is drawn at random by weight.
+  - **Your heading:** while you move (faster than 0.8 m/s), points behind and beside you are favoured. Points close ahead are rare, and points far ahead (beyond 40 m) are allowed but less likely.
+  - **Spread:** sides of you that already have more dead within 40 m count for less.
+  - **Variety:** a point used in the last 6 s, or a zone used in the last 3 s, counts for less.
+  - **Routes:** shorter routes to you count for more.
+  - A new zone is chosen the same way, by where you are heading.
+- **Batches:** from The Hunt, an arrival can bring up to 2 (3 in The Apocalypse) from one zone, at its different points. A batch is never larger than the shore is short, so after a cull the dead return over several arrivals, 1.4 s apart. There is no catch-up burst.
+- **The first brute no longer stalls a frame.** The brutes' wider routes take about 0.1 s to build. Since v206 they were built when the first brute was rolled (from level 6 in v208), a stall of 72–132 ms in headless measurements. They are now built behind the title screen, right after the dead's bodies (Play finishes them at once, as it does the bodies). They are kept current whenever the level's mix has brutes; a rebuild takes about 0.5 ms.
+- **No change while the shore is held:** everything random is drawn only when someone comes ashore. So a held shore, as in the island's own trace scenarios, draws nothing from the game's generator.
+- **The threat tracker** sits top left, in the mansion's wave counter's place and style:
+  - it shows the threat level, the rank, the kills and the progress to the next level ("8 / 20"), with a 20-segment bar in a restrained red;
+  - the rank's name warms from the island's teal through amber to red as the ranks rise;
+  - each new level pulses the number and plays a quiet, low pulse;
+  - a new rank also glows its name, and its pulse is deeper;
+  - a jump of several levels at once (a big blast) plays a single cue;
+  - nothing is centred, and nothing pauses;
+  - on touch screens it shows the level, rank and bar only, since the kills are already top right;
+  - it replaces the old "grey-box preview, no dead yet" note.
+- **Proof:**
+  - `tests/tide-threat.mjs`: the zone counts at every rank boundary, never falling, within the spec's ranges; the minor, interior and batch numbers by rank.
+  - `tests/dead-tide.mjs`, the director on a stand-in spawner:
+    - open zones by rank;
+    - a zone swapped every 40 s;
+    - the minor points more often each rank, and the interior only from The Swarm;
+    - every arrival keeping its safety rules, with a moving, turning player;
+    - batches of 1, 2 and 3 from one zone at different points, never more than the shore is short;
+    - arrivals around a player circling at 4 m/s mostly behind them;
+    - minor points sending two now and then;
+    - a held shore drawing nothing.
+  - `tests/dead-tide.mjs`, in play:
+    - the tracker's readings, pulse, glow and cues, with no banner and no pause;
+    - New Run starting it again quietly;
+    - inland arrivals at The Apocalypse, never within 28 m, on land and routed to you.
+  - **The director's own cost** (`scripts/tide-director-bench.mjs`, new): 120 s at The Apocalypse with the island culled every 5 s.
+    - main: 1.9 ms an arrival, with a worst frame of 78–95 ms (the first brute's routes);
+    - v209: 0.61 ms an arrival, with a worst frame of 4.7–6.5 ms (a batch of three), and none over 16 ms.
+  - **Dead Tide's golden trace:**
+    - The island's seven scenarios match v208 in every gameplay channel. Only the page differs, since the tracker is on it.
+    - `fight` and `summit` change, as they should, since the dead now come from the open zones.
+    - The escalation scenarios' `threat` channel also records the open zones, the interior and where arrivals came from.
+- **Not verified:**
+  - how the tracker looks and reads on real screens and phones;
+  - how the cue sounds over a fight;
+  - how the rotation and weighting feel in play;
+  - the opening pace (only three major zones are open at the start, so first contact may come from fewer directions);
+  - real-browser frame rates.
+- **Release tiers:**
+  - **Mansion: quick.** Nothing it loads changed.
+  - **Dead Tide: full, no regression.** +15 KB of code, no new files; load, memory, shader programs and frame logic within noise. The director's worst frame drops from 78–95 ms to 6.5 ms.
+  - **Mode picker: standard, no differences.**
+
+  Numbers in `perf/README.md`.
+- **Next (step 4):** stations, the leaderboard and the run summary.
 
 ## The threat director's core (version 208)
 

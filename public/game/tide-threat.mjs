@@ -74,3 +74,44 @@ export function chooseTideKind(level,roll){
   for(let k=shares.length-1;k>=0;k--)if(shares[k]>0)return TIDE_KINDS[k];
   return 'walker';
 }
+
+// ---- The spawn network by rank (v209, Dead Tide step 3b) --------------------------------------
+// Spec 5.2–5.5 and 9.3: only part of the island's 28 spawn locations is live at once, and which
+// part keeps changing. Indexed by rank (The Unease, The Hunt, The Swarm, The Apocalypse).
+//   major      major shoreline zones open at once: [at the rank's first level, at its last];
+//              never fewer than the level before (The Swarm opens at 6 of the spec's 5–7);
+//              The Apocalypse climbs from 7 to all 8 by level 28. One open zone is swapped for
+//              a closed one every `rotate` seconds.
+//   minor      the share of arrivals that come from the 14 minor shoreline points; after one,
+//              `follow` is the chance that a second follows from the same point once the first
+//              has cleared it (within `followFor` s): one or two from each.
+//   interior   concealed interior zones: none until The Swarm, then a few open at once,
+//              swapped every `rotate` s, and only ever `near` m or more away and outside a wide
+//              view cone at any distance (never beside you, never where you can see).
+//   batch      the most that rise together from one zone in a single arrival (never more than
+//              the population is short, so a deficit is made up over several arrivals).
+//   weights    how points are weighed: a moving player's flanks and back over the way ahead,
+//              sides of you with fewer dead, points and zones not just used, short routes.
+export const SPAWN_RULES=Object.freeze({
+  major:Object.freeze([Object.freeze([3,4]),Object.freeze([4,6]),Object.freeze([6,7]),Object.freeze([7,8])]),apocalypseFull:28,rotate:40,
+  minor:Object.freeze([.12,.22,.32,.4]),follow:Object.freeze([.25,.35,.45,.5]),followFor:6,
+  interior:Object.freeze({open:Object.freeze([0,0,2,4]),share:Object.freeze([0,0,.1,.18]),rotate:30,near:28,halfAngle:Math.PI*80/180}),
+  batch:Object.freeze([1,2,2,3]),
+  weights:Object.freeze({
+    moving:.8,                                   // m/s: slower than this, you are standing
+    travel:Object.freeze({ahead:.2,aheadFar:.55,far:40,side:.9,behind:1}),
+    recent:Object.freeze({point:6,pointFactor:.2,zone:3,zoneFactor:.5}),
+    sector:Object.freeze({count:8,range:40,per:.35}),
+    route:Object.freeze({near:42,far:80,mid:.5,beyond:.2})
+  })
+});
+const S=SPAWN_RULES,rankSpan=[[1,5],[6,13],[14,23],[24,S.apocalypseFull]];
+export function majorZoneCount(level){
+  const {index}=threatRank(level),[a,b]=S.major[index],[from,to]=rankSpan[index],t=Math.min(1,Math.max(0,(level-from)/(to-from)));
+  return Math.round(a+(b-a)*t);
+}
+export const minorShare=level=>S.minor[threatRank(level).index];
+export const minorFollow=level=>S.follow[threatRank(level).index];
+export const interiorOpen=level=>S.interior.open[threatRank(level).index];
+export const interiorShare=level=>S.interior.share[threatRank(level).index];
+export const batchSize=level=>S.batch[threatRank(level).index];
