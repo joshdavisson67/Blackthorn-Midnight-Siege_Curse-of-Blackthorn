@@ -98,6 +98,7 @@ function snapshot(sc={}){const s=G(),R=s.run,inv=R.inventory,held=inv[R.weapon];
 // `script(f)` acts before frame f; `watch()` notes what the scenario reached.
 // v210: the radio tent (the shack in builds before it).
 const H=ISLAND.hill,S=ISLAND.tent||ISLAND.shack,tentLane=ISLAND.tent?1.2:0,sp=ISLAND.spawn,yawTo=(x,z)=>{const p=G().player;return Math.atan2(-(x-p.x),-(z-p.z));};
+// v212: the stations scenario replaces v210's landmarks scenario (the pads now hold stations).
 const yawToFrom=(x,z,tx,tz)=>Math.atan2(-(tx-x),-(tz-z));
 function hillBearing(){const I=G().island;const clear=b=>{for(let d=8;d<=34;d+=.25){const x=H.x+Math.cos(b)*d,z=H.z+Math.sin(b)*d;if(I.isBlocked(x,z,.45,I.colliders,null,groundHeight(x,z),1.8))return false;}return true;};let b=Math.PI/2;while(!clear(b))b+=.05;return b;}
 // v208: a run far into the kill count, with an M4 and plenty of rounds, and you unkillable.
@@ -169,12 +170,14 @@ const scenarios={
   session:{frames:480,script:f=>f===30?()=>key('Escape'):f===60?()=>$('settingsPause').onclick():f===90?()=>key('Escape'):f===120?()=>$('controlsPause').onclick():f===150?()=>key('Escape'):f===180?()=>$('resume').onclick():
     f===260?()=>key('Escape'):f===290?()=>$('mainMenuPause').onclick():f===320?()=>$('confirmYes').onclick():f===400?()=>enter():null,
     watch:()=>{note('session: paused',G().mode==='paused');note('session: title',G().mode==='menu');}},
-  // v210, the map: stand on each station pad in turn, looking at Radio Hill's tower, then walk
-  // toward it for a second (the HUD's place names, the view and the ground under each landmark).
-  landmarks:{frames:720,script:f=>{const pads=G().island.stations;if(!pads)return null;const k=Math.floor((f-1)/90),p=pads[k];if(!p)return null;
-    if((f-1)%90===0)return ()=>{qa.setKeys([]);qa.setPlayer(p.x,p.z);qa.setAim(yawToFrom(p.x,p.z,ISLAND.tower.x,ISLAND.tower.z),.08);};
-    if((f-1)%90===30)return ()=>qa.setKeys(['KeyW']);if((f-1)%90===89)return ()=>qa.setKeys([]);return null;},
-    watch:()=>{const z=G().zone;for(const n of ['RUIN','SHIPWRECK','CAMP','DOCK','EAST COVE','FORGE','SUMMIT'])note('landmarks: '+n.toLowerCase(),z.includes(n));}}
+  // v210, the map; v212, the stations: walk up to each station in turn (seventeen pads, then the
+  // tent's crate), with essence to spare, and press E there (buying it, or a rank, or ammunition).
+  stations:{frames:18*80,script:f=>{const list=G().stations;if(!list)return null;const k=Math.floor((f-1)/80),s=list[k];if(!s)return null;const t=(f-1)%80;
+    if(t===0)return ()=>{qa.setKeys([]);const a=s.rotation||0;qa.setPlayer(s.x+Math.sin(a)*3,s.z+Math.cos(a)*3);qa.setAim(yawToFrom(s.x+Math.sin(a)*3,s.z+Math.cos(a)*3,s.x,s.z),-.15);G().run.points=6000;};
+    if(t===10)return ()=>qa.setKeys(['KeyW']);if(t===30)return ()=>qa.setKeys([]);
+    if(t===40)return ()=>{key('KeyE');keyUp('KeyE');};return null;},
+    watch:()=>{const s=G();note('stations: prompt',!!$('interaction').textContent);for(const k of ['smg','shotgun','rifle','lmg','bushmaster','katana'])note('stations: '+k,s.run.inventory[k]?.owned);note('stations: perk',s.run.perkOwned.size>0);note('stations: armour',s.run.armorTier>0);note('stations: forged',Object.values(s.run.inventory).some(w=>w.forgeRank>0));
+      const z=s.zone;for(const n of ['RUIN','SHIPWRECK','CAMP','DOCK','EAST COVE','FORGE','BUNKER','NORTH BEACH','SUMMIT'])note('stations: '+n.toLowerCase(),z.includes(n));}}
 };
 
 const out={tide:true,boot:fullLogs?bootLog.join('\n'):fnv(bootLog.join('\n'))};

@@ -6,7 +6,7 @@ An original, single-player, first-person zombie survival game for desktop browse
 
 **Play in your browser:** https://joshdavisson67.github.io/Blackthorn-Midnight-Siege-v119-source/ (published automatically from `main` by `.github/workflows/pages.yml`). This copy's shared leaderboard is stored in Supabase; see below.
 
-**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the island mapped out in grey-box shapes (its hills, coves, landmarks and trails), with the dead coming ashore, the threat rising every 20 kills and its tracker top left (version 211, with bolder ground and a free test ammo crate in the radio tent), before its stations and leaderboard. `modes.html` is the mode picker.
+**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the island mapped out in grey-box shapes (its hills, coves, landmarks and trails), with the dead coming ashore, the threat rising every 20 kills and its tracker top left (version 212, with its stations: every weapon, the Soul Forge, armour, perks and ammunition, spread round the island), before its leaderboard. `modes.html` is the mode picker.
 
 
 Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1–6 switch owned guns and 7 draws the katana (version 205), M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
@@ -28,6 +28,60 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## Dead Tide's stations (version 212)
+
+Dead Tide step 5: the island's stations, on the pads v210 reserved and a few more. They use the mansion's own station models, prices and effects (`stations.mjs`, `station-models.mjs`), so nothing is rebalanced. The mansion is unchanged; no file it loads changed.
+
+- **Where everything is.** Each station faces Radio Hill's summit. The armour, perks and ammunition are spread out, so kitting out means crossing the island.
+
+  | Landmark | Stations |
+  |---|---|
+  | Lookout Compound (summit) | Bushmaster .450 (2,500), Tsuru katana, ammunition (the tent's crate) |
+  | Bunker B-01 (north-east) | Aegis body armour (2,500), then the Nano Shield's ranks |
+  | Jungle Ruin (north-west) | Raven SMG (1,500), Quickhands (1,500) |
+  | North Beach (north) | Nightstride (1,500), ammunition |
+  | Shipwreck Cove (west) | M12 shotgun (1,200), ammunition |
+  | Coastal Camp (south-west) | M4 (4,500), Ironheart (2,500) |
+  | South Dock (south) | Warden LMG (5,000), ammunition |
+  | East Cove (south-east) | the Glock 21's bench (its ranks, then pistol ammunition), Deadeye (2,000) |
+  | Soul Forge (east) | the Soul Forge (5,000 / 10,000 / 15,000), ammunition |
+
+- **Ammunition** costs 350 at all five places. The radio tent's crate, free for testing in v211, is now one of them.
+- **No shrines.** Dead Tide sells neither the timed double damage nor endless grenades. Kill drops are unchanged, as before.
+- **The M4 and the Warden LMG** stand on racks like the other guns. The mansion sells them from its own kinds of station (the shed's bench, the cellar's exhibit, the Warden's frenzy), so here each is an SMG rack with its own gun on it, built in `tide.mjs` without changing the shared model. Once owned, each rack sells its weapon's ranks, then hands the gun back.
+- **The mansion's prompt and E (B, USE):** walk up to a station, and the nearest one within reach shows its prompt and sells. Nothing pauses.
+- **New Run** starts every station afresh: weapons, perks, the armour's tier and the Forge's rank.
+- **The stations block** like the island's other props. You cannot stand on one, and they are placed before the routes are built, so the dead walk round them.
+- **The new pads** (nine more: the armour, four perks and four ammunition stations) were each found on open, near-level ground in their landmark, off the trails, clear of every spawn point and reachable from most sides. Ironheart sits clear of the camp's tents. The wreck-to-camp and hill-to-dock trails now end beside their racks rather than at them.
+- **`signage.mjs`**, the plaques' lettering, is now loaded by Dead Tide too. It is generic, not part of the mansion.
+- **Drawn in few calls.** The mansion's station models are many small parts in a few dozen materials; spread over open ground, the first build drew the stations in some two hundred calls from the title view and doubled the island's textures. A new Dead Tide-only module, `tide-palette.mjs`, fixes that without touching the shared models:
+  - the still untextured parts have their colour, finish (roughness, metalness) and glow written into their vertices and share one material; the textured gun parts keep the held guns' materials (and so their shaders); both are merged, indexed, in 48 m cells;
+  - the plaques' lettering is packed into one atlas texture (24 textures become one);
+  - the armour and each Nano Shield model are merged within themselves, so they still show and hide whole;
+  - the Forge's soul stone (an octahedron, already faceted) drops a flat-shading flag that needed its own shader;
+  - its seams draw with the plain unlit material rather than a line material of their own (one shader fewer);
+  - bullets, grenades and blasts stop at each station's collider box, not at its merged triangles;
+  - the stations' matrices are frozen once built, except the Forge's hovering stone.
+  The screenshots before and after the merge match.
+- **Palms** keep 2.2 m clear of what must stay open, whatever their spacing. With seventeen pads, the wider rule left too few places; the island keeps about the same number of palms (46).
+- **Proof:**
+  - `tests/dead-tide.mjs`:
+    - **the pads:** seventeen, by kind; the perks one to a landmark, one in each quarter round Radio Hill; ammunition at four landmarks, 25 m or more apart; the armour apart from both; every station facing the summit;
+    - **in play:**
+      - a station on every pad, and none of the shrines;
+      - every prompt shows;
+      - each sells at the mansion's price: the six weapons; the M4's and the Warden's ranks; each perk once (Ironheart doubles health); the armour and every Nano Shield rank; the Forge; ammunition at all five places;
+      - nothing is sold short of the price;
+      - New Run starts the stations afresh;
+      - with the stations standing, there are no pockets for walkers or brutes, the beach loop and every trail are open, and no spawn point is within 6 m of a station.
+      - the stations draw as 70 meshes or fewer, the palette shader's three patches find their places in this three.js, and the hit boxes stand in for the stations' parts.
+  - **Dead Tide's golden trace:** a `stations` scenario replaces v210's `landmarks` and walks up to every station in turn, buying each. Two runs are byte-identical.
+- **Looked at, in headless screenshots only:** every weapon rack, the armour, the Forge, a perk and an ammunition station.
+- **Not verified:**
+  - how the economy feels in play: whether the essence from kills buys the next thing at a good pace, and whether the spread is too far to run under pressure;
+  - real-browser frame rates.
+- **Next:** the run summary and Dead Tide's own leaderboard (spec 8.5 and 12).
 
 ## Bolder ground, B-01 turned into its ridge, and a test ammo crate (version 211)
 
