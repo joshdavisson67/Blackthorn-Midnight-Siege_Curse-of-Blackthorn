@@ -85,7 +85,14 @@ The stations from v212, set into the landmarks round them, and the landmarks rew
       - with everything standing: no pockets for walkers or brutes, the beach loop and every trail open, no spawn point within 6 m of a station.
   - **Dead Tide's golden trace:** the `stations` scenario visits all fourteen stations (the boathouse opened first, as level 10 opens it). Two runs are byte-identical.
 - **Looked at, in headless screenshots only:** every station, the wreck and her crates, the camp's opening and its outhouse, the boathouse outside and in, the East Cove shelter, B-01's armour, the ruin and the tent's ammunition.
-- **Release tiers:** TIERS
+- **Release tiers:**
+  - **Mansion: quick.** Nothing it loads changed.
+  - **Dead Tide: full.** Against v212:
+    - load time, memory, shader programs and textures are unchanged;
+    - title draw calls 143 → 149, with fewer in most other views and fewer triangles;
+    - frame logic +0.014 ms, reported as the new landmarks' cost.
+    Details in `perf/README.md`.
+  - **Mode picker: quick.** Nothing it loads changed.
 - **Not verified:** how the reworked landmarks and the spread feel in play, and real-browser frame rates.
 
 ## Dead Tide's stations (version 212)
