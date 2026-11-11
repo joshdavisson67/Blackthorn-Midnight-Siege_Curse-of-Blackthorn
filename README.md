@@ -6,7 +6,7 @@ An original, single-player, first-person zombie survival game for desktop browse
 
 **Play in your browser:** https://joshdavisson67.github.io/Blackthorn-Midnight-Siege-v119-source/ (published automatically from `main` by `.github/workflows/pages.yml`). This copy's shared leaderboard is stored in Supabase; see below.
 
-**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the island mapped out in grey-box shapes (its hills, coves, landmarks and trails), with the dead coming ashore, the threat rising every 20 kills and its tracker top left (version 210), before its stations and leaderboard. `modes.html` is the mode picker.
+**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the island mapped out in grey-box shapes (its hills, coves, landmarks and trails), with the dead coming ashore, the threat rising every 20 kills and its tracker top left (version 211, with bolder ground and a free test ammo crate in the radio tent), before its stations and leaderboard. `modes.html` is the mode picker.
 
 
 Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1–6 switch owned guns and 7 draws the katana (version 205), M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
@@ -28,6 +28,40 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## Bolder ground, B-01 turned into its ridge, and a test ammo crate (version 211)
+
+Three changes to Dead Tide's island, from playing v210. The mansion is unchanged.
+
+- **More character in the ground** (`ISLAND.mounds`):
+  - **The hills stand taller:** the bunker's ridge 6.6 → 8.6 m, the ruin's knoll 5.6 → 6.7 m, the camp's bluff 5.0 → 6.3 m, the cove's headland 4.6 → 5.5 m (heights above the sea).
+  - **New high ground:** a knob on the ridge's south-east end, a crag between the ridge and North Beach (4.4 m), the east downs behind the east shore (4.2 m), and dunes behind Shipwreck Cove.
+  - **New low ground:** the wash is now a ravine below the hill's south-west foot, about 3 m deep between the camp's bluff and a new bank along its east side; a shallow gully runs north off Radio Hill; and the east hollow is a deeper, boggy bowl.
+  - **The ground's kinds now show in its colour:** a dark jungle floor round the ruin, dry grass on the south and east lowland, mud in the hollows and gullies, and stone on the rocky hills (the ridge, its knob, the crag, the headland). This is vertex colour only, so it adds no draw calls and no shader programs.
+  - Every slope stays under 40.4°, as before, so everyone can walk everywhere.
+- **Bunker B-01 is turned round** to come out of its ridge. Its door now faces the north-east reef, away from Radio Hill. The portal runs 6 m into the ridge, so its roof sinks into the slope behind, and the wing walls hold back the cut. It blocks only as far back as it shows. Its trail now runs round the ridge's north-west end, and its interior spawn zone sits on that approach.
+- **A test ammo crate** (olive, with a yellow band) is inside the radio tent, in its north-east corner, clear of the walk through.
+  - It is free and works as often as you like, so the threat's later ranks can be reached and tried.
+  - Press E, B on a controller, or the USE button on touch. It restocks every gun you carry, as the mansion's ammo stations do (reserves full, including what the magazine lacks), and adds a grenade.
+  - The prompt shows within 2 m of it.
+  - It is for testing; the real stations come in step 5.
+- **Proof:**
+  - `tests/dead-tide.mjs`:
+    - the four main hills stand over 5 m, and the crag and the downs are hills of their own;
+    - the wash is a ravine at least 1.7 m deep, measured across it;
+    - no walkable ground is steeper than 40.4°;
+    - B-01's door looks north-east, away from Radio Hill, with the ridge over its roof behind it;
+    - the crate is inside the tent, its prompt shows beside it, E restocks the pistol in full and adds a grenade, and nothing happens out of reach.
+  - All the v210 map checks still pass on the new ground: landmarks, pads, no climbable props, routes with no pockets for walkers or brutes, the beach loop, the hill's approaches, the trails, and all 72 spawn points.
+  - **Dead Tide's golden trace** is re-baselined, since the ground changed. Two runs are byte-identical.
+- **Release tiers:**
+  - **Mansion: quick.** Nothing it loads changed.
+  - **Dead Tide: full.** +5 KB and two draw calls where the crate is in view. Building the world takes +73 ms (within two standard errors); memory, shader programs and frame logic are unchanged.
+  - **Mode picker: quick.** Nothing it loads changed.
+
+  Numbers in `perf/README.md`.
+- **Looked at, in headless screenshots only:** the bunker from its front and side, the crate, the ravine, the downs, the crag and the overviews.
+- **Not verified:** how any of it looks on a real GPU, or feels to play.
 
 ## The island's map (version 210)
 

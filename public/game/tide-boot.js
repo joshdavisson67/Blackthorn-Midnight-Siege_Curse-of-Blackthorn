@@ -24,4 +24,4 @@ byId('modesLink').addEventListener('click',()=>{location.href='modes.html';});
 window.addEventListener('error',event=>{if(event.error)report(event.error);});
 window.addEventListener('unhandledrejection',event=>report(event.reason));
 const timeout=setTimeout(()=>{if(!ready&&!failed){byId('loading').classList.add('hidden');byId('error').classList.remove('hidden');byId('errorDetails').textContent='The island is taking too long to load. Try reloading the game.';}},45000);
-import('./tide.mjs?v=210').then(()=>clearTimeout(timeout)).catch(report);
+import('./tide.mjs?v=211').then(()=>clearTimeout(timeout)).catch(report);

@@ -31,15 +31,26 @@ export const ISLAND=Object.freeze({
   // its own flat top: [name, x, z, half-length, half-width, bearing of its long axis, height,
   // the fraction of it that is flat]. All of it walkable from every side, for everyone.
   mounds:Object.freeze([
-    ['BUNKER RIDGE',27,-30,21,13,Math.PI/4,5.4,.2],        // the rocky embankment B-01 is dug into
-    ['RUIN KNOLL',-37,-29,19,17,0,4.2,.36],                // the jungle ruin stands on it
+    // v211: bolder. The ridge, knoll, bluff and headland stand taller, two new hills (a crag
+    // above North Beach and the downs behind the east shore) and a dune field behind Shipwreck
+    // Cove join them, the wash is a real ravine, a second gully runs north off Radio Hill, and
+    // the east hollow is a boggy bowl. Every slope stays under about 40 degrees.
+    ['BUNKER RIDGE',21,-30,20,14,Math.PI/4,6,.1],          // the rocky embankment B-01 comes out of
+    ['RIDGE KNOB',33,-14,8,7,0,2.4,.2],                    // a knob on its south-east end
+    ['RUIN KNOLL',-37,-29,20,18,0,5.4,.4],                 // the jungle ruin's plateau
     ['RUIN SPUR',-25,-22,11,8,.62,2,.1],                   // Radio Hill's shoulder toward the ruin
-    ['CAMP BLUFF',-33,27,18,15,-.6,3.6,.4],                // the coastal camp, above the south-west beach
+    ['NORTH CRAG',11,-45,10,8,.3,3,.15],                   // a crag between the ridge and North Beach
+    ['CAMP BLUFF',-33,27,19,16,-.6,5,.4],                  // the coastal camp's bluff, above the south-west beach
     ['FORGE RISE',31,-3,11,10,0,1.5,.55],                  // the Soul Forge's clearing
-    ['COVE HEAD',31,42,12,9,.9,3.2,.15],                   // the headland between East Cove and the dock
+    ['EAST DOWNS',47,12,10,7,1.25,2.8,.15],                // a long down behind the east shore
+    ['COVE HEAD',31,42,13,10,.9,4.3,.12],                  // the headland between East Cove and the dock
     ['NORTH DUNE',-4,-51,17,7,0,1.9,.1],                   // the back of North Beach
-    ['THE WASH',-15,17,19,8,2,-1.4,.2],                    // a dry gully down the hill's south-west flank
-    ['EAST HOLLOW',20,17,9,7,.4,-.9,.3]                    // low, wet ground behind the south-east shore
+    ['WEST DUNE',-45,-14,8,4.5,1.3,1.4,.1],                // dunes behind Shipwreck Cove
+    ['WEST DUNE SOUTH',-46,15,7,4,1.9,1.2,.1],
+    ['THE WASH',-20,28,17,10,2,-1.9,.2],                   // a ravine below the hill's south-west foot, toward the beach
+    ['WASH BANK',-10,33,14,6,2,1.6,.15],                   // and the bank along its east side
+    ['NORTH GULLY',-15,-43,10,7,-1.95,-.85,.2],             // a shallow gully north off Radio Hill
+    ['EAST HOLLOW',22,19,11,9.5,.4,-1.3,.3]                  // a boggy bowl behind the south-east shore
   ].map(m=>Object.freeze(m))),
   wade:.8,               // the deepest water the player can wade into (m)
   bounds:120,            // half-width of the square nothing leaves (m)
@@ -54,7 +65,9 @@ export const ISLAND=Object.freeze({
 const {coast:COAST,hill:HILL,lowland:LOW,seabed:DEEP}=ISLAND;
 // v210: where three landmarks sit: the dock's bearing on the south shore; East Cove's bearing and
 // how far in from the waterline its shelter stands; how far down the ridge's face B-01 is dug.
-const DOCK=Object.freeze({bearing:1.36,length:15}),COVE=Object.freeze({bearing:.62,at:.79}),BUNKER=Object.freeze({out:8.2});
+// v211: B-01 comes out of the ridge's north-east (seaward) face, `out` m from its crest line.
+const DOCK=Object.freeze({bearing:1.36,length:15}),COVE=Object.freeze({bearing:.62,at:.79}),BUNKER=Object.freeze({out:9}),
+  AMMO=Object.freeze({x:2,z:-1.4,size:.8,reach:2});   // v211: the test ammo crate, in the tent's own frame
 // v206: the routes' grid (cell size and half-width, m).
 export const NAV=Object.freeze({cell:.5,extent:84});
 const TAU=Math.PI*2,COVES=COAST.coves.map(([b,depth,width])=>[b,depth,1/width]);
@@ -69,13 +82,15 @@ export function shoreFraction(x,z){return Math.hypot(x,z)/coastRadius(Math.atan2
 function hillHeight(x,z){const d=Math.hypot(x-HILL.x,z-HILL.z),u=Math.min(1,Math.max(0,(d-HILL.flat)/(HILL.foot-HILL.flat)));return HILL.top*(.5+.5*Math.cos(Math.PI*u));}
 // v210: the mounds, ready to sum: centre, the long axis's cosine and sine, 1/half-length,
 // 1/half-width, height, flat fraction and the square of the reach.
-const MOUNDS=ISLAND.mounds.map(([,x,z,a,b,angle,height,flat])=>[x,z,Math.cos(angle),Math.sin(angle),1/a,1/b,height,flat,Math.max(a,b)**2]);
-let calm=0;   // how flat the last relief() point is asked to be (1 on a mound's flat top)
+const ROCKY=new Set(['BUNKER RIDGE','NORTH CRAG','COVE HEAD','RIDGE KNOB']);
+const MOUNDS=ISLAND.mounds.map(([name,x,z,a,b,angle,height,flat])=>[x,z,Math.cos(angle),Math.sin(angle),1/a,1/b,height,flat,Math.max(a,b)**2,ROCKY.has(name)?1:0]);
+let calm=0,dip=0,crag=0;   // how flat the last relief() point is asked to be (1 on a mound's flat top); v211: how deep it lies in a hollow, and how much of it is rocky high ground
 function relief(x,z){
-  let h=0;calm=0;
+  let h=0;calm=0;dip=0;crag=0;
   for(let i=0;i<MOUNDS.length;i++){const m=MOUNDS[i],dx=x-m[0],dz=z-m[1];if(dx*dx+dz*dz>=m[8])continue;
     const u=Math.hypot((dx*m[2]+dz*m[3])*m[4],(dz*m[2]-dx*m[3])*m[5]);if(u>=1)continue;
-    if(u<=m[7]){h+=m[6];calm=1;}else{const k=(u-m[7])/(1-m[7]);h+=m[6]*(.5+.5*Math.cos(Math.PI*k));if(1-k>calm)calm=1-k;}}
+    let part;if(u<=m[7]){part=m[6];calm=1;}else{const k=(u-m[7])/(1-m[7]);part=m[6]*(.5+.5*Math.cos(Math.PI*k));if(1-k>calm)calm=1-k;}
+    h+=part;if(part<0)dip-=part;else if(m[9])crag=Math.max(crag,part/m[6]);}
   return h;
 }
 // The height of one named mound's own ground (its flat top), for what stands on it.
@@ -102,10 +117,12 @@ export function islandSites(){
   if(SITES)return SITES;
   const T=ISLAND.tent,W=ISLAND.wreck,mound=n=>moundAt(n),ridge=mound('BUNKER RIDGE'),knoll=mound('RUIN KNOLL'),bluff=mound('CAMP BLUFF'),rise=mound('FORGE RISE');
   const [wx,wz]=polar(W.bearing,W.at),[dx,dz]=polar(DOCK.bearing,1),[cx,cz]=polar(COVE.bearing,COVE.at),[nx,nz]=polar(-Math.PI/2,.84);
-  // B-01 is dug into the ridge's south-west face, looking back at Radio Hill.
-  const bunkerAngle=-ridge.angle,[bx,bz]=turned(ridge.x,ridge.z,bunkerAngle,0,BUNKER.out);
+  // v211: turned round (it faced Radio Hill): its door looks out to the north-east reef, its back in the ridge.
+  const bunkerAngle=Math.PI-ridge.angle,[bx,bz]=turned(ridge.x,ridge.z,bunkerAngle,0,BUNKER.out);
   const sites={
     tent:{x:T.x,z:T.z,angle:0},tower:{x:ISLAND.tower.x,z:ISLAND.tower.z},
+    // v211: an ammunition crate under the tent's canopy, for testing (free; the real stations come in step 5).
+    ammo:{x:T.x+AMMO.x,z:T.z+AMMO.z,reach:AMMO.reach},
     bunker:{x:bx,z:bz,angle:bunkerAngle},ruin:{x:knoll.x,z:knoll.z,angle:.3},wreck:{x:wx,z:wz,heading:W.bearing+Math.PI},
     camp:{x:bluff.x,z:bluff.z,angle:-.6},dock:{x:dx,z:dz,angle:Math.atan2(dx,dz),bearing:DOCK.bearing},
     cove:{x:cx,z:cz,angle:Math.atan2(cx,cz)},forge:{x:rise.x,z:rise.z,angle:.4},north:{x:nx,z:nz}
@@ -113,7 +130,7 @@ export function islandSites(){
   const S=sites,at=(site,lx,lz)=>turned(site.x,site.z,site.angle||0,lx,lz);
   // What the HUD calls each place: a circle round it (the first that holds you wins).
   const landmarks=[
-    ['BUNKER B-01',...at(S.bunker,0,3),10],['JUNGLE RUIN',S.ruin.x,S.ruin.z,11],['SHIPWRECK COVE',S.wreck.x+5,S.wreck.z,15],['COASTAL CAMP',S.camp.x,S.camp.z,11],
+    ['BUNKER B-01',...at(S.bunker,0,.5),10],['JUNGLE RUIN',S.ruin.x,S.ruin.z,11],['SHIPWRECK COVE',S.wreck.x+5,S.wreck.z,15],['COASTAL CAMP',S.camp.x,S.camp.z,11],
     ['SOUTH DOCK',...at(S.dock,1.5,-6),10],['EAST COVE',...at(S.cove,0,3),12],['SOUL FORGE',S.forge.x,S.forge.z,8.5],['NORTH BEACH',S.north.x,S.north.z,17]
   ].map(([name,x,z,r])=>Object.freeze({name,x,z,r}));
   // The pads: one for every weapon the game sells, and the Forge (spec 4.1). Perks, ammunition,
@@ -136,7 +153,7 @@ export function islandSites(){
     trail('RUIN TO RADIO HILL',[S.ruin.x+5,S.ruin.z+3],[-25,-21],[-17,-15],[HILL.x-8.5,HILL.z-.5]),
     trail('WRECK TO CAMP',[S.wreck.x+11,S.wreck.z+3],[-41,10],[-35,17],at(S.camp,0,-6.5)),
     trail('NORTH BEACH TO RADIO HILL',[-5,-56],[-10,-44],[-5,-30],[HILL.x,HILL.z-9]),
-    trail('BUNKER TO RADIO HILL',at(S.bunker,0,4.5),[12,-18],[HILL.x+7,HILL.z-6.5]),
+    trail('BUNKER TO RADIO HILL',at(S.bunker,0,4.5),[22,-44],[12,-40],[4,-30],[HILL.x+7,HILL.z-6.5]),   // v211: round the ridge's north-west end
     trail('RADIO HILL TO FORGE',[HILL.x+9,HILL.z+1],[14,-5],[23,-3.5],[S.forge.x-3.5,S.forge.z]),
     trail('RADIO HILL TO DOCK',[HILL.x+2,HILL.z+9],[1,16],[5,32],[9,46],at(S.dock,2,-9)),
     trail('CAMP TO EAST COVE',[S.camp.x+4,S.camp.z+2],[-14,34],[4,37],[22,32],at(S.cove,-4.5,5)),
@@ -165,6 +182,9 @@ export function buildIsland({scene,world}){
   // Normals come from the height function, so chunk edges join without a seam.
   const SPACING=1.5,CHUNK=20,EXTENT=90,groundMat=material(0xffffff,{vertexColors:true,roughness:.97});
   const sand=new T.Color(0xbcae8e),wetSand=new T.Color(0x756a55),scrub=new T.Color(0x34492f),dryScrub=new T.Color(0x5b6143),dirt=new T.Color(0x6b5c47),rock=new T.Color(0x666962),c=new T.Color();
+  // v211: the ground's kinds: dark jungle floor round the ruin, dry grass on the south and east
+  // lowland, mud in the hollows and gullies, and bare stone on the rocky hills.
+  const jungle=new T.Color(0x22341d),dryGrass=new T.Color(0x6e6a3e),mud=new T.Color(0x3a3527),stoneGround=new T.Color(0x5d605a),RUIN=moundAt('RUIN KNOLL');
   function groundColor(x,z,h,slope){
     const t=shoreFraction(x,z),patch=.5+.5*Math.sin(x*.31+z*.17)*Math.sin(z*.27-x*.11);
     c.copy(wetSand).lerp(sand,smooth(-.1,.55,h));                                        // wet near the water, dry up the beach
@@ -172,6 +192,13 @@ export function buildIsland({scene,world}){
     c.lerp(scrub,smooth(.8,.62,t)*smooth(1.4,2,h)*(.55+.45*patch));                      // scrub inland
     if(Math.hypot(x-HILL.x,z-HILL.z)<HILL.flat+1.5)c.lerp(dirt,.85);                    // the beaten summit
     else if(h>.25){const d=trailDistance(x,z);if(d<2.6)c.lerp(dirt,.8*smooth(2.6,1.1,d));}   // v210: the trails, worn to dirt
+    // v211: the kinds of ground (h > .4: never on the beach).
+    if(h>.4){relief(x,z);const inland=smooth(.8,.66,t);
+      c.lerp(jungle,inland*smooth(30,12,Math.hypot(x-RUIN.x,z-RUIN.z))*(.55+.35*patch));      // the jungle floor round the ruin
+      c.lerp(dryGrass,inland*smooth(-6,14,z+x*.35)*(.25+.45*(1-patch))*(1-smooth(0,1.2,dip))); // dry grass to the south and east
+      c.lerp(mud,smooth(.25,1.1,dip)*.8);                                                    // mud down in the hollows and gullies
+      c.lerp(stoneGround,smooth(.25,.75,crag)*(.35+.5*patch));                               // stone showing on the rocky hills
+    }
     c.lerp(rock,smooth(.35,.6,slope));                                                   // bare rock on the steep parts
     return c;
   }
@@ -304,7 +331,7 @@ void main(){
   // itself; nothing here can be stood on above head height (the dead could not follow).
   const props=new T.Group();props.name='Landmarks';world.add(props);
   const timber=material(0x5a4a3a),plank=material(0x3f3429),roofMat=material(0x2c3134,{roughness:.8,metalness:.25}),glow=new T.MeshStandardMaterial({color:0x1a1108,emissive:0xe8913c,emissiveIntensity:.85,roughness:.6}),steel=material(0x6a6f6c,{roughness:.55,metalness:.6});
-  const canvas=material(0x7d7a5c,{roughness:1}),concrete=material(0x7c7e78,{roughness:.95}),stone=material(0x6c6f66,{roughness:1}),rustMat=material(0x6a3b24,{roughness:.9,metalness:.15}),crate=material(0x66573d),padMat=material(0xc9c4b2,{roughness:.8});
+  const canvas=material(0x7d7a5c,{roughness:1}),concrete=material(0x7c7e78,{roughness:.95}),stone=material(0x6c6f66,{roughness:1}),rustMat=material(0x6a3b24,{roughness:.9,metalness:.15}),crate=material(0x66573d),padMat=material(0xc9c4b2,{roughness:.8}),ammoMat=material(0x4b5a2c),band=material(0xc9a227,{roughness:.6});
   const warn=new T.MeshStandardMaterial({color:0x2a0705,emissive:0xff1a10,emissiveIntensity:1.2,roughness:.5}),rune=new T.MeshStandardMaterial({color:0x140a26,emissive:0x8a4dff,emissiveIntensity:1.05,roughness:.5});
   // No prop can be jumped onto: what blocks reaches at least 1.05 m above the highest ground
   // round it (on a slope that is above the prop's own top on its uphill side).
@@ -353,6 +380,8 @@ void main(){
     A.box(steel,-1.3,.8,-1.25,.9,.38,.42);A.box(glow,-1.3,.9,-1.03,.6,.08,.01);                                    // the radio set and its dial
     A.block(-.9,-1.2,2.6,.8,1.2);                                                                                  // what the desk blocks
     A.crate(-2.1,1.3,1.1,.4);
+    // v211: the ammunition crate, olive with a yellow band, in the north-east corner (clear of the walk through).
+    A.box(ammoMat,AMMO.x,0,AMMO.z,AMMO.size,AMMO.size*.75,AMMO.size,{collide:true});A.box(band,AMMO.x,AMMO.size*.3,AMMO.z,AMMO.size+.02,.08,AMMO.size+.02);A.box(band,AMMO.x,AMMO.size*.75,AMMO.z,AMMO.size*.5,.03,AMMO.size*.12);
   }
   const lamp=new T.PointLight(0xffb867,2.4,7.5,1.6);lamp.position.set(TENT.x-.4,summit+TENT.eave-.25,TENT.z-.4);scene.add(lamp);lights.push(lamp);
   // The rest of the Lookout Compound: a dish on its mount, crates, barrels and what is left of
@@ -400,18 +429,20 @@ void main(){
   boxCollider(wx,wz,L*.95,B*1.05,groundHeight(wx,wz)-2,groundHeight(wx,wz)+3.6,-heading,'wreck');
 
   // ---- The landmarks (v210): grey-box shapes for the design spec's section 3 -------------------
-  // Bunker B-01: a concrete portal dug into the ridge's south-west face, its steel door sealed.
-  // Reserved for later: nothing opens, nothing spawns in it, and the ground round it is open.
+  // Bunker B-01: a concrete portal coming out of the ridge's north-east face (v211: turned to
+  // face the reef, its back in the hill), its steel door sealed. The portal runs 6 m into the
+  // ridge, so its roof sinks into the slope behind; it blocks only as far back as it shows.
+  // Reserved for later: nothing opens, nothing spawns in or near it, the ground round it is open.
   {const B=SITE.bunker,front=turned(B.x,B.z,B.angle,0,1.6),A=site(B.x,B.z,B.angle,groundHeight(front[0],front[1])-.05,'bunker');
-    A.box(concrete,0,0,-.4,5.4,3.6,3.4,{collide:true});                                   // the portal
-    A.box(concrete,0,3.6,-.2,6,.35,4);                                                    // its roof slab
+    A.box(concrete,0,0,-1.6,5.4,3.6,6);A.block(0,-.9,5.4,4.6,3.6);                       // the portal, and as much of it as stands out
+    A.box(concrete,0,3.6,-1.4,6,.35,6.4);                                                 // its roof slab
     A.box(steel,0,.05,1.33,2.3,2.5,.12);A.box(rustMat,0,.05,1.4,.12,2.5,.04);             // the sealed door, and its seam
     A.box(concrete,0,2.65,1.36,3,.5,.2);                                                  // the lintel (B-01's lettering comes with the art)
     for(const side of [-1,1]){
       A.box(warn,side*1.75,2.95,1.36,.22,.22,.1);                                          // warning lamps
-      A.box(concrete,side*3.9,0,1.5,3.2,2.3,.45,{ry:side*-.55,collide:true});              // wing walls, splayed open
+      A.box(concrete,side*3.9,0,1.1,3.4,2.6,.45,{ry:side*-.55,collide:true});              // wing walls, holding back the cut
     }
-    A.post(steel,1.7,3.95,-.9,.16,1.1);A.post(steel,-1.5,3.95,-1.2,.12,.7);                // vents
+    A.post(steel,1.7,3.95,-2.4,.16,1.1);A.post(steel,-1.5,3.95,-2.9,.12,.7);              // vents, where the roof meets the hill
     const G=site(B.x,B.z,B.angle,null,'bunker');G.crate(-4.6,5.4,1.3,.3);G.crate(-5.9,4.9,1.15,-.4);G.barrel(4.4,5.6);
   }
   // The Jungle Ruin, on its knoll: two lengths of broken wall, an arch you can walk through, a
@@ -474,7 +505,7 @@ void main(){
   // Thick round the ruin (the jungle), a grove behind Shipwreck Cove, then singles inland of every beach.
   for(let tries=0;tries<900&&palmSpots.length<22;tries++){const a=rand()*Math.PI*2,r=9+rand()*13,x=SITE.ruin.x+Math.cos(a)*r,z=SITE.ruin.z+Math.sin(a)*r*.9;if(clear(x,z,3.4))palmSpots.push({x,z});}
   for(let tries=0;tries<500&&palmSpots.length<34;tries++){const a=Math.PI*(.86+rand()*.4),r=coastRadius(a)*(.5+rand()*.26),x=Math.cos(a)*r,z=Math.sin(a)*r;if(clear(x,z,3.4))palmSpots.push({x,z});}
-  for(let tries=0;tries<1500&&palmSpots.length<72;tries++){const a=rand()*Math.PI*2,r=coastRadius(a)*(.56+rand()*.23),x=Math.cos(a)*r,z=Math.sin(a)*r;if(clear(x,z,5.5))palmSpots.push({x,z});}
+  for(let tries=0;tries<3000&&palmSpots.length<72;tries++){const a=rand()*Math.PI*2,r=coastRadius(a)*(.56+rand()*.23),x=Math.cos(a)*r,z=Math.sin(a)*r;if(clear(x,z,5.5))palmSpots.push({x,z});}
   const trunkGeo=new T.CylinderGeometry(.15,.27,1,7,4);trunkGeo.translate(0,.5,0);
   const crownGeo=(()=>{const pos=[],nor=[],uv=[];
     for(let f=0;f<8;f++){const a=f/8*Math.PI*2+(f%2)*.2,dir=new T.Vector3(Math.cos(a),0,Math.sin(a)),side=new T.Vector3(-dir.z,0,dir.x);
@@ -596,7 +627,7 @@ export const SHORE=Object.freeze({depth:.35,zoneSpread:.09,
   minor:Object.freeze([['NORTH TIDE POOL',-1.25],['NORTH ROCKS',-1.05],['REEF SHALLOWS',-.47],['EAST ROCKS',-.3],['EAST FLATS',.3],['COVE HEAD',.9],['DOCK DEBRIS',1.08],
     ['SOUTH DRIFTWOOD',1.64],['SOUTH BEACH',1.9],['SOUTH-WEST ROCKS',2.1],['WRECK DEBRIS SOUTH',2.72],['WRECK DEBRIS NORTH',-2.72],['WEST TIDE POOL',-2.05],['NORTH-WEST DRIFTWOOD',-1.85]]),
   // [name, x, z] with two more points beside each (spec 5.2's six, in its order).
-  interior:Object.freeze([['JUNGLE RUIN BRUSH',-27,-38],['NORTH BRUSH',-12,-42],['BUNKER FOLIAGE',12,-34],['EAST THICKET',43,-7],['SOUTH BRUSH',-8,27],['SOUTH-WEST FOLIAGE',-20,16]])
+  interior:Object.freeze([['JUNGLE RUIN BRUSH',-27,-38],['NORTH BRUSH',-12,-42],['BUNKER FOLIAGE',16,-40],['EAST THICKET',43,-7],['SOUTH BRUSH',-8,27],['SOUTH-WEST FOLIAGE',-20,16]])
 });
 // The point in the shallows on a bearing: walking out from the land until the water is this deep.
 export function waterline(bearing,depth=SHORE.depth){

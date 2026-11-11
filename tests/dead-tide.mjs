@@ -107,8 +107,24 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
   for(const [b,depth] of ISLAND.coast.coves)assert(coastRadius(b)<Math.min(coastRadius(b-.45),coastRadius(b+.45))-depth*.4,'A cove bites into the coast');
   // The high ground: Radio Hill highest, then the ridge, the knoll, the bluff and the headland, each a real rise.
   const rises=Object.fromEntries(['BUNKER RIDGE','RUIN KNOLL','CAMP BLUFF','COVE HEAD'].map(n=>{const m=moundAt(n);return [n,groundHeight(m.x,m.z)];}));
-  for(const [n,h] of Object.entries(rises))assert(h>4&&h<I.summit-5,`${n} is a hill of its own (${h.toFixed(1)} m), well under Radio Hill`);
-  {const w=moundAt('THE WASH'),px=-Math.sin(w.angle)*w.width,pz=Math.cos(w.angle)*w.width;assert(groundHeight(w.x,w.z)<groundHeight(w.x+px,w.z+pz)-.5&&groundHeight(w.x,w.z)<groundHeight(w.x-px,w.z-pz)-.5,'The wash is a gully: lower than the ground either side');}
+  for(const [n,h] of Object.entries(rises))assert(h>4&&h<I.summit-4,`${n} is a hill of its own (${h.toFixed(1)} m), under Radio Hill`);
+  // The wash is a ravine: across it, the ground falls to a floor and climbs again on both sides
+  // (v211: at least 1.7 m, between the camp's bluff and the wash's bank).
+  const washDepth=(()=>{const w=moundAt('THE WASH'),px=-Math.sin(w.angle),pz=Math.cos(w.angle),at=k=>groundHeight(w.x+px*k,w.z+pz*k);let floor=Infinity,fk=0;for(let k=-8;k<=8;k+=.5)if(at(k)<floor){floor=at(k);fk=k;}
+    let left=-Infinity,right=-Infinity;for(let k=fk;k>=fk-14;k-=.5)left=Math.max(left,at(k));for(let k=fk;k<=fk+14;k+=.5)right=Math.max(right,at(k));return Math.min(left,right)-floor;})();
+  assert(washDepth>1.7,`The wash is a ravine, ${washDepth.toFixed(1)} m deep`);
+  // v211: bolder ground. The ridge, knoll, bluff and headland stand 5 m or more above the sea,
+  // and the wash is at least 1.7 m below its banks; nothing anyone walks on is steeper than 42°.
+  for(const n of ['BUNKER RIDGE','RUIN KNOLL','CAMP BLUFF','COVE HEAD'])assert(rises[n]>5,`${n} stands over 5 m (${rises[n].toFixed(1)})`);
+  for(const n of ['NORTH CRAG','EAST DOWNS'])assert(groundHeight(moundAt(n).x,moundAt(n).z)>3.8,`${n} is a hill of its own`);
+  {let steep=0;for(let x=-90;x<=90;x+=.5)for(let z=-90;z<=90;z+=.5){if(groundHeight(x,z)<-ISLAND.wade)continue;steep=Math.max(steep,Math.hypot(groundHeight(x+.25,z)-groundHeight(x-.25,z),groundHeight(x,z+.25)-groundHeight(x,z-.25))/.5);}
+   assert(steep<Math.tan(42*Math.PI/180),`No walkable ground steeper than 42° (${(Math.atan(steep)*180/Math.PI).toFixed(1)}°)`);}
+  // v211: B-01 comes out of its ridge: its door faces the north-east reef, away from Radio Hill,
+  // with the ridge rising behind it over its roof.
+  {const b=sites.bunker,fx=Math.sin(b.angle),fz=Math.cos(b.angle),out=Math.atan2(fz,fx);
+   assert(near(out,-Math.PI/4,.3),'B-01’s door looks out to the north-east');
+   assert(fx*(H.x-b.x)+fz*(H.z-b.z)<0,'away from Radio Hill');
+   const ground=groundHeight(b.x+fx*1.6,b.z+fz*1.6);assert(groundHeight(b.x-fx*6,b.z-fz*6)>ground+4,'and the ridge behind it stands over its roof (it comes out of the hill)');}
   // b. The pads: one for every weapon and the Forge, each on open, near-level ground at its landmark.
   assert.deepEqual(stations.map(p=>p.id).sort(),['bushmaster','forge','glock','katana','lmg','rifle','shotgun','smg'],'Eight pads: every weapon, and the Forge');
   const spec={bushmaster:'LOOKOUT COMPOUND',katana:'LOOKOUT COMPOUND',smg:'JUNGLE RUIN',shotgun:'SHIPWRECK COVE',rifle:'COASTAL CAMP',lmg:'SOUTH DOCK',glock:'EAST COVE',forge:'SOUL FORGE'};
@@ -240,6 +256,17 @@ try{
   assert(peak>summitY+.6&&peak+1.8<=summitY+S.eave,'A jump inside clears the eaves');
   qa.setKeys(['KeyW']);frames(200);qa.setKeys([]);assert(G().player.z<S.z-S.d/2-1&&!G().zone.includes('TENT'),'and you walk straight out the far side: it has no walls');
   qa.setPlayer(S.x-.9,S.z+1.5);qa.setAim(0,0);qa.setKeys(['KeyW']);frames(120);qa.setKeys([]);assert(G().player.z>S.z-1.2+.4,'The radio desk stops you');
+  // v211: the test ammo crate under the canopy: its prompt, and E restocks every gun you carry
+  // and adds a grenade; out of reach, nothing.
+  {const A=I.sites.ammo,R=G().run;assert(Math.abs(A.x-S.x)<S.w/2-.3&&Math.abs(A.z-S.z)<S.d/2-.3,'The ammo crate is inside the radio tent');
+   qa.setPlayer(A.x-1.4,A.z);frames(2);assert($('interaction').textContent.includes('AMMO CRATE'),'Beside it, its prompt shows');
+   R.inventory.glock.reserve=0;R.inventory.glock.ammo=2;R.grenades=1;
+   key({code:'KeyE'});listeners.keyup({code:'KeyE'});frames(2);
+   assert(R.inventory.glock.reserve>=78+11&&R.grenades===2,`E restocks the pistol in full (reserve ${R.inventory.glock.reserve}: 78 and what the magazine lacks) and adds a grenade`);
+   assert(G().mode==='playing','with no pause');
+   qa.setPlayer(A.x-4,A.z+4);frames(2);R.inventory.glock.reserve=0;key({code:'KeyE'});listeners.keyup({code:'KeyE'});frames(2);
+   assert(R.inventory.glock.reserve===0&&!$('interaction').textContent,'Out of reach, no prompt and nothing happens');
+   R.inventory.glock.reserve=78;R.inventory.glock.ammo=13;R.grenades=3;}
   // The sea: wade into the shallows, slower as it deepens, and no further.
   const a=Math.PI/2+.4,far=coastRadius(a)*1.4;qa.setPlayer(Math.cos(a)*coastRadius(a)*.9,Math.sin(a)*coastRadius(a)*.9);qa.setAim(Math.atan2(-Math.cos(a),-Math.sin(a)),0);
   qa.setKeys(['KeyW']);frames(60*12);qa.setKeys([]);p=G().player;
@@ -274,7 +301,7 @@ try{
   $('resume').onclick();assert.equal(G().mode,'playing','Resume locks the mouse and plays on');
   key({code:'Escape'});$('mainMenuPause').onclick();assert(!$('pauseConfirm').classList.contains('hidden'));$('confirmYes').onclick();
   assert.equal(G().mode,'menu');assert(!$('menu').classList.contains('hidden')&&$('hud').classList.contains('hidden')&&!$('start').disabled,'Title Screen asks first, then returns to the title');
-  console.log('PASS: playing Dead Tide (v207: the dead built behind its title screen, a body a frame, their shaders compiled off to the side; v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, walk in under the radio tent and out the far side (only its desk stops you), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
+  console.log('PASS: playing Dead Tide (v207: the dead built behind its title screen, a body a frame, their shaders compiled off to the side; v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, walk in under the radio tent and out the far side (only its desk stops you); its ammo crate restocks you, wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
   // ---- 5. The dead come ashore (v206) ------------------------------------------------------
   const {SHORE_RULES:R}=await import('../public/game/tide-dead.mjs'),TT=await import('../public/game/tide-threat.mjs'),LIVING=TT.targetPopulation(1),STATS=TT.threatStats(1);
   const alive=()=>G().zombies.filter(e=>!e.dead),dist=e=>Math.hypot(e.walkPos.x-G().player.x,e.walkPos.z-G().player.z);

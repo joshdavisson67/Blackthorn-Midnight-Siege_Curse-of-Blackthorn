@@ -21,14 +21,14 @@ import {PERKS} from './stations.mjs?v=205';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
-import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=210';
+import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=211';
 import {buildEnemyAssets} from './enemy-assets.mjs?v=207';
 import {createCrowd,enemyBody} from './crowd.mjs?v=123';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=210';
+import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=211';
 import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=210';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
@@ -144,6 +144,20 @@ function updateThreat(dt){
 }
 // A new run starts again at level 1, quietly.
 function resetThreat(){Object.assign(threatTracker,{level:threatLevel(runState.kills),rank:threatRank(threatLevel(runState.kills)).index,kills:runState.kills,pulse:0,rankGlow:0});updateThreat(0);showThreat();}
+// ---- The test ammo crate (v211) ------------------------------------------------------------------
+// Under the radio tent's canopy, until the real stations arrive (step 5): free, and as often as
+// you like, so the threat's later ranks can be reached and tried. It restocks every gun you carry
+// (as the mansion's ammo stations do) and adds a grenade.
+const AMMO_CRATE=island.sites.ammo;
+function atAmmoCrate(){return session.mode==='playing'&&runState.health>0&&Math.hypot(player.x-AMMO_CRATE.x,player.z-AMMO_CRATE.z)<=AMMO_CRATE.reach&&Math.abs(player.y-island.summit)<1.2;}
+function ammoNeeded(){for(const k in runState.inventory)if(runState.inventory[k].owned&&!ammoFull(k))return true;return runState.grenades<4;}
+function ammoPrompt(){const key=padPlay()?'B':touchControls?.enabled?'USE':'E';return `<strong>${key}</strong> AMMO CRATE <span style="color:#d4b77a">FREE · TESTING</span><small>${ammoNeeded()?'Restock every gun you carry, and a grenade.':'You are fully stocked.'}</small>`;}
+function useAmmoCrate(){
+  if(!atAmmoCrate())return false;
+  if(!ammoNeeded()){notify('AMMUNITION FULL');return false;}
+  refillAmmo();   // reserves full, including what the magazine lacks (a reload tops it up), as the mansion's stations
+  notify('AMMUNITION RESTOCKED');tone(330,.1,.04,'square',440);updateHud();return true;
+}
 const weaponRecoil=createWeaponRecoil(),combatHud=createCombatHud({hit:$('hit'),headshot:$('headshotIndicator'),directions:$('damageDirections'),toggle:$('headshotToggle')});
 function addPoints(n){runState.points+=n;runState.totalScore+=n;return n;}
 // The weapon runtime reaches the run, the session and the view through one object.
@@ -153,7 +167,7 @@ link(runState,['inventory','weapon','perkOwned','points','reloadLeft','reloadDur
 link(session,['mode','aiming','lookYaw','lookPitch']);
 link(firstPerson,['flashTime','recoil','dualSide','viewFov'],['flashTime','recoil','dualSide','weaponViewFov']);
 const raycaster=new T.Raycaster();let combat=null;
-const {swing,updateMelee,freshInventory,shoot,reload,finishReload,holdToFire,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,selectWeapon,applyWeaponRanks,viewGun,zoomOf,aimFovOf,aimHeight}=createWeaponRuntime({
+const {swing,updateMelee,freshInventory,shoot,reload,finishReload,holdToFire,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,ammoFull,refillAmmo,selectWeapon,applyWeaponRanks,viewGun,zoomOf,aimFovOf,aimHeight}=createWeaponRuntime({
   level:{colliders,isBlocked,solidMeshes,floorOf:islandLevel.floorOf},
   view:{camera,gunGroups,bushDot,smgDual,dualGuns,dualMuzzle,flash,reticleHud,weaponRecoil,grenadeThrow,grenadeAssets},
   run:{scene:world,zombies,effects,markPool,rand,tone,noise,notify,rumble:padRumble,suppressedReport,updateHud,updateReloadHud,shotRumble:SHOT_RUMBLE,raycaster,player},
@@ -204,7 +218,7 @@ const controlScheme=createControlScheme({win:window,controllerSupported:true,onC
 const {hasMouseLock,clearPlayInput,releaseMouse,requestPointer,resumeLabel,pauseGame,showPauseMenu,settingsOpen,openSettings,closeSettings,confirmOpen,askConfirm,cancelConfirm,acceptConfirm,resumeGame,
   directControls,padPlay,touchActions,padActions,onPointerLockChange,onPointerLockError,onVisibilityChange,onMouseMove,onMouseDown,onMouseUp,playKey,onKeyUp,onBlur}=createControls({
   page:{$,canvas,keys},session,state:runState,
-  act:{shoot,reload,grenade,selectWeapon,zoomOf,interact(){},toggleFlashlight,openEstateMap(){},initAudio,fitTouchStick},
+  act:{shoot,reload,grenade,selectWeapon,zoomOf,interact(){useAmmoCrate();},toggleFlashlight,openEstateMap(){},initAudio,fitTouchStick},
   ui:{get touchControls(){return touchControls;},get controlScheme(){return controlScheme;}},
   hooks:{
     onPause(){},onPauseMenu(){},
@@ -373,8 +387,9 @@ function tick(now){
     shore.update(dt);updateEnemies(dt);updateThreat(dt);
     grenadeThrow.update(dt,releaseGrenade,grenadeCue);combat.updateEffects(dt);explosionFx.update(dt);combat.updatePickups(dt);
     recover(dt,true);runState.doubleTime=Math.max(0,runState.doubleTime-dt);runState.grenadeTime=Math.max(0,runState.grenadeTime-dt);
-    zone=island.zoneAt(player.x,player.z,player.y);setMarkup('location',`DEAD TIDE <span> / ${zone}</span>`);setMarkup('interaction','');
-    touchControls?.update({playing:true,aiming:session.aiming,canInteract:false,flashlight:firstPerson.flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
+    zone=island.zoneAt(player.x,player.z,player.y);setMarkup('location',`DEAD TIDE <span> / ${zone}</span>`);
+    const crate=atAmmoCrate();setMarkup('interaction',crate?ammoPrompt():'');
+    touchControls?.update({playing:true,aiming:session.aiming,canInteract:crate,flashlight:firstPerson.flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
     gunRoot.visible=true;
     const ads=firstPerson.updateGun(dt,{moving,sprint});setOpacity('crosshair',ads?0:1);
     hudTick-=dt;if(hudTick<=0){updateHud();hudTick=.1;}
