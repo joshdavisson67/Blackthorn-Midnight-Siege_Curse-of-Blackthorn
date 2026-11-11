@@ -24,14 +24,14 @@ import {createSignage} from './signage.mjs?v=94';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
-import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=212';
+import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=213';
 import {buildEnemyAssets} from './enemy-assets.mjs?v=207';
 import {createCrowd,enemyBody} from './crowd.mjs?v=123';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=212';
+import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=213';
 import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=210';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
@@ -79,14 +79,13 @@ const WEAPON_STATIONS={bushmaster:['AR-15 / .450 BUSHMASTER',2500],katana:['TSUR
 function stationDef(p){
   if(p.kind==='forge')return forgeStation('THE SOUL FORGE');
   if(p.kind==='armor')return {...ARMOR_STATION};
-  if(p.kind==='ammo')return rackStation('ammo','AMMUNITION',350);
   if(p.kind==='perk'){const d=PERK_DEFS[p.id];return {...d,type:'perk',modelCaption:d.desc};}
   if(OWN_RACKS[p.id])return {...rackStation('smg',OWN_RACKS[p.id].name,OWN_RACKS[p.id].price),...OWN_RACKS[p.id]};
   const [name,price]=WEAPON_STATIONS[p.id];return p.id==='katana'?{...KATANA_STATION}:rackStation(p.id,name,price);
 }
 const rackKit=createModelKit();
 for(const p of island.stations){
-  const y=groundHeight(p.x,p.z)+.02,def=stationDef(p),made=stationBuilder.add({x:p.x,z:p.z,y,rotation:p.angle,...def});
+  const y=(p.y??groundHeight(p.x,p.z))+.02,def=stationDef(p),made=stationBuilder.add({x:p.x,z:p.z,y,rotation:p.angle,...def});
   made.station.padId=p.id;made.station.landmark=p.landmark;
   if(OWN_RACKS[p.id]){
     made.station.type=p.id;
@@ -94,8 +93,11 @@ for(const p of island.stations){
     for(const o of shown){const gun=rackKit.gun(p.id);gun.position.copy(o.position);gun.scale.copy(o.scale).multiplyScalar(p.id==='lmg'?.88:1);o.parent.add(gun);o.parent.remove(o);}
   }
 }
-// The tent's ammo crate (v211) is an ammunition station too.
-{const A=island.sites.ammo;interactables.push({type:'ammo',name:'RADIO TENT AMMUNITION',price:350,hex:'#67efbb',x:A.x,z:A.z,y:island.summit,padId:'ammo-tent',landmark:'LOOKOUT COMPOUND'});}
+// The island's one ammunition station (v212): the standard one, in the radio tent's corner where
+// v211's test crate stood.
+{const A=island.sites.ammo,made=stationBuilder.add({x:A.x,z:A.z,y:island.summit+.02,rotation:A.angle,...rackStation('ammo','AMMUNITION',350)});made.station.padId='ammo-tent';made.station.landmark='LOOKOUT COMPOUND';}
+// The Warden LMG's boathouse stays locked until the threat reaches its level (v212).
+const boathouse=island.boathouse,boathouseStation=interactables.find(s=>s.padId==='lmg');boathouseStation.locked=true;
 // Their still parts merged (v212): the painted ones with their colours baked into a shared
 // material and the plaques' lettering into one atlas (tide-palette.mjs), the rest by material,
 // all indexed and in cells, as the mansion merges its world (though wider than the mansion's 24 m: the stations
@@ -185,6 +187,11 @@ Object.defineProperty(routes,'brutes',{get(){if(!bruteRoutes){const b=enemyBody(
 // rolled (they are built behind the title screen now; a rebuild takes about 0.5 ms).
 const BRUTE_SHARE=TIDE_KINDS.indexOf('brute');
 const brutesNeedRoutes=()=>{if(shore.pending==='brute'||tideMix(threatLevel(runState.kills))[BRUTE_SHARE]>0)return true;for(const e of zombies)if(e.brute&&!e.dead)return true;return false;};
+// The boathouse (v212): opened for the rest of the run once the threat reaches its level, shut again by
+// a new run. Its doorway's cells are worked out again for the routes either way.
+function setBoathouse(open){if(boathouse.open===open)return;boathouse.setOpen(open);boathouseStation.locked=!open;routes.refresh(boathouse.x,boathouse.z,3);bruteRoutes?.refresh(boathouse.x,boathouse.z,3);}
+const BOATHOUSE_PROMPT=`<strong>LOCKED</strong> BOATHOUSE <span style="color:#d4b77a">OPENS AT THREAT LEVEL ${boathouse.opens}</span><small>The Warden LMG is inside</small>`;
+const boathouseLocked=()=>!boathouse.open&&Math.hypot(player.x-boathouse.x,player.z-boathouse.z)<2.8;
 const rebuildRoutes=()=>{navTarget=[player.x,player.z];routes.rebuild(player.x,player.z);if(bruteRoutes&&brutesNeedRoutes())bruteRoutes.rebuild(player.x,player.z);};
 const islandLevel=createIslandLevel({island,crowd,routes,hunter});
 let elapsed=0,lastTime=performance.now(),hudTick=0,zone='SOUTH BEACH';
@@ -385,7 +392,7 @@ function resetRun({capture=true}={}){
   Object.assign(runState,{health:100,maxHealth:100,armor:0,armorMax:0,armorTier:0,points:500,totalScore:0,kills:0,runTime:0,lastHurt:-20,grenades:3,doubleTime:0,grenadeTime:0,grenadeCooldown:0});
   runState.perkOwned.clear();runState.inventory=freshInventory();applyWeaponRanks();
   Object.assign(runState,{reloadLeft:0,shotTimer:0,feetY:0,jumpV:0,grounded:true,shotId:0});clearFlashes();
-  weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();resetThreat();stationBuilder.reset();firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');
+  weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();resetThreat();stationBuilder.reset();setBoathouse(false);firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');
   session.mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');
   if(capture)requestPointer();
   else{$('pauseTitle').textContent='The island is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}
@@ -453,10 +460,11 @@ function tick(now){
     // (Routes are only rebuilt while there are dead to lead, or the shore is about to send more.)
     followPlayer(hunter,player,island);navTimer-=dt;if(navTimer<=0&&(shore.alive()>0||shore.wanting())){rebuildRoutes();navTimer=.6;}
     shore.update(dt);updateEnemies(dt);updateThreat(dt);
+    if(!boathouse.open&&threatLevel(runState.kills)>=boathouse.opens){setBoathouse(true);notify('THE BOATHOUSE AT THE SOUTH DOCK IS OPEN');}
     grenadeThrow.update(dt,releaseGrenade,grenadeCue);combat.updateEffects(dt);explosionFx.update(dt);combat.updatePickups(dt);
     recover(dt,true);runState.doubleTime=Math.max(0,runState.doubleTime-dt);runState.grenadeTime=Math.max(0,runState.grenadeTime-dt);
     zone=island.zoneAt(player.x,player.z,player.y);setMarkup('location',`DEAD TIDE <span> / ${zone}</span>`);
-    stationKit.updateForges();const near=stationKit.closest();setMarkup('interaction',near?stationKit.prompt(near,padPlay()?'B':touchControls?.enabled?'USE':'E'):'');
+    stationKit.updateForges();const near=stationKit.closest();setMarkup('interaction',near?stationKit.prompt(near,padPlay()?'B':touchControls?.enabled?'USE':'E'):boathouseLocked()?BOATHOUSE_PROMPT:'');
     touchControls?.update({playing:true,aiming:session.aiming,canInteract:!!near,flashlight:firstPerson.flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
     gunRoot.visible=true;
     const ads=firstPerson.updateGun(dt,{moving,sprint});setOpacity('crosshair',ads?0:1);

@@ -483,6 +483,42 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v213 (the stations set into the landmarks) against main (v212)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. The reworked landmarks are new content; their costs are reported here.
+
+### Mansion: quick
+
+Nothing it loads changed; five files differ only in their version number.
+
+### Dead Tide: full protocol
+
+| | main (v212) | v213 |
+|---|---:|---:|
+| Files / KB before playable | 65 / 2,096 | 65 / 2,109 |
+| Time to playable (load phases, 20 pairs) | 8,596 ms | 8,592 ms (−4, SE 54) |
+| ↳ modules / world / shaders | 275 / 1,369 / 6,952 ms | 268 / 1,359 / 6,965 ms (all within noise) |
+| Shader programs, at load and after play | 48 | 48 |
+| Geometries / textures | 274 / 29 | 277 / 29 |
+| Heap after load / after play, after a collection | 64.7 / 154.5 MB | 64.7 / 154.5 MB |
+| Draw calls in the fixed views | 32–163 (title 143) | 30–158 (title 149) |
+| Triangles in the title view | 134K | 133K |
+| Frame logic, walking the empty island (24 pairs) | 0.286 ms | 0.300 ms (+0.014, SE 0.006) |
+| The 45-enemy fight: draw calls / triangles | 308–309 / 322K | 302–304 / 306K–307K |
+
+- **Load, memory and shaders are unchanged.** Three ammunition stations fewer roughly pays for the bigger wreck, the camp, the boathouse and the ruin's walls.
+- **Draw calls:** +6 in the title view, where the boathouse door's two leaves are drawn apart so they can swing, and the new props' materials fall into more of the merged cells. Most views have fewer: the blast view −5, the fight −5, spawn −4.
+- **Triangles:** fewer in most views (the fight −16K), with the removed ammunition stations' guns and plaques.
+- **Frame logic +0.014 ms** (the standard series alone measured −0.001). Not traced to a cause. The likely ones: the new colliders near the player's paths (tents, seats, crates, walls), and the boathouse's per-frame lock check. It is small, and is reported as the landmarks' cost.
+- **The golden trace** differs where the landmarks and stations changed, as it must. Two runs of v213 are byte-identical.
+- **Not measured:** real GPUs, integrated graphics, or frame rates in a real browser.
+
+### Mode picker: quick
+
+Nothing it loads changed.
+
+Files: `v213-tide.jsonl`, `v213-tide-load-phases.jsonl`, `v213-tide-frame-logic.jsonl`, `v213-tier-summary.json`.
+
 ## v212 (Dead Tide's stations) against main (v211)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. The stations are new content, so their costs are reported here; the first build's were cut down before release (below).
