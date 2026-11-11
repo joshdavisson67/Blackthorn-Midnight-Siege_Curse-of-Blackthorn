@@ -109,8 +109,8 @@ try{
    assert(G().deadReady===true&&G().renderer.compileCalls.length===3&&target===G().scene&&warm!==G().scene&&warm.children.length===0,'then their shaders compile once, in a scene of their own lit by the island’s, emptied after');
    assert.deepEqual([...new Set(G().world.children.map(o=>o.name))].sort(),[...top].sort(),'and nothing of them ever enters the world');}
   // The shore sends no one until the dead are ready.
-  {const {createShoreDirector}=await import('../public/game/tide-dead.mjs');let made=0,ready=false;
-   const d=createShoreDirector({spawner:{placement:()=>({valid:()=>true}),choosePoint:o=>o[0],spawnKind:()=>(made++,{group:{position:{y:0}}})},zombies:[],player:{x:0,z:0},look:()=>Math.PI,noise(){},ready:()=>ready});
+  {const {createThreatDirector}=await import('../public/game/tide-dead.mjs');let made=0,ready=false;
+   const d=createThreatDirector({spawner:{placement:()=>({valid:()=>true}),choosePoint:o=>o[0],spawnKind:()=>(made++,{group:{position:{y:0}}})},zombies:[],player:{x:0,z:0},look:()=>Math.PI,noise(){},ready:()=>ready});
    for(let i=0;i<600;i++)d.update(1/60);assert.equal(made,0,'The shore waits while the dead are not ready');ready=true;for(let i=0;i<60;i++)d.update(1/60);assert(made>0,'and sends them once they are');}
   frames(30);const orbit=G().camera.position.clone();frames(30);assert(orbit.distanceTo(G().camera.position)>.05&&!G().gunRoot.visible,'The title screen circles the island with no gun in view');
   // Enter: capture in the click, then play from the south beach.
@@ -178,12 +178,12 @@ try{
   assert.equal(G().mode,'menu');assert(!$('menu').classList.contains('hidden')&&$('hud').classList.contains('hidden')&&!$('start').disabled,'Title Screen asks first, then returns to the title');
   console.log('PASS: playing Dead Tide (v207: the dead built behind its title screen, a body a frame, their shaders compiled off to the side; v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, go into the shack by its door (its walls and roof hold), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
   // ---- 5. The dead come ashore (v206) ------------------------------------------------------
-  const {SHORE_RULES:R}=await import('../public/game/tide-dead.mjs');
+  const {SHORE_RULES:R}=await import('../public/game/tide-dead.mjs'),TT=await import('../public/game/tide-threat.mjs'),LIVING=TT.targetPopulation(1),STATS=TT.threatStats(1);
   const alive=()=>G().zombies.filter(e=>!e.dead),dist=e=>Math.hypot(e.walkPos.x-G().player.x,e.walkPos.z-G().player.z);
   const aimAt=(point)=>{const eye=G().camera.position,dx=point.x-eye.x,dy=point.y-eye.y,dz=point.z-eye.z;qa.setAim(Math.atan2(-dx,-dz),Math.atan2(dy,Math.hypot(dx,dz)));};
   const still=e=>{e.emergeLeft=0;e.speed=0;e.attack=1e9;return e;};
   enter();await Promise.resolve();assert.equal(G().mode,'playing');qa.setAim(ISLAND.spawn.yaw,0);
-  assert(G().shore.target===R.living&&alive().length===0,'A run starts with no dead and a target of eight');
+  assert(G().shore.target===LIVING&&alive().length===0,'A run starts with no dead and a target of eight');
   frames(Math.floor(R.firstDelay*60)-5);assert.equal(G().zombies.length,0,`None arrive in the first ${R.firstDelay} s`);
   let first=null;for(let i=0;i<120&&!first;i++){frames(1);first=G().zombies[0];}
   assert(first&&first.emergeLeft>0&&first.shoreBorn,'Then the first rises out of the surf');
@@ -193,16 +193,16 @@ try{
   frames(Math.ceil(R.emerge.time*60)+2);assert(!(first.emergeLeft>0)&&Math.abs(first.group.position.y-(groundHeight(first.walkPos.x,first.walkPos.z)+first.walkPos.y-.02))<1e-6,'It stands on the ground once risen');
   // A steady eight, never more, all on legal ground and routed to you.
   let most=0;for(let i=0;i<40;i++){frames(30);most=Math.max(most,alive().length);G().run.health=100;}
-  assert.equal(most,R.living,`The shore keeps ${R.living} walkers, never more`);
+  assert.equal(most,LIVING,`At threat level 1 the shore keeps ${LIVING} walkers, never more`);
   for(const e of alive()){assert(!e.brute&&!e.dog&&!e.feral&&!e.lurker,'all walkers');assert(groundHeight(e.walkPos.x,e.walkPos.z)>=-ISLAND.wade-1e-6,'on land or in the shallows');
-    assert(G().routes.direction(e.walkPos.x,e.walkPos.z,0)?.reachable,'with a route to you');assert(e.hp<=R.stats.health&&e.maxHp===R.stats.health,'at the mansion’s wave-1 strength');}
+    assert(G().routes.direction(e.walkPos.x,e.walkPos.z,0)?.reachable,'with a route to you');assert(e.hp<=STATS.health&&e.maxHp===STATS.health,'at the mansion’s wave-1 strength');}
   // The cap: however many are asked for, never more than 45 at once.
   G().shore.target=500;assert.equal(G().shore.target,R.cap,'The target can never pass the cap of 45');
   let crowdPeak=0;G().run.health=1e9;for(let i=0;i<260&&crowdPeak<R.cap;i++){frames(30);G().run.health=1e9;crowdPeak=Math.max(crowdPeak,alive().length);}
   frames(600);assert(G().mode==="playing"&&alive().length<=R.cap&&crowdPeak===R.cap,`Pressed, the shore fills to 45 and stops there (${crowdPeak})`);
   for(const e of alive())assert(Number.isFinite(e.walkPos.x+e.walkPos.y+e.walkPos.z+e.group.position.y),'every one in a real place');
   // New Run clears the dead.
-  qa.resetRun();await Promise.resolve();assert(G().zombies.length===0&&G().pickups.length===0&&G().shore.target===R.living,'New Run clears the dead and their drops');
+  qa.resetRun();await Promise.resolve();assert(G().zombies.length===0&&G().pickups.length===0&&G().shore.target===LIVING,'New Run clears the dead and their drops');
   G().shore.target=0;
   // Shooting downhill: a walker on Radio Hill's flank is hit where it stands, and its kill pays.
   {const b=Math.PI/2+.3,fx=H=>[ISLAND.hill.x+Math.cos(b)*H,ISLAND.hill.z+Math.sin(b)*H];const [px,pz]=fx(16),[ex,ez]=fx(23);qa.setPlayer(px,pz);frames(1);
@@ -222,6 +222,68 @@ try{
    const seeded=Math.random;Math.random=()=>.05;try{G().combat.damageEnemy(e,1e4,false,{part:'torso',direction:new T.Vector3(1,0,0),source:'glock'});}finally{Math.random=seeded;}
    const p=G().pickups.at(-1);assert(p&&Math.abs(p.y-groundHeight(x,z))<.05,`A power-up drops on the hillside where it fell (${p?.y.toFixed(2)} m, ground ${groundHeight(x,z).toFixed(2)} m)`);
    const count=G().pickups.length;qa.setPlayer(p.mesh.position.x,p.mesh.position.z);frames(3);assert.equal(G().pickups.length,count-1,'and walking onto it collects it');}
-  console.log(`PASS: the dead come ashore: none in the first ${R.firstDelay} s, then each rises out of the shallows from below the water, more than ${R.near} m away and out of sight, and stands on the ground; the shore keeps ${R.living} walkers at the mansion's wave-1 strength, never more, all routed to you; pressed for 500 it fills to ${crowdPeak} and never passes ${R.cap}; New Run clears them; shots and the katana land downhill on Radio Hill's slopes and kills pay; bodies never overlap; power-ups drop on the hillside and are picked up.`);
+  console.log(`PASS: the dead come ashore: none in the first ${R.firstDelay} s, then each rises out of the shallows from below the water, more than ${R.near} m away and out of sight, and stands on the ground; at threat level 1 the shore keeps ${LIVING} walkers at the mansion's wave-1 strength, never more, all routed to you; pressed for 500 it fills to ${crowdPeak} and never passes ${R.cap}; New Run clears them; shots and the katana land downhill on Radio Hill's slopes and kills pay; bodies never overlap; power-ups drop on the hillside and are picked up.`);
+  // ---- 6. The threat director (v208, Dead Tide step 3a) --------------------------------------
+  // The formulas themselves are tested in tests/tide-threat.mjs; here, the director in play.
+  {
+    const {createThreatDirector}=await import('../public/game/tide-dead.mjs'),{BRUTE}=await import('../public/game/brute.mjs'),{BUILD}=await import('../public/game/zombie-build.mjs');
+    const {DOG_SPEED_MULTIPLIER:DOG,RARE_DOG_SPEED_MULTIPLIER:RARE}=await import('../public/game/zombie-dog.mjs'),{FERAL}=await import('../public/game/feral.mjs'),{LURKER}=await import('../public/game/lurker.mjs');
+    const kindOf=e=>e.lurker?'lurker':e.feral?'feral':e.rareDog?'ashfang':e.dog?'dog':e.brute?'brute':'walker';
+    // a. The director alone, on a stand-in spawner.
+    {let kills=0,draws=0,roll=0,brutesOk=false;const zs=[],made=[];
+     const spawner={placement:kind=>({valid:()=>kind!=='brute'||brutesOk}),choosePoint:o=>o[0],spawnKind:kind=>{const e={kind,dead:false,group:{position:{y:0}}};zs.push(e);made.push(kind);return e;}};
+     const d=createThreatDirector({spawner,zombies:zs,player:{x:0,z:0},look:()=>0,noise(){},kills:()=>kills,rng:()=>{draws++;return roll;}});
+     const run=s=>{for(let i=0;i<s*60;i++)d.update(1/60);};
+     run(30);assert(made.length===8&&made.every(k=>k==='walker')&&draws===0,'Level 1: eight walkers, and nothing drawn from the game’s generator (the opening plays exactly as v207’s)');
+     kills=39;run(10);assert(d.level===2&&made.length===10&&draws===0,'Level 2: ten, still walkers alone, still no draw');
+     kills=40;run(10);assert(d.level===3&&made.length===12&&draws===2,'Level 3: twelve, each arrival’s kind rolled once');
+     kills=460;roll=.99;run(1.5);assert.equal(made.at(-1),'lurker','The Apocalypse, a high roll: a lurker');
+     // A brute with no safe point keeps its turn; a walker comes ashore in its place.
+     roll=.8;const before=draws;run(1.5);assert(made.at(-1)==='walker'&&d.pending==='brute'&&draws===before+1,'A brute with nowhere safe to rise waits its turn, and a walker comes instead');
+     run(3);assert(made.slice(-2).every(k=>k==='walker')&&d.pending==='brute'&&draws===before+1,'still waiting, with no new roll');
+     brutesOk=true;run(1.5);assert(made.at(-1)==='brute'&&d.pending===null,'and comes ashore when it can');
+     d.target=500;assert.equal(d.target,45,'A target set by hand never passes 45');d.reset();assert(d.target===45&&d.pending===null,'New Run forgets it (45: the run’s kills here are 460)');
+     zs.length=0;made.length=0;kills=1000;run(200);assert(zs.length===45,'However long it runs, never more than 45');}
+    // b. Escalation mid-run, with no pause: kills raise the level, the rank and the target.
+    enter();await Promise.resolve();G().run.health=1e9;qa.setPlayer(0,40);
+    G().run.kills=99;frames(2);assert(G().shore.level===5&&G().shore.rank==='THE UNEASE'&&G().shore.target===16,'99 kills: level 5, The Unease, sixteen on the island');
+    {const e=still(G().spawnKind('walker',0,30,0));G().combat.damageEnemy(e,1e4,false,{part:'torso',direction:new T.Vector3(0,0,1),source:'glock'});frames(1);
+     assert(G().run.kills===100&&G().shore.level===6&&G().shore.rank==='THE HUNT'&&G().shore.target===18&&G().mode==='playing','The 100th kill: level 6, The Hunt, eighteen, and play goes on');}
+    // c. Each arrival rises at the level's strength; the dead already ashore keep theirs.
+    {qa.resetRun();await Promise.resolve();G().run.health=1e9;qa.setPlayer(0,40);
+     let early=null;for(let i=0;i<60*20&&!early;i++){frames(1);early=G().zombies.find(e=>!e.dead);}assert(early&&early.maxHp===93,'At level 1 the first rises with 93 health');
+     G().run.kills=260;const L=G().shore.level,stats=TT.threatStats(L),known=new Set(G().zombies);assert(L===14&&G().shore.rank==='THE SWARM');
+     const HEALTH={walker:1,feral:1,dog:.85,ashfang:.85*2,brute:BRUTE.healthMultiplier,lurker:LURKER.health},fresh=[];
+     for(let i=0;i<60*40;i++){frames(1);G().run.health=1e9;for(const e of G().zombies)if(!known.has(e)){known.add(e);fresh.push(e);}}
+     assert(fresh.length>=20,`New arrivals keep coming (${fresh.length})`);
+     for(const e of fresh){const k=kindOf(e);assert(Math.abs(e.maxHp/(stats.health*HEALTH[k])-1)<1e-12,`A ${k} rises with level ${L}'s health (${e.maxHp.toFixed(1)})`);
+       const pace=e.speed/stats.speed;
+       if(k==='walker')assert(pace>=BUILD.speed[0]-1e-9&&pace<=BUILD.speed[1]+1e-9,'a walker at its own pace of level 14’s speed');
+       else if(k==='dog'||k==='ashfang'||k==='feral'||k==='lurker'){const want={dog:DOG,ashfang:RARE,feral:FERAL.speedMultiplier,lurker:LURKER.speed}[k];if(!e.enraged)assert(Math.abs(pace-want)<1e-9,`a ${k} at ${want}× level 14’s speed`);}}
+     assert(early.maxHp===93,'The first, risen at level 1, keeps its 93');
+     console.log(`PASS (threat): ${fresh.length} arrivals at level 14 each rise at its strength (${stats.health.toFixed(2)} health, ${stats.speed.toFixed(3)} speed, times each kind’s own multiple); one risen at level 1 keeps its 93.`);}
+    // d. The Apocalypse: all six kinds come ashore, filling to 45 and never more.
+    {qa.resetRun();await Promise.resolve();G().run.health=1e9;G().run.kills=1000;qa.setPlayer(0,40);
+     const kinds={},known=new Set();let peak=0;
+     for(let i=0;i<60*150;i++){frames(1);G().run.health=1e9;let n=0;for(const e of G().zombies){if(!e.dead)n++;if(!known.has(e)){known.add(e);kinds[kindOf(e)]=(kinds[kindOf(e)]||0)+1;}}peak=Math.max(peak,n);assert(n<=45,'Never more than 45 living');}
+     assert.deepEqual(Object.keys(kinds).sort(),['ashfang','brute','dog','feral','lurker','walker'],`The Apocalypse sends every kind (${JSON.stringify(kinds)})`);
+     assert.equal(peak,45,'and fills the island to 45');assert.equal(G().mode,'playing');
+     for(const e of G().zombies.filter(e=>!e.dead))assert(Number.isFinite(e.walkPos.x+e.walkPos.y+e.walkPos.z+e.group.position.y)&&groundHeight(e.walkPos.x,e.walkPos.z)>=-ISLAND.wade-1e-6,'each on land or in the shallows, in a real place');
+     console.log(`PASS (threat): at level ${G().shore.level} the shore sends every kind (${Object.entries(kinds).map(([k,n])=>`${n} ${k}`).join(', ')}), fills to ${peak} and never passes 45.`);}
+    // e. Every kind climbs Radio Hill after you, from its southern foot to the summit;
+    // brutes on their own wider routes.
+    {const H=ISLAND.hill,times={};
+     for(const kind of ['walker','dog','ashfang','feral','lurker','brute']){
+       qa.resetRun();await Promise.resolve();G().shore.target=0;G().run.health=1e9;qa.setPlayer(-2,-2);frames(2);
+       const x=H.x+Math.cos(1.6)*32,z=H.z+Math.sin(1.6)*32,e=G().spawnKind(kind,x,z,0);e.attack=1e9;
+       let t=0,reached=false;for(;t<60*90&&!reached;t++){frames(1);G().run.health=1e9;const d=Math.hypot(e.walkPos.x-G().player.x,e.walkPos.z-G().player.z);reached=d<2.4||!!e.lurkerFuse||!!e.lurkerBurst;}
+       assert(reached,`A ${kind} climbs Radio Hill to you (stopped ${Math.hypot(e.walkPos.x+2,e.walkPos.z+2).toFixed(1)} m short)`);times[kind]=Math.round(t/60);
+       if(kind==='brute'){const wide=G().routes.brutes;assert(wide&&wide!==G().routes&&wide.direction(e.walkPos.x,e.walkPos.z,0)?.reachable,'the brute on its own, wider routes');}
+       if(!e.dead)G().combat.damageEnemy(e,1e9,false,{part:'torso',direction:new T.Vector3(0,0,1),source:'glock'});frames(5);}
+     console.log(`PASS (threat): every kind climbs Radio Hill from its southern foot to you on the summit (${Object.entries(times).map(([k,s])=>`${k} ${s} s`).join(', ')}).`);}
+    // f. New Run starts the threat again.
+    qa.resetRun();await Promise.resolve();assert(G().run.kills===0&&G().shore.level===1&&G().shore.target===8&&G().shore.pending===null,'New Run starts again at threat level 1');
+    console.log('PASS: the threat director: kills raise the threat level, rank and target with no pause; walkers alone (and no draw from the generator) at levels 1–2; a brute with nowhere safe to rise waits its turn while a walker comes; never more than 45; New Run starts again at level 1.');
+  }
 }finally{Math.random=random;}
 process.exit(0);

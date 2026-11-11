@@ -13,7 +13,9 @@
 // Glock, firing four times a second, with the shore held (v206) so builds before and after
 // the dead play the same frames. --mode tide-fight (v206): the 45-enemy stress test, a mixed
 // ring of unkillable dead around an unkillable player who keeps firing (builds with the dead
-// only). A checkout from before v206 has no Dead Tide harness of its own, so this checkout's
+// only). v208: the ring is The Apocalypse's full mix (19 walkers, 7 dogs, 7 ferals, 6 brutes,
+// 3 Ashfangs and 3 lurkers); a lurker that bursts on you is replaced where it stood in the
+// ring, so the fight stays at 45 and includes the bursts. A checkout from before v206 has no Dead Tide harness of its own, so this checkout's
 // tests/tide-harness.mjs plays its game.
 //
 // Prints the median and the fastest of five 300-frame samples, in ms per frame.
@@ -25,7 +27,7 @@ const mi=argv.indexOf('--mode'),mode=mi>=0?argv[mi+1]:'mansion',repo=resolve(arg
 if(!['mansion','tide','tide-fight'].includes(mode)){console.error('--mode is mansion, tide or tide-fight');process.exit(2);}
 let seed=1;Math.random=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 const log=console.log;
-let frames;
+let frames,ring=null,refill=()=>{};
 if(mode==='mansion'){
   const h=await import(pathToFileURL(resolve(repo,'tests/harness.mjs')).href),qa=h.qa;frames=h.frames;console.log=()=>{};
   qa.start();qa.holdSpawns();qa.setHealth(1e9);qa.setPlayer(0,22);qa.setAim(0,-.05);
@@ -38,10 +40,12 @@ if(mode==='mansion'){
   if(qa.get().mode!=='playing')throw new Error('Dead Tide did not start');
   if(qa.get().shore)qa.get().shore.target=0;
   if(mode==='tide-fight'){const g=qa.get();if(!g.spawnKind)throw new Error('This build has no dead');g.run.health=g.run.maxHealth=1e9;qa.setPlayer(0,40);
-    const kinds=['walker','walker','walker','brute','walker','feral','walker','dog','walker','walker','ashfang','walker','feral','walker','brute','walker'];
-    for(let i=0;i<45;i++){const a=i/45*Math.PI*2,r=9+(i%4)*1.6;const e=g.spawnKind(kinds[i%kinds.length],Math.sin(a)*r,40+Math.cos(a)*r*.55,0);e.hp=e.maxHp=1e9;}}
+    const kinds=Array(45).fill('walker'),put=(kind,slots)=>slots.forEach(s=>{kinds[s]=kind;});
+    put('lurker',[3,19,35]);put('brute',[1,9,17,25,33,41]);put('ashfang',[6,22,38]);put('feral',[4,10,16,24,30,36,42]);put('dog',[2,8,14,20,28,34,44]);
+    const slot=i=>{const a=i/45*Math.PI*2,r=9+(i%4)*1.6;const e=g.spawnKind(kinds[i],Math.sin(a)*r,40+Math.cos(a)*r*.55,0);e.hp=e.maxHp=1e9;return e;};
+    ring=kinds.map((_,i)=>slot(i));refill=()=>{for(let i=0;i<45;i++)if(ring[i].dead)ring[i]=slot(i);};}
   let n=0;const start=qa.get().player.clone();qa.setPlayer(start.x,start.z);qa.setKeys(mode==='tide'?['KeyW']:[]);
-  frames=count=>{for(let i=0;i<count;i++,n++){qa.setAim(n/600*Math.PI*2,-.05);if(n%15===0){qa.get().run.inventory.glock.ammo=13;qa.shoot();}step(1);}};
+  frames=count=>{for(let i=0;i<count;i++,n++){qa.setAim(n/600*Math.PI*2,-.05);if(n%15===0){qa.get().run.inventory.glock.ammo=13;qa.shoot();}step(1);refill();}};
   frames(120);const g=qa.get();
   if(g.player.distanceTo(start)<1&&mode==='tide'||!g.effects.length&&mode==='tide')throw new Error('Dead Tide frame logic: the player should be walking and firing');
   if(mode==='tide-fight'&&g.zombies.filter(e=>!e.dead).length!==45)throw new Error('the stress test needs 45 dead');

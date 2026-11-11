@@ -88,8 +88,11 @@ if(tide)appendFileSync(join(stage,'tide.mjs'),`
    blast(x,z){combat.explode(new T.Vector3(x,groundHeight(x,z)+.3,z));},
    // v206: the 45-enemy stress test (the plan's hard cap): a mixed ring of the dead around you on
    // the south beach, unkillable, with you unkillable too. Builds from before v206 have no dead.
+   // v208: The Apocalypse's full mix (19 walkers, 7 dogs, 7 ferals, 6 brutes, 3 Ashfangs and 3
+   // lurkers, the lurkers on the outer ring); scripts/frame-logic.mjs --mode tide-fight uses the same ring.
    fight:typeof shore==='object'?async n=>{if(typeof finishTheDead==='function')await finishTheDead();clearTheDead();shore.target=0;window.__perf.view(0,40,0,-.05);runState.health=runState.maxHealth=1e9;
-     const kinds=['walker','walker','walker','brute','walker','feral','walker','dog','walker','walker','ashfang','walker','feral','walker','brute','walker'];
+     const kinds=Array(45).fill('walker'),put=(kind,slots)=>slots.forEach(s=>{kinds[s]=kind;});
+     put('lurker',[3,19,35]);put('brute',[1,9,17,25,33,41]);put('ashfang',[6,22,38]);put('feral',[4,10,16,24,30,36,42]);put('dog',[2,8,14,20,28,34,44]);
      for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=9+(i%4)*1.6;const e=spawnKind(kinds[i%kinds.length],Math.sin(a)*r,40+Math.cos(a)*r*.55,0);e.hp=e.maxHp=1e9;}
      return zombies.filter(e=>!e.dead).length;}:null,
    alive(){return zombies.filter(e=>!e.dead).length;}

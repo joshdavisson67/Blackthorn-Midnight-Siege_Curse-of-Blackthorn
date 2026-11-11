@@ -28,15 +28,18 @@ import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createShoreDirector,SHORE_RULES} from './tide-dead.mjs?v=207';
+import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=208';
+import {THREAT_RULES,threatLevel,threatStats} from './tide-threat.mjs?v=208';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
 // through tide-boot.js. It builds the island and nothing of the mansion, and plays with
 // the shared modules: the screen and sound, the first-person view, the player's run,
 // the weapon runtime, combat, the HUD and the play session (keyboard and mouse, touch,
 // controller). v206: the dead come ashore, with the shared enemy AI, spawner and combat,
-// through the island's view of itself in tide-dead.mjs and a stand-in director. The threat
-// director (step 3) and stations, the leaderboard and the run summary (step 4) come next.
+// through the island's view of itself in tide-dead.mjs. v208: the threat director (step 3a,
+// tide-threat.mjs): kills raise the threat level, which sets the population, the next
+// arrivals' strength and the mix of kinds. Zones, the tracker and its sound (step 3b), then
+// stations, the leaderboard and the run summary (step 4) come next.
 performance.mark?.('tide:modules');
 const domCache=new Map(),$=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);};
 const shownMarkup=new Map(),shownOpacity=new Map();
@@ -98,7 +101,10 @@ const hunter=new T.Vector3();followPlayer(hunter,player,island);
 const crowd=createCrowd(zombies,hunter),playerCanOccupy=playerOccupancy({crowd,island,player});
 const routes=island.buildRoutes({radius:.44});let bruteRoutes=null,navTarget=null;
 Object.defineProperty(routes,'brutes',{get(){if(!bruteRoutes){const b=enemyBody({brute:true});bruteRoutes=island.buildRoutes({radius:Math.max(.44,b.radius),height:b.height});if(navTarget)bruteRoutes.rebuild(...navTarget);}return bruteRoutes;}});
-const rebuildRoutes=()=>{navTarget=[player.x,player.z];routes.rebuild(player.x,player.z);bruteRoutes?.rebuild(player.x,player.z);};
+// v208: the brutes' routes are rebuilt only while a brute is on the island or next to come
+// ashore (the director's pending kind); walkers, dogs, ferals and lurkers share the fine grid.
+const brutesNeedRoutes=()=>{if(shore.pending==='brute')return true;for(const e of zombies)if(e.brute&&!e.dead)return true;return false;};
+const rebuildRoutes=()=>{navTarget=[player.x,player.z];routes.rebuild(player.x,player.z);if(bruteRoutes&&brutesNeedRoutes())bruteRoutes.rebuild(player.x,player.z);};
 const islandLevel=createIslandLevel({island,crowd,routes,hunter});
 let elapsed=0,lastTime=performance.now(),hudTick=0,zone='SOUTH BEACH';
 const soundOn=()=>$('sound').checked,gameAudio=createAudio({isOn:soundOn}),{init:initAudio,tone,noise,suppressedReport}=gameAudio;
@@ -132,7 +138,8 @@ firstPerson.bind({player,state:runState,session,weaponRecoil,grenadeThrow,arms:{
 const {makeZombie,spawnKind,placement,choosePoint,disposeEnemy}=createEnemySpawner({
   level:islandLevel,
   run:{player:hunter,zombies,scene:world,enemyAssets,rng,rand,sharedResources:()=>({geometries:new Set(),materials:new Set()})},
-  rules:{enemyStats:()=>SHORE_RULES.stats}
+  // v208: each arrival rises at the strength of the threat level when it comes ashore.
+  rules:{enemyStats:()=>threatStats(threatLevel(runState.kills))}
 });
 combat=createCombat({
   level:{supportBelow,floorHeight:island.floorHeight,solidMeshes,visibleFloor:island.visibleFloor,colliders,isBlocked,standAt:islandLevel.standAt},
@@ -149,9 +156,9 @@ const NO_BOSS={rules:{meleeMultiplier:1,cry:{speed:1,damage:1}},warden:{damageMu
 const {updateEnemies}=createEnemyAI({
   level:islandLevel,
   run:{player:hunter,camera,zombies,scene:world,rand,tone,noise,get elapsed(){return elapsed;},get health(){return runState.health;},hurtPlayer,gameOver,killZombie:combat.killZombie,disposeEnemy,lurkerBursts:combat.lurkerBursts,lurkerBurst:combat.lurkerBurst},
-  rules:{decoy:()=>null,decoyStruck(){},detour:()=>null,baseDamage:()=>SHORE_RULES.stats.damage,surge:()=>1,speedScale:()=>1,attackRate:()=>1,boss:NO_BOSS}
+  rules:{decoy:()=>null,decoyStruck(){},detour:()=>null,baseDamage:()=>THREAT_RULES.base.damage,surge:()=>1,speedScale:()=>1,attackRate:()=>1,boss:NO_BOSS}
 });
-const shore=createShoreDirector({spawner:{placement,choosePoint,spawnKind},zombies,player,look:()=>session.lookYaw,noise,ready:()=>deadReady});
+const shore=createThreatDirector({spawner:{placement,choosePoint,spawnKind},zombies,player,look:()=>session.lookYaw,noise,kills:()=>runState.kills,rng,ready:()=>deadReady});
 let navTimer=0;
 function clearTheDead(){
   for(const e of zombies){world.remove(e.group);disposeEnemy(e);}zombies.length=0;

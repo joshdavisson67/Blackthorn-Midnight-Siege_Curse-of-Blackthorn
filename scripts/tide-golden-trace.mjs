@@ -76,7 +76,9 @@ const screenState=s=>{const R=s.renderer;return [R.pr,R.autoClear,R.shadowMap.en
 const enemy=e=>[e.dead?1:0,e.brute?1:0,e.dog?1:0,e.rareDog?1:0,e.feral?1:0,e.lurker?1:0,e.walkPos.x,e.walkPos.y,e.walkPos.z,e.hp,e.group.rotation.y,e.group.position.y,e.attackTime,e.stuck,e.crawling?1:0,e.enraged?1:0,e.staggerLeft??0,e.death??0,e.emergeLeft??0,e.group.visible?1:0].map(r);
 const birth=e=>[e.walkPos.x,e.walkPos.y,e.walkPos.z,e.group.position.y,e.hp,e.maxHp,e.speed,e.radius,e.bodyHeight,e.brute?1:0,e.dog?1:0,e.rareDog?1:0,e.feral?1:0,e.lurker?1:0,e.crawling?1:0,
   e.templateIndex,e.routeSide,e.flank,e.attack,e.navigation?.seed,e.life?.type,e.injury?.major,e.injury?.legless?1:0,e.injury?.props?.length,e.emergeLeft,e.face?.variant,e.style].map(r);
-function snapshot(){const s=G(),R=s.run,inv=R.inventory,held=inv[R.weapon];return {
+// v208: the threat director's state (escalation scenarios only, so the others keep their shape).
+const threatState=s=>[s.shore.level,s.shore.rank,s.shore.target,s.shore.pending,s.shore.alive()].map(r);
+function snapshot(sc={}){const s=G(),R=s.run,inv=R.inventory,held=inv[R.weapon];return {...(sc.threat?{threat:threatState(s)}:{}),
   player:[s.player.x,s.player.y,s.player.z,R.health,R.armor,R.points,R.totalScore,R.kills,R.weapon,held?.ammo??null,held?.reserve??null,R.grenades,R.doubleTime,R.grenadeTime,s.effects.length,s.zone].map(r),
   zombies:(s.zombies||[]).map(enemy),
   pickups:(s.pickups||[]).map(p=>[p.type,p.mesh.position.x,p.mesh.position.y,p.mesh.position.z,p.life].map(r)),
@@ -95,6 +97,14 @@ function snapshot(){const s=G(),R=s.run,inv=R.inventory,held=inv[R.weapon];retur
 // `script(f)` acts before frame f; `watch()` notes what the scenario reached.
 const H=ISLAND.hill,S=ISLAND.shack,sp=ISLAND.spawn,yawTo=(x,z)=>{const p=G().player;return Math.atan2(-(x-p.x),-(z-p.z));};
 function hillBearing(){const I=G().island;const clear=b=>{for(let d=8;d<=34;d+=.25){const x=H.x+Math.cos(b)*d,z=H.z+Math.sin(b)*d;if(I.isBlocked(x,z,.45,I.colliders,null,groundHeight(x,z),1.8))return false;}return true;};let b=Math.PI/2;while(!clear(b))b+=.05;return b;}
+// v208: a run far into the kill count, with an M4 and plenty of rounds, and you unkillable.
+function escalate(kills){const R=G().run;R.kills=kills;R.health=R.maxHealth=1e9;const m4=R.inventory.rifle;m4.owned=true;m4.reserve=1e5;qa.selectWeapon('rifle');qa.setAim(0,0);}
+// Turn to the nearest risen enemy every 10 frames and fire every 20 when it is within 30 m.
+function holdBeach(f){if(f%10)return null;return ()=>{const s=G(),alive=s.zombies.filter(e=>!e.dead&&!(e.emergeLeft>0));if(!alive.length)return;
+  let near=alive[0],best=Infinity;for(const e of alive){const d=Math.hypot(e.walkPos.x-s.player.x,e.walkPos.z-s.player.z);if(d<best){best=d;near=e;}}
+  const tip=near.group.position.clone().add(new T.Vector3(0,1.3,0)),eye=s.camera.position,dx=tip.x-eye.x,dy=tip.y-eye.y,dz=tip.z-eye.z;
+  qa.setAim(Math.atan2(-dx,-dz),Math.atan2(dy,Math.hypot(dx,dz)));
+  if(f%20===0&&best<30){if(s.run.inventory[s.run.weapon].ammo>0)qa.shoot();else if(!(s.run.reloadLeft>0))qa.reload();}};}
 const scenarios={
   // Walking, strafing, sprinting, jumping and looking about on the beach.
   walk:{frames:720,script:f=>f===1?()=>{qa.setAim(0,0);qa.setKeys(['KeyW']);}:f===120?()=>qa.setKeys(['KeyW','ShiftLeft']):f===240?()=>qa.setKeys(['KeyA']):f===330?()=>qa.setKeys(['KeyD','KeyS']):f===420?()=>{qa.setKeys([]);key('Space');}:f===470?()=>{keyUp('Space');listeners.mousemove?.({movementX:180,movementY:-40});}:f===520?()=>{qa.setKeys(['KeyW']);key('Space');}:f===560?()=>keyUp('Space'):f===640?()=>qa.setKeys([]):null,
@@ -142,6 +152,15 @@ const scenarios={
   // and strike. Then into the shack: they follow you through its door.
   summit:{frames:4200,dead:true,script:f=>f===1?()=>{qa.setPlayer(H.x,H.z+3);qa.setAim(0,-.3);}:f===2400?()=>{qa.setPlayer(S.x,S.z);}:null,
     watch:()=>{const s=G();note('summit: hurt',s.run.health<100);note('summit: climbing',s.zombies.some(e=>!e.dead&&groundHeight(e.walkPos.x,e.walkPos.z)>9));note('summit: in the shack',s.zombies.some(e=>!e.dead&&s.island.shackInside(e.walkPos.x,e.walkPos.z)));}},
+  // v208, the threat director: three escalation scenarios, each a run begun far into the kill
+  // count (so the dead come ashore at that threat), held on the south beach with an M4 against
+  // the nearest. You cannot die here (the director is what is traced), and a `threat` channel
+  // records the level, rank, target, the kind waiting to come ashore and the living count.
+  // threshold: from 95 kills, across into The Hunt (level 6) mid-fight; swarm: level 14;
+  // apocalypse: level 24, every kind, filling towards 45.
+  threshold:{frames:2400,dead:true,threat:true,setup:()=>escalate(95),script:holdBeach,watch:()=>{note('threshold: the hunt',G().shore.level>=6);note('threshold: specials',G().zombies.some(e=>e.dog||e.feral||e.brute||e.lurker));}},
+  swarm:{frames:2400,dead:true,threat:true,setup:()=>escalate(260),script:holdBeach,watch:()=>{note('swarm: dogs',G().zombies.some(e=>e.dog&&!e.rareDog));note('swarm: ferals',G().zombies.some(e=>e.feral));note('swarm: ashfangs',G().zombies.some(e=>e.rareDog));}},
+  apocalypse:{frames:3000,dead:true,threat:true,setup:()=>escalate(460),script:holdBeach,watch:()=>{const s=G();note('apocalypse: ashfangs',s.zombies.some(e=>e.rareDog));note('apocalypse: ferals',s.zombies.some(e=>e.feral));note('apocalypse: brutes',s.zombies.some(e=>e.brute));note('apocalypse: lurkers',s.zombies.some(e=>e.lurker));note('apocalypse: 25+',s.zombies.filter(e=>!e.dead).length>=25);}},
   // The session: pause, Settings and the controls card, Resume, a pause to the title, and back in.
   session:{frames:480,script:f=>f===30?()=>key('Escape'):f===60?()=>$('settingsPause').onclick():f===90?()=>key('Escape'):f===120?()=>$('controlsPause').onclick():f===150?()=>key('Escape'):f===180?()=>$('resume').onclick():
     f===260?()=>key('Escape'):f===290?()=>$('mainMenuPause').onclick():f===320?()=>$('confirmYes').onclick():f===400?()=>enter():null,
@@ -160,11 +179,11 @@ for(const name of order){const sc=scenarios[name];
   // v206: the island's own scenarios hold the shore (no dead), so they match builds before it.
   if(!sc.dead&&G().shore)G().shore.target=0;
   sc.setup?.();step();renderLog.length=0;audioLog.length=0;
-  const known=new WeakSet(),births=[],frames=[snapshot()];
+  const known=new WeakSet(),births=[],frames=[snapshot(sc)];
   for(let f=1;f<=sc.frames;f++){
     const act=sc.script(f);if(act)act();step();await settle();
     for(const e of G().zombies||[])if(!known.has(e)){known.add(e);births.push(birth(e));note('births');}
-    sc.watch?.();if(f%30===0)frames.push(snapshot());
+    sc.watch?.();if(f%30===0)frames.push(snapshot(sc));
   }
   qa.setKeys([]);listeners.mouseup?.({button:0});listeners.mouseup?.({button:2});
   out[name]={frames,births};
