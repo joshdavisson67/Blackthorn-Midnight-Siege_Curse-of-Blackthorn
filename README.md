@@ -93,6 +93,12 @@ Dead Tide step 3b finishes the threat director: where the dead come from now cha
   - how the rotation and weighting feel in play;
   - the opening pace (only three major zones are open at the start, so first contact may come from fewer directions);
   - real-browser frame rates.
+- **Release tiers:**
+  - **Mansion: quick.** Nothing it loads changed.
+  - **Dead Tide: full, no regression.** +15 KB of code, no new files; load, memory, shader programs and frame logic within noise. The director's worst frame drops from 78–95 ms to 6.5 ms.
+  - **Mode picker: standard, no differences.**
+
+  Numbers in `perf/README.md`.
 - **Next (step 4):** stations, the leaderboard and the run summary.
 
 ## The threat director's core (version 208)
