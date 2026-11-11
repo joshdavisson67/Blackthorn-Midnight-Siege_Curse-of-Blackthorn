@@ -6,7 +6,7 @@ An original, single-player, first-person zombie survival game for desktop browse
 
 **Play in your browser:** https://joshdavisson67.github.io/Blackthorn-Midnight-Siege-v119-source/ (published automatically from `main` by `.github/workflows/pages.yml`). This copy's shared leaderboard is stored in Supabase; see below.
 
-**Dead Tide (preview):** add `tide.html` to that address for the island mode: the grey-box island with the dead coming ashore (version 206), before its threat director, stations and leaderboard. `modes.html` is the mode picker.
+**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the grey-box island with the dead coming ashore (version 207), before its threat director, stations and leaderboard. `modes.html` is the mode picker.
 
 
 Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1–6 switch owned guns and 7 draws the katana (version 205), M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
@@ -28,6 +28,22 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## The picker opens Dead Tide, and the dead build behind its title (version 207)
+
+A small release before the threat director (step 3).
+
+- **The mode picker opens Dead Tide's preview** (`modes.html`). Its half of the picker is now a link to `tide.html` with a **Play the preview** button in the island's colours, and a line saying what is still to come. Click, Enter or the gamepad's A button launches whichever half is chosen; the curtain reads *The tide rises* for the island. It is still marked in development; the picker no longer turns it away.
+- **The dead build behind Dead Tide's title screen, not while loading.** In v206, building the dead's bodies and compiling their shaders added about 6 s to time to playable (headless).
+  - **At load:** only the island, the guns, the effects and the power-ups are built and compiled.
+  - **On the title screen:** the dead build one step a frame (the surfaces, then each of the 11 bodies, the rage colours, the injuries and the faces). Their shaders then compile in a scene of their own, lit by the island's lights and never drawn, so nothing appears in front of the title camera.
+  - **Pressing Play first** finishes the build at once, and the shore sends no one until the shaders are ready. In practice that is well inside the 4-second grace before the first walker.
+  - **What makes it possible:** `enemy-assets.mjs` gained `buildEnemyAssets`, the same build as a series of steps. `createEnemyAssets` runs every step at once, so the mansion builds exactly what it did; its golden trace is byte-identical to main's.
+- **Proof:**
+  - Dead Tide's golden trace matches v206 in every gameplay channel, both fights included; only the renderer's log moves, since the dead's shaders now compile later.
+  - New tests: the dead are not built while loading; they build a body a frame behind the title with Play untouched; their shaders compile once, off to the side, and nothing of them enters the world; the shore waits while they are not ready.
+- **Measuring:** `perf-measure.mjs --page tide.html` now records when the dead are ready behind an untouched title screen (`deadReadyMs`). The fixed views and the fight are measured after Play has finished the build, as in play. Results are in `perf/README.md`.
+- **Not verified:** how the title screen feels while the dead build in a real browser (each step is one body; the slowest steps take a few hundred milliseconds headless), and the picker's new button on real devices.
 
 ## The dead come ashore (version 206)
 

@@ -55,7 +55,9 @@ export const SHORE_RULES=Object.freeze({
   emerge:Object.freeze({time:1.6,depth:1.75}),
   stats:Object.freeze({health:93,speed:1.145,damage:19.5})
 });
-export function createShoreDirector({spawner,zombies,player,look,noise,rules=SHORE_RULES}){
+// v207: `ready` holds the shore back until the dead's bodies are built and their shaders
+// compiled (Dead Tide builds them behind its title screen).
+export function createShoreDirector({spawner,zombies,player,look,noise,ready=()=>true,rules=SHORE_RULES}){
   const network=shoreSpawns(),points=[...network.major,...network.minor].flatMap(z=>z.points.map(([x,zz])=>[x,zz,0]));
   let timer=rules.firstDelay,target=rules.living;
   const alive=()=>{let n=0;for(const e of zombies)if(!e.dead)n++;return n;};
@@ -75,10 +77,11 @@ export function createShoreDirector({spawner,zombies,player,look,noise,rules=SHO
     get target(){return target;},set target(n){target=Math.max(0,Math.min(rules.cap,n));},
     alive,spawnOne,
     // Whether the shore will try to send one soon (its routes must be current for that).
-    wanting(){return timer<=.7&&alive()<Math.min(rules.cap,target);},
+    wanting(){return timer<=.7&&ready()&&alive()<Math.min(rules.cap,target);},
     reset(){timer=rules.firstDelay;target=rules.living;},
     update(dt){
       timer-=dt;if(timer>0)return;
+      if(!ready()){timer=rules.retry;return;}
       if(alive()>=Math.min(rules.cap,target)){timer=rules.retry;return;}
       timer=spawnOne()?rules.interval:rules.retry;
     }};

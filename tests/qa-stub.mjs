@@ -21,7 +21,7 @@ export class WebGLRenderer {
   }};}
   setPixelRatio(p){this.pr=p;}getPixelRatio(){return this.pr;}
   initTexture(texture){(this.initializedTextures??=new Set()).add(texture);}
-  setSize(){}setRenderTarget(){}compileAsync(scene,camera){(this.compileCalls??=[]).push(camera.layers.mask);return Promise.resolve();}
+  setSize(){}setRenderTarget(){}compileAsync(scene,camera,target=null){(this.compileCalls??=[]).push(camera.layers.mask);(this.compileScenes??=[]).push([scene,target]);return Promise.resolve();}
   clear(){}clearDepth(){}
   render(scene,camera){this.renderDepth++;
     try{if(scene.matrixWorldAutoUpdate===true)scene.updateMatrixWorld();if(camera.parent===null&&camera.matrixWorldAutoUpdate===true)camera.updateMatrixWorld();

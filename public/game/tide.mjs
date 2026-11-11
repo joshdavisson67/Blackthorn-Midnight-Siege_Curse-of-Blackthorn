@@ -22,13 +22,13 @@ import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
 import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=206';
-import {createEnemyAssets} from './enemy-assets.mjs?v=183';
+import {buildEnemyAssets} from './enemy-assets.mjs?v=207';
 import {createCrowd,enemyBody} from './crowd.mjs?v=123';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createShoreDirector,SHORE_RULES} from './tide-dead.mjs?v=206';
+import {createIslandLevel,followPlayer,playerOccupancy,createShoreDirector,SHORE_RULES} from './tide-dead.mjs?v=207';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
 // through tide-boot.js. It builds the island and nothing of the mansion, and plays with
@@ -87,7 +87,13 @@ const spawn=ISLAND.spawn,player=new T.Vector3(spawn.x,groundHeight(spawn.x,spawn
 // v206: the dead. `hunter` is where the player stands for them (height above the ground);
 // the crowd keeps bodies apart; the routes lead them to you (the brutes' wider ones are
 // built the first time something asks for them).
-const enemyAssets=createEnemyAssets(batchArticulated),powerupAssets=createPowerupAssets();
+// v207: the dead's bodies are built behind the title screen, one body a frame, not while
+// loading; their shaders then compile off to the side (a scene of their own, lit by the
+// island's lights, never drawn). Pressing Play first finishes the build at once, and the
+// shore sends no one until their shaders are ready. `enemyAssets` stands in for the
+// finished assets, so the shared modules can be wired before they exist.
+const enemyBuild=buildEnemyAssets(batchArticulated);let enemyReal=null,deadWarm=null,deadReady=false;
+const enemyAssets=new Proxy({},{get:(_,key)=>enemyReal?.[key]}),powerupAssets=createPowerupAssets();
 const hunter=new T.Vector3();followPlayer(hunter,player,island);
 const crowd=createCrowd(zombies,hunter),playerCanOccupy=playerOccupancy({crowd,island,player});
 const routes=island.buildRoutes({radius:.44});let bruteRoutes=null,navTarget=null;
@@ -145,7 +151,7 @@ const {updateEnemies}=createEnemyAI({
   run:{player:hunter,camera,zombies,scene:world,rand,tone,noise,get elapsed(){return elapsed;},get health(){return runState.health;},hurtPlayer,gameOver,killZombie:combat.killZombie,disposeEnemy,lurkerBursts:combat.lurkerBursts,lurkerBurst:combat.lurkerBurst},
   rules:{decoy:()=>null,decoyStruck(){},detour:()=>null,baseDamage:()=>SHORE_RULES.stats.damage,surge:()=>1,speedScale:()=>1,attackRate:()=>1,boss:NO_BOSS}
 });
-const shore=createShoreDirector({spawner:{placement,choosePoint,spawnKind},zombies,player,look:()=>session.lookYaw,noise});
+const shore=createShoreDirector({spawner:{placement,choosePoint,spawnKind},zombies,player,look:()=>session.lookYaw,noise,ready:()=>deadReady});
 let navTimer=0;
 function clearTheDead(){
   for(const e of zombies){world.remove(e.group);disposeEnemy(e);}zombies.length=0;
@@ -234,7 +240,24 @@ schemeChanged(controlScheme.scheme);
 display.useScreen({select:$('quality'),fps:$('fps'),layout(){applyFormFactor();fitTouchStick();}});
 
 // ---- Runs, the title screen and the end of a run ---------------------------------------------
-function startFromMenu(){resetRun();}
+function startFromMenu(){finishTheDead();resetRun();}
+// One step of the dead's build (a body); true once they are built.
+function growTheDead(){if(enemyReal)return true;const step=enemyBuild.next();if(!step.done)return false;enemyReal=step.value;warmTheDead();return true;}
+function finishTheDead(){while(!growTheDead());return deadWarm;}
+function warmTheDead(){
+  const warmScene=new T.Scene(),rage=enemyReal.templates.map(r=>{const group=r.group.clone(true);enemyReal.enrage({group});return group;});
+  const groups=[...enemyReal.templates.map(r=>r.group),enemyReal.injuries.group,enemyReal.faces.group,...rage];
+  for(const g of groups)warmScene.add(g);
+  deadWarm=(async()=>{
+    // Compiled for the film pass's target, as everything warmed at load is (a program's key
+    // depends on where it draws), so play finds these programs ready. The target is only
+    // needed while compileAsync makes the programs, before its first await.
+    try{const was=renderer.getRenderTarget?.()??null;let compiling;renderer.setRenderTarget?.(display.rt);try{compiling=renderer.compileAsync?.(warmScene,camera,scene);}finally{renderer.setRenderTarget?.(was);}
+      await compiling;for(const t of [enemyReal.surfaces.map,enemyReal.surfaces.bumpMap,enemyReal.surfaces.detail])renderer.initTexture?.(t);}
+    finally{for(const g of groups)g.removeFromParent();deadReady=true;performance.mark?.('tide:dead');}
+  })();
+  return deadWarm;
+}
 function resetRun({capture=true}={}){
   applyFormFactor();releaseMouse();grenadeThrow.cancel();
   for(const e of effects){world.remove(e.mesh);if(e.type==='blast')e.mesh.material?.dispose();}effects.length=0;explosionFx.clear();bloodPool.reset();markPool.reset();
@@ -287,6 +310,7 @@ document.addEventListener('keyup',onKeyUp);window.addEventListener('blur',onBlur
 // ---- Every frame ----------------------------------------------------------------------------
 const MENU_ORBIT=96;
 function tick(now){
+  if(!enemyReal)growTheDead();
   requestAnimationFrame(tick);
   gamepad.poll(Math.min(Math.max(0,(now-lastTime)/1000),.05),{enabled:padPlay(),playing:session.mode==='playing'&&!controlsOpen(),layer:padLayer(),sensitivity:Number($('sensitivity').value),aiming:session.aiming&&!grenadeThrow.active,zoom:(zoomOf(runState.weapon)||1),onTarget:false});
   updateControllerStatus();document.body.classList.toggle('pad-playing',padPlay()&&session.mode==='playing');
@@ -327,19 +351,17 @@ function tick(now){
 window.addEventListener('resize',display.resize);display.resize();
 
 // What Dead Tide warms before play: every gun and the grenade in hand, the scope masks,
-// a grenade and the explosion's effects, with the island lit as in play. v206: every enemy
-// body (and its blood-rage variant), their injuries and faces, and every power-up, solid and
-// fading, so nothing compiles when the dead arrive.
+// a grenade and the explosion's effects, with the island lit as in play, and every power-up,
+// solid and fading. The dead warm themselves once built (v207, warmTheDead).
 async function prepareRendering(){
   return display.prepare(()=>{
     const viewModels=[...Object.values(gunGroups),bushDot],savedVisibility=viewModels.map(g=>g.visible),savedGun=gunRoot.visible;
     const scopeMasks=scopedGuns.map(({sight})=>sight.mask),savedMasks=scopeMasks.map(mask=>mask.visible);scopeMasks.forEach(mask=>mask.visible=true);
     camera.position.set(player.x,player.y+1.68,player.z);camera.rotation.set(0,0,0);gunRoot.visible=true;viewModels.forEach(g=>g.visible=true);grenadeThrow.warm();
-    const warmRage=enemyAssets.templates.map(r=>{const group=r.group.clone(true);enemyAssets.enrage({group});return group;});
     const warmPickups=Object.keys(POWERUPS).map(type=>powerupAssets.create(type)),warmFading=Object.keys(POWERUPS).map(type=>powerupAssets.create(type));
     for(const g of warmFading){g.visible=true;fadeMaterials(g).set(.5);}
-    return {world,warm:[...enemyAssets.templates.map(r=>r.group),enemyAssets.injuries.group,enemyAssets.faces.group,...warmRage,...warmPickups,...warmFading,grenadeAssets.create(),explosionFx.warmGroup()],
-      textures:()=>[...weaponSurfaces().textures,...katanaSurfaces().textures,island.depthMap,enemyAssets.surfaces.map,enemyAssets.surfaces.bumpMap,enemyAssets.surfaces.detail],
+    return {world,warm:[...warmPickups,...warmFading,grenadeAssets.create(),explosionFx.warmGroup()],
+      textures:()=>[...weaponSurfaces().textures,...katanaSurfaces().textures,island.depthMap],
       done(){viewModels.forEach((g,i)=>g.visible=savedVisibility[i]);scopeMasks.forEach((mask,i)=>mask.visible=savedMasks[i]);gunRoot.visible=savedGun;grenadeThrow.cancel();}};
   });
 }

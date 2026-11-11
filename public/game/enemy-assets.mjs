@@ -43,8 +43,14 @@ export function bakeEnemyPalette(rig){
 
 // Prepare immutable GPU assets once. Live enemies own only their articulated
 // transforms and gameplay state, so spawning never tessellates or merges meshes.
-export function createEnemyAssets(batch){
-  const templates=[],surfaces=enemySurfaces();
+// Every enemy body, built at once (the mansion, while loading).
+export function createEnemyAssets(batch){const steps=buildEnemyAssets(batch);let step;while(!(step=steps.next()).done);return step.value;}
+// v207: the same build in steps. It pauses after the surfaces, after each of the 11 bodies,
+// after the rage colours and after the injuries, and returns the assets when done, so a
+// page can spread it over frames (Dead Tide does, behind its title screen). Nothing in it
+// depends on when it runs, so both builds produce the same assets.
+export function* buildEnemyAssets(batch){
+  const templates=[],surfaces=enemySurfaces();yield;
   // v179: template 10 is the Grotesque Lurker.
   for(let i=0;i<11;i++){
     let seed=9147+i*137,first=true;
@@ -57,7 +63,7 @@ export function createEnemyAssets(batch){
     // Close-range detail coordinates are taken from each joint's merged geometry.
     rig.group.traverse(o=>{if(o.isMesh&&o.material.userData.bakedPalette&&!o.geometry.attributes.detailUv)addDetailCoordinates(o.geometry);});
     rig.group.traverse(o=>{if(o.isMesh){rig.resources.geometries.add(o.geometry);o.geometry.computeBoundingBox();o.geometry.computeBoundingSphere();o.updateMatrix();o.matrixAutoUpdate=false;}});
-    templates.push(rig);
+    templates.push(rig);yield;
   }
   // Cache rage colors before play. No per-kill materials, lights or geometry.
   const rageMaterials=new Map();
@@ -80,6 +86,7 @@ export function createEnemyAssets(batch){
       rageMaterials.set(material,rage);
     }
   });
+  yield;
   function enrage(enemy){enemy.group.traverse(o=>{
     if(o.isMesh)o.material=Array.isArray(o.material)?o.material.map(m=>rageMaterials.get(m)||m):rageMaterials.get(o.material)||o.material;
   });}
@@ -95,7 +102,7 @@ export function createEnemyAssets(batch){
     return rig;
   }
   // v178: shared wound caps, props and crushed skulls for injured spawns.
-  const injuries=createInjuryKit(templates,[0,1,2,3,9]);
+  const injuries=createInjuryKit(templates,[0,1,2,3,9]);yield;
   // v183: extra faces per body, sculpted once here (heads only, except the
   // Lurker, whose boils need its arms) and baked like the templates.
   const faces=createFaceKit(templates,(i,v,face)=>{

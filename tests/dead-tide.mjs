@@ -100,6 +100,18 @@ try{
   assert(G().renderer.compileCalls?.length===2,'Every shader is compiled under the loading screen (world and weapon)');
   const top=new Set(G().world.children.map(o=>o.name));
   assert.deepEqual([...top].sort(),['Blood particles','Bullet impact marks','Explosion effects','Island ground','Palm crowns','Palm trunks','Radio shack','Radio tower','Rocks','The sea','Tower beacon','Wreck'].sort(),'The world holds the island and the shared effects, nothing else');
+  // v207: the dead are not built while loading. Behind the title screen they build a body a
+  // frame, then their shaders compile in a scene of their own, lit by the island's, never drawn.
+  assert(G().deadBuilt===false&&G().deadReady===false,'The dead are not built while loading');
+  frames(3);assert(G().deadBuilt===false,'They build a body a frame behind the title screen');
+  frames(20);assert(G().deadBuilt===true,'and are built within 23 title frames, Play untouched');for(let i=0;i<6;i++)await Promise.resolve();
+  {const [warm,target]=G().renderer.compileScenes.at(-1);
+   assert(G().deadReady===true&&G().renderer.compileCalls.length===3&&target===G().scene&&warm!==G().scene&&warm.children.length===0,'then their shaders compile once, in a scene of their own lit by the island’s, emptied after');
+   assert.deepEqual([...new Set(G().world.children.map(o=>o.name))].sort(),[...top].sort(),'and nothing of them ever enters the world');}
+  // The shore sends no one until the dead are ready.
+  {const {createShoreDirector}=await import('../public/game/tide-dead.mjs');let made=0,ready=false;
+   const d=createShoreDirector({spawner:{placement:()=>({valid:()=>true}),choosePoint:o=>o[0],spawnKind:()=>(made++,{group:{position:{y:0}}})},zombies:[],player:{x:0,z:0},look:()=>Math.PI,noise(){},ready:()=>ready});
+   for(let i=0;i<600;i++)d.update(1/60);assert.equal(made,0,'The shore waits while the dead are not ready');ready=true;for(let i=0;i<60;i++)d.update(1/60);assert(made>0,'and sends them once they are');}
   frames(30);const orbit=G().camera.position.clone();frames(30);assert(orbit.distanceTo(G().camera.position)>.05&&!G().gunRoot.visible,'The title screen circles the island with no gun in view');
   // Enter: capture in the click, then play from the south beach.
   // v206: the island's own checks run with the shore held (no dead); the dead are tested below.
@@ -136,7 +148,8 @@ try{
   assert(G().zone==='THE SHALLOWS'&&groundHeight(p.x,p.z)<-.5&&groundHeight(p.x,p.z)>=-ISLAND.wade,`You wade out to ${(-groundHeight(p.x,p.z)).toFixed(2)} m of water and no deeper`);
   assert(Math.hypot(p.x,p.z)<far,'The open sea is out of reach');
   // Shooting: the pistol fires, marks the sand and reloads.
-  qa.setPlayer(sp.x,sp.z);qa.setAim(0,-.6);frames(2);const marks=G().effects.length;qa.shoot();
+  qa.setPlayer(sp.x,sp.z);qa.setAim(0,-.6);frames(2);const marks=G().effects.length;
+  {const seeded=Math.random;Math.random=()=>.25;try{qa.shoot();}finally{Math.random=seeded;}}   // a shot marks the ground half the time (v207: chosen, not left to the stream)
   assert.equal(G().run.inventory.glock.ammo,12,'Firing spends a round');assert(G().effects.length>marks,'and leaves a mark on the ground');assert(G().firstPerson.flashTime>0,'with a muzzle flash');
   frames(20);qa.reload();assert(G().run.reloadLeft>0,'R reloads');frames(130);assert.equal(G().run.inventory.glock.ammo,13,'back to a full magazine');assert.equal(G().run.inventory.glock.reserve,77);
   canvas.events.mousedown({button:0,preventDefault(){}});assert.equal(G().run.inventory.glock.ammo,12,'A click fires');listeners.mouseup({button:0});
@@ -163,7 +176,7 @@ try{
   $('resume').onclick();assert.equal(G().mode,'playing','Resume locks the mouse and plays on');
   key({code:'Escape'});$('mainMenuPause').onclick();assert(!$('pauseConfirm').classList.contains('hidden'));$('confirmYes').onclick();
   assert.equal(G().mode,'menu');assert(!$('menu').classList.contains('hidden')&&$('hud').classList.contains('hidden')&&!$('start').disabled,'Title Screen asks first, then returns to the title');
-  console.log('PASS: playing Dead Tide (v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, go into the shack by its door (its walls and roof hold), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
+  console.log('PASS: playing Dead Tide (v207: the dead built behind its title screen, a body a frame, their shaders compiled off to the side; v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, go into the shack by its door (its walls and roof hold), wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
   // ---- 5. The dead come ashore (v206) ------------------------------------------------------
   const {SHORE_RULES:R}=await import('../public/game/tide-dead.mjs');
   const alive=()=>G().zombies.filter(e=>!e.dead),dist=e=>Math.hypot(e.walkPos.x-G().player.x,e.walkPos.z-G().player.z);
