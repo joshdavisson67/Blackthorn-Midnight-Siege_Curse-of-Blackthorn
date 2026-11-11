@@ -69,6 +69,7 @@ Dead Tide step 3a: the steady eight walkers of v206's stand-in give way to the d
       - New Run starts again at level 1.
   - **Dead Tide's golden trace:** all nine existing scenarios (the island's seven and both fights) are byte-identical to v207's. Three escalation scenarios are new, run last, with a `threat` channel: `threshold` (from 95 kills across into The Hunt), `swarm` (level 14) and `apocalypse` (level 24). `scripts/golden-compare.mjs` compares that channel and lists scenarios new in the second trace.
   - **The 45-enemy fight** (`perf-measure.mjs --page tide.html` and `frame-logic.mjs --mode tide-fight`) is now The Apocalypse's full mix: 19 walkers, 7 dogs, 7 ferals, 6 brutes, 3 Ashfangs and 3 lurkers. In frame logic a lurker that bursts is replaced where it stood, so the fight stays at 45 and includes the bursts. Results are in `perf/README.md`.
+- **Release tiers:** the mansion quick (nothing it loads changed); Dead Tide full, with no regression (one new 5 KB file; load, memory, shader programs and frame logic within noise; the nine existing trace scenarios byte-identical); the mode picker standard, with no differences. Numbers in `perf/README.md`.
 - **The mode picker** now says the threat rises every 20 kills, with the threat tracker, stations and leaderboard still to come.
 - **Not verified:**
   - how the escalation feels, including the opening pace (first contact about 35–40 s, unchanged);
