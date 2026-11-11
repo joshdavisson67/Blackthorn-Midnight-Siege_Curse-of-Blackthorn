@@ -1,7 +1,7 @@
 import * as T from './three.module.js';
 import {PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {shoreSpawns} from './island.mjs?v=206';
-import {THREAT_RULES,SPAWN_RULES,threatLevel,threatRank,targetPopulation,walkersOnly,chooseTideKind,majorZoneCount,minorShare,minorFollow,interiorOpen,interiorShare,batchSize} from './tide-threat.mjs?v=209';
+import {shoreSpawns,islandSites} from './island.mjs?v=210';
+import {THREAT_RULES,SPAWN_RULES,threatLevel,threatRank,targetPopulation,walkersOnly,chooseTideKind,majorZoneCount,minorShare,minorFollow,interiorOpen,interiorShare,batchSize} from './tide-threat.mjs?v=210';
 
 // The dead come ashore (v206, Dead Tide step 2, slice 3): the island as the shared enemy
 // modules see it, and (v208, step 3a) the threat director that sends them.
@@ -9,7 +9,7 @@ import {THREAT_RULES,SPAWN_RULES,threatLevel,threatRank,targetPopulation,walkers
 // The island as one floor: the shared enemy AI, spawner and crowd were written for the
 // mansion's flat floors, where an enemy on your floor is within half a metre of your
 // height. On the island the ground rises 14 m, so the enemies keep their height relative to
-// the ground under them (0 on the ground, the deck's height on the shack's deck), and so does
+// the ground under them (0 on the ground, a slab's height on a low slab), and so does
 // the player as they see it (`hunter`). This view turns those heights back into the world's
 // for collision, footing and drawing (`standAt`), so the AI's routing, crowding, flanking and
 // strikes work unchanged on slopes.
@@ -73,7 +73,9 @@ export function createThreatDirector({spawner,zombies,player,look,noise,kills=()
   const network=shoreSpawns(),W=net.weights;
   // Every location as a zone of points ([x, z, 0], each knowing its zone and its number).
   const zones=[...network.major,...network.minor,...network.interior].map(z=>({...z,points:z.points.map(([x,zz])=>[x,zz,0])}));
-  const all=[];for(const z of zones)for(const p of z.points){p.zone=z;p.id=all.length;all.push(p);}
+  // v210: no one rises within `stationClear` m of a station's pad (spec 5.3).
+  const pads=islandSites().stations;
+  const all=[];for(const z of zones)for(const p of z.points){p.zone=z;p.id=all.length;p.clear=pads.every(s=>Math.hypot(s.x-p[0],s.z-p[1])>=net.stationClear);all.push(p);}
   const majors=zones.filter(z=>z.kind==='major'),minors=zones.filter(z=>z.kind==='minor'),interiors=zones.filter(z=>z.kind==='interior');
   const points=all.filter(p=>p.zone.kind!=='interior');   // the shoreline's points (v206's list)
   const lastPoint=new Float64Array(all.length),lastZone=new Map(),sectors=new Float64Array(W.sector.count),log=[];
@@ -93,6 +95,7 @@ export function createThreatDirector({spawner,zombies,player,look,noise,kills=()
   }
   // The safety rules: the shore's (18 m, the 40 m view cone) and, inland, the interior's own.
   function safe(p,place){
+    if(!p.clear)return false;
     if(p.zone.kind==='interior'){if(Math.hypot(p[0]-player.x,p[1]-player.z)<net.interior.near||inSight(p,Infinity,net.interior.halfAngle))return false;}
     else if(inSight(p,rules.sight.range,rules.sight.halfAngle))return false;
     return place.valid(p,rules.near);

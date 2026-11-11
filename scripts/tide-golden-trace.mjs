@@ -14,7 +14,7 @@
 // from before this script (v205) can be traced too. The clock is fixed and randomness
 // seeded before the game loads; every scenario starts from a fresh run with the game's own
 // generator reseeded. Before the dead come ashore (v206) the island has no enemies, and the
-// scenarios cover everything it already does: walking, the hill and the shack, wading,
+// scenarios cover everything it already does: walking, the hill and its tent, wading,
 // every gun, the katana, grenades, death and the play session. The enemies' channel and a
 // fight join them with the dead. A coverage line on stderr confirms each scenario reached
 // what it tests; GOLDEN_LOGS=1 writes the screen and sound logs out in full.
@@ -96,7 +96,9 @@ function snapshot(sc={}){const s=G(),R=s.run,inv=R.inventory,held=inv[R.weapon];
 // ---- The scenarios ----------------------------------------------------------------------
 // Each starts a fresh run on the south beach (New Run), reseeded, and plays its own script:
 // `script(f)` acts before frame f; `watch()` notes what the scenario reached.
-const H=ISLAND.hill,S=ISLAND.shack,sp=ISLAND.spawn,yawTo=(x,z)=>{const p=G().player;return Math.atan2(-(x-p.x),-(z-p.z));};
+// v210: the radio tent (the shack in builds before it).
+const H=ISLAND.hill,S=ISLAND.tent||ISLAND.shack,tentLane=ISLAND.tent?1.2:0,sp=ISLAND.spawn,yawTo=(x,z)=>{const p=G().player;return Math.atan2(-(x-p.x),-(z-p.z));};
+const yawToFrom=(x,z,tx,tz)=>Math.atan2(-(tx-x),-(tz-z));
 function hillBearing(){const I=G().island;const clear=b=>{for(let d=8;d<=34;d+=.25){const x=H.x+Math.cos(b)*d,z=H.z+Math.sin(b)*d;if(I.isBlocked(x,z,.45,I.colliders,null,groundHeight(x,z),1.8))return false;}return true;};let b=Math.PI/2;while(!clear(b))b+=.05;return b;}
 // v208: a run far into the kill count, with an M4 and plenty of rounds, and you unkillable.
 function escalate(kills){const R=G().run;R.kills=kills;R.health=R.maxHealth=1e9;const m4=R.inventory.rifle;m4.owned=true;m4.reserve=1e5;qa.selectWeapon('rifle');qa.setAim(0,0);}
@@ -110,13 +112,14 @@ const scenarios={
   // Walking, strafing, sprinting, jumping and looking about on the beach.
   walk:{frames:720,script:f=>f===1?()=>{qa.setAim(0,0);qa.setKeys(['KeyW']);}:f===120?()=>qa.setKeys(['KeyW','ShiftLeft']):f===240?()=>qa.setKeys(['KeyA']):f===330?()=>qa.setKeys(['KeyD','KeyS']):f===420?()=>{qa.setKeys([]);key('Space');}:f===470?()=>{keyUp('Space');listeners.mousemove?.({movementX:180,movementY:-40});}:f===520?()=>{qa.setKeys(['KeyW']);key('Space');}:f===560?()=>keyUp('Space'):f===640?()=>qa.setKeys([]):null,
     watch:()=>{note('walk: airborne',!G().run.grounded);note('walk: sprinting',G().keys?.has('ShiftLeft'));}},
-  // Up Radio Hill on foot, into the shack by its door, a jump under its roof, against its back wall.
+  // Up Radio Hill on foot, in under the radio tent, a jump under its canopy, and on out the far
+  // side (v210; before it, into the shack by its door and against its back wall).
   hill:{frames:1080,script:f=>{
     if(f===1)return ()=>{const b=hillBearing();qa.setPlayer(H.x+Math.cos(b)*34,H.z+Math.sin(b)*34);qa.setAim(Math.atan2(Math.cos(b),Math.sin(b)),0);qa.setKeys(['KeyW','ShiftLeft']);};
-    if(f===420)return ()=>{qa.setKeys([]);qa.setPlayer(S.x,S.z+S.d/2+2);qa.setAim(0,0);qa.setKeys(['KeyW']);};
+    if(f===420)return ()=>{qa.setKeys([]);qa.setPlayer(S.x+tentLane,S.z+S.d/2+2);qa.setAim(0,0);qa.setKeys(['KeyW']);};
     if(f===540)return ()=>{qa.setKeys([]);key('Space');};if(f===600)return ()=>{keyUp('Space');qa.setKeys(['KeyW']);};
     if(f===840)return ()=>{qa.setKeys(['KeyS']);};if(f===960)return ()=>qa.setKeys([]);return null;},
-    watch:()=>{note('hill: summit',G().zone.includes('SUMMIT'));note('hill: shack',G().zone==='RADIO SHACK');}},
+    watch:()=>{note('hill: summit',G().zone.includes('SUMMIT'));note('hill: tent',G().zone.includes('RADIO TENT')||G().zone==='RADIO SHACK');}},
   // Out into the shallows, slower as they deepen, to the wading limit.
   wade:{frames:780,script:f=>f===1?()=>{const a=Math.PI/2+.4,c=coastRadius(a)*.9;qa.setPlayer(Math.cos(a)*c,Math.sin(a)*c);qa.setAim(Math.atan2(-Math.cos(a),-Math.sin(a)),0);qa.setKeys(['KeyW']);}:f===720?()=>qa.setKeys([]):null,
     watch:()=>note('wade: shallows',G().zone==='THE SHALLOWS')},
@@ -150,9 +153,9 @@ const scenarios={
     return null;},
     watch:()=>{const s=G();note('fight: kills',s.run.kills>0);note('fight: hurt',s.run.health<100);note('fight: emerging',s.zombies.some(e=>e.emergeLeft>0));note('fight: dead',s.mode==='dead');note('fight: pickups',s.pickups.length>0);note('fight: summit',s.zone.includes('SUMMIT'));}},
   // v206: on the summit of Radio Hill with the gun lowered; the dead climb its slopes to you
-  // and strike. Then into the shack: they follow you through its door.
-  summit:{frames:4200,dead:true,script:f=>f===1?()=>{qa.setPlayer(H.x,H.z+3);qa.setAim(0,-.3);}:f===2400?()=>{qa.setPlayer(S.x,S.z);}:null,
-    watch:()=>{const s=G();note('summit: hurt',s.run.health<100);note('summit: climbing',s.zombies.some(e=>!e.dead&&groundHeight(e.walkPos.x,e.walkPos.z)>9));note('summit: in the shack',s.zombies.some(e=>!e.dead&&s.island.shackInside(e.walkPos.x,e.walkPos.z)));}},
+  // and strike. Then under the radio tent: they follow you in from every side.
+  summit:{frames:4200,dead:true,script:f=>f===1?()=>{qa.setPlayer(H.x,H.z+3);qa.setAim(0,-.3);}:f===2400?()=>{qa.setPlayer(S.x+tentLane,S.z);}:null,
+    watch:()=>{const s=G();note('summit: hurt',s.run.health<100);note('summit: climbing',s.zombies.some(e=>!e.dead&&groundHeight(e.walkPos.x,e.walkPos.z)>9));note('summit: in the tent',s.zombies.some(e=>!e.dead&&(s.island.tentInside||s.island.shackInside)(e.walkPos.x,e.walkPos.z)));}},
   // v208, the threat director: three escalation scenarios, each a run begun far into the kill
   // count (so the dead come ashore at that threat), held on the south beach with an M4 against
   // the nearest. You cannot die here (the director is what is traced), and a `threat` channel
@@ -165,7 +168,13 @@ const scenarios={
   // The session: pause, Settings and the controls card, Resume, a pause to the title, and back in.
   session:{frames:480,script:f=>f===30?()=>key('Escape'):f===60?()=>$('settingsPause').onclick():f===90?()=>key('Escape'):f===120?()=>$('controlsPause').onclick():f===150?()=>key('Escape'):f===180?()=>$('resume').onclick():
     f===260?()=>key('Escape'):f===290?()=>$('mainMenuPause').onclick():f===320?()=>$('confirmYes').onclick():f===400?()=>enter():null,
-    watch:()=>{note('session: paused',G().mode==='paused');note('session: title',G().mode==='menu');}}
+    watch:()=>{note('session: paused',G().mode==='paused');note('session: title',G().mode==='menu');}},
+  // v210, the map: stand on each station pad in turn, looking at Radio Hill's tower, then walk
+  // toward it for a second (the HUD's place names, the view and the ground under each landmark).
+  landmarks:{frames:720,script:f=>{const pads=G().island.stations;if(!pads)return null;const k=Math.floor((f-1)/90),p=pads[k];if(!p)return null;
+    if((f-1)%90===0)return ()=>{qa.setKeys([]);qa.setPlayer(p.x,p.z);qa.setAim(yawToFrom(p.x,p.z,ISLAND.tower.x,ISLAND.tower.z),.08);};
+    if((f-1)%90===30)return ()=>qa.setKeys(['KeyW']);if((f-1)%90===89)return ()=>qa.setKeys([]);return null;},
+    watch:()=>{const z=G().zone;for(const n of ['RUIN','SHIPWRECK','CAMP','DOCK','EAST COVE','FORGE','SUMMIT'])note('landmarks: '+n.toLowerCase(),z.includes(n));}}
 };
 
 const out={tide:true,boot:fullLogs?bootLog.join('\n'):fnv(bootLog.join('\n'))};

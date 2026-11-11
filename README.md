@@ -6,7 +6,7 @@ An original, single-player, first-person zombie survival game for desktop browse
 
 **Play in your browser:** https://joshdavisson67.github.io/Blackthorn-Midnight-Siege-v119-source/ (published automatically from `main` by `.github/workflows/pages.yml`). This copy's shared leaderboard is stored in Supabase; see below.
 
-**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the grey-box island with the dead coming ashore, the threat rising every 20 kills and its tracker top left (version 209), before its stations and leaderboard. `modes.html` is the mode picker.
+**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the island mapped out in grey-box shapes (its hills, coves, landmarks and trails), with the dead coming ashore, the threat rising every 20 kills and its tracker top left (version 210), before its stations and leaderboard. `modes.html` is the mode picker.
 
 
 Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1–6 switch owned guns and 7 draws the katana (version 205), M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
@@ -28,6 +28,85 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## The island's map (version 210)
+
+Before the stations go in, the island gets its layout: the design spec's landmarks (section 3), its movement network (section 2), ground with some character, and the spawn network moved onto it. Everything new is a grey-box shape; the art comes later. The mansion is unchanged.
+
+- **The ground** (`ISLAND.mounds` and `ISLAND.coast.coves` in `island.mjs`):
+  - **Two coves** are bitten out of the coast: Shipwreck Cove on the west and East Cove on the south-east.
+  - **Four hills of their own** under Radio Hill (14.2 m): the bunker's ridge in the north-east (6.6 m), the ruin's knoll in the north-west (5.6 m), the camp's bluff in the south-west (5.0 m) and the headland between East Cove and the dock (4.6 m).
+  - **Smaller shapes:** a spur off Radio Hill toward the ruin, a low rise for the Forge, a dune behind North Beach, a dry gully (the wash) down the hill's south-west flank, a hollow behind the south-east shore, and a slow roll under the lowland.
+  - Radio Hill's flat top is 9 m in radius (8 before), to hold the compound.
+  - All of it is walkable from every side by everyone. The steepest ground is under 40°.
+- **The landmarks:**
+
+  | Landmark | Where | What stands there |
+  |---|---|---|
+  | Lookout Compound | Radio Hill's summit | the radio tent, the tower, a dish, crates, barrels, a length of fence |
+  | Bunker B-01 | north-east, dug into the ridge | a concrete portal with a sealed steel door, wing walls, warning lamps |
+  | Jungle Ruin | north-west, on its knoll | two lengths of broken wall, an arch to walk through, a column stub, a floor slab |
+  | Shipwreck Cove | west shore | the wreck (moved from the south-east beach) and what washed out of her |
+  | Coastal Camp | south-west, on its bluff | three ridge tents, a fire ring, supplies, a lantern |
+  | South Dock | south shore | a broken dock, its first span gone; stumps on the sand, supplies ashore |
+  | East Cove | south-east | an open equipment shelter and its stores |
+  | Soul Forge | east of the hill, by its foot | a stone dais in a ring of four standing stones |
+  | North Beach | north shore | open sand, driftwood, the dune behind it |
+
+  - **The radio tent replaces the radio shack:** an open canopy on six poles with the radio desk under it. It has no walls, so it hides no one, and a brute walks under it.
+  - **The bunker is sealed** and reserved for later: nothing opens and nothing spawns in or near it.
+  - **The dock cannot be walked on.** Its surviving deck stands in the surf and blocks like a wall. A deck you could stand on would be out of the dead's reach.
+  - **Nothing can be climbed onto.** Every prop that blocks reaches at least 1.05 m above the ground round it, and every slab you can stand on is a step. A perch would be a safe spot.
+  - **No new lights and no new shader programs:** the lamps and runes glow by their material only.
+- **Station pads** (`islandSites().stations`): eight pale slabs, one for every weapon and the Forge, where the spec's section 4.1 puts them. Step 5 builds the stations on them.
+  - Bushmaster .450 and the katana at the Lookout Compound;
+  - Raven SMG at the Jungle Ruin;
+  - shotgun at Shipwreck Cove;
+  - M4 at the Coastal Camp;
+  - Warden LMG at the South Dock's landward end;
+  - Glock 21 at East Cove;
+  - the Soul Forge in its clearing.
+  - Perks, ammunition, armour and the shrines get their pads with the stations themselves.
+- **Trails:** nine, worn to dirt: the spec's seven cross-routes and two that close its loops (Forge to East Cove, ruin to wreck). The beach is the perimeter loop. Palms and rocks keep off the trails, the pads, the beach and Radio Hill's upper slopes.
+- **Plants and rocks:** palms thick round the ruin and behind Shipwreck Cove; boulders on the ridge and the headland; reefs of rock in the deep water off the north-east and north-west shores; and low brush (new) where the dead rise inland. Brush blocks nothing.
+- **The spawn network on this map** (`SHORE` in `island.mjs`):
+  - **The eight major zones** carry the spec's names: North Beach, North-East Reef, East Shore, South-East Cove, South Dock Shore, South-West Beach, Shipwreck Cove, North-West Reef.
+  - The dock's zone stands clear of the dock, and the wreck's has points on both sides of her.
+  - **The 14 minor points** are named for the shore's features.
+  - **The six interior zones** are where the spec puts them: by the ruin, north below the hill, by the bunker's approach, beyond the Forge, south by the hill's foot, and in the wash between the camp and the hill.
+  - **A new rule:** no one rises within 6 m of a station's pad (`SPAWN_RULES.stationClear`).
+  - The director itself is unchanged.
+- **Place names** in the HUD follow the landmarks.
+- **Tools** (new):
+  - `scripts/island-map.mjs` draws a plan of the island as a PNG: ground, colliders, palms, rocks, brush, trails, pads and (with `--spawns`) the spawn network.
+  - `scripts/tide-shots.mjs` photographs the game itself from named viewpoints in headless Chromium.
+- **Proof:**
+  - `tests/dead-tide.mjs`, the finished map:
+    - each landmark is in its part of the island, and the HUD names it;
+    - the coves, hills and gully are real;
+    - the pads are on open, near-level ground, each reachable on five sides or more;
+    - no prop can be climbed, and every slab is a step;
+    - every open cell is routed to the summit for walkers and for brutes (no pockets);
+    - the beach is at least 9.5 m wide all the way round for a brute;
+    - all 12 bearings give a broad, clear climb up Radio Hill (the spec asks for six);
+    - the nine trails are clear along their length;
+    - all 72 spawn points in 28 named locations are clear, routed and 6 m or more from every pad.
+  - In play: you walk in under the tent and out the far side, a jump clears its eaves, and its desk stops you.
+  - The tests from before still pass on the new ground: every kind climbs Radio Hill, The Apocalypse fills to 45, and inland arrivals keep their rules.
+  - **Dead Tide's golden trace** is re-baselined, since the island itself changed. A new `landmarks` scenario stands on each pad in turn. Two runs of this build are byte-identical.
+- **Release tiers:**
+  - **Mansion: quick.** Nothing it loads changed.
+  - **Dead Tide: full.** The map's cost is +24 KB, +86 ms building the world (the time to playable is within noise), +8 to +17 draw calls a view, +0.8 MB of heap, and no new shader programs. Frame logic is level.
+  - **Mode picker: standard, no differences.**
+
+  Numbers in `perf/README.md`.
+- **Looked at, in headless screenshots only:** the overviews, the summit and each landmark. The shapes read as intended there.
+- **Not verified:**
+  - how any of it looks on a real GPU, or feels to walk and fight on;
+  - whether the hills are bold enough;
+  - real-browser frame rates.
+- **Not done yet:** B-01's lettering, ambient sound and all art (the polish step); the spec's concealment by foliage is brush you can see over.
+- **Next (step 5):** stations on the pads, the leaderboard and the run summary.
 
 ## The spawn network and the threat tracker (version 209)
 

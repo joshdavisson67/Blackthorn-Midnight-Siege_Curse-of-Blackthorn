@@ -168,7 +168,8 @@ if(mansion){
   const measure=async name=>{await frames(3);const a=await q(()=>window.__perf.stats()),d=await frames(VIEW_FRAMES),b=await q(()=>window.__perf.stats());
     result.views[name]={drawCalls:Math.round((b.calls-a.calls)/VIEW_FRAMES),trianglesK:Math.round((b.triangles-a.triangles)/VIEW_FRAMES/1000),renderCpuMs:+((b.cpu-a.cpu)/VIEW_FRAMES).toFixed(2),...summary(d)};log(`view ${name}: ${JSON.stringify(result.views[name])}`);};
   result.views={};await measure('title');
-  const views=[['spawn',0,46.5,.073,-.02],['summit',-3,-8,1.2,-.1],['wreck',40,36,-2.2,0],['sea',-40,30,2.2,-.05],['shack',-.5,-1.2,0,-.05]];
+  // v210: the views follow the finished map: the wreck in her cove on the west, the open sea to the south-west, the radio tent, the bunker and the ruin.
+  const views=[['spawn',0,46.5,.073,-.02],['summit',-3,-8,1.2,-.1],['wreck',-38,4,1.35,0],['sea',-40,36,2.2,-.05],['tent',1.5,-.5,0,-.05],['bunker',13,-17,-.85,0],['ruin',-33,-17,.3,0]];
   for(const [name,x,z,yaw,pitch] of views){await q(v=>window.__perf.view(...v),[x,z,yaw,pitch]);await measure(name);}
   // A grenade blast in view: its effects were compiled under the loading screen, so no new shaders now.
   await q(()=>{window.__perf.view(0,46.5,.073,-.1);window.__perf.blast(0,40);});await measure('blast');
