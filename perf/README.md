@@ -483,6 +483,36 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v207 (the picker opens Dead Tide; the dead build behind its title) against main (v206)
+
+Measured by `node scripts/release-tier.mjs --measure` (24 frame-logic pairs, 20 load-phase runs each) on one machine, headless Chromium with software rendering, and one `perf-measure.mjs --page tide.html` run after the fix below.
+
+### Dead Tide: back to its pre-dead load time
+
+| | main (v206) | v207 |
+|---|---:|---:|
+| Time to playable (load phases, total) | 9,215 ms | 4,617 ms (−4,598, SE 60) |
+| ↳ world | 4,162 ms | 615 ms |
+| ↳ shaders | 4,838 ms | 3,787 ms |
+| Geometries at playable | 490 | 212 |
+| Shader programs after play, and after the 45-enemy fight | 43 | 40 (none new in play or the fight) |
+| Frame logic, walking the empty island | 0.207 ms | 0.209 ms (+0.002, SE 0.005) |
+
+- **v205, before the dead existed,** was 4,651 ms to playable. The dead now cost nothing before the title screen.
+- **Behind the title screen:** they are ready about 10.0 s after the page opens, roughly 5 s behind the title, with Play untouched. Pressing Play sooner finishes the build at once, and the shore waits.
+- **The 45-enemy fight is unchanged:** 252 draw calls, 261K triangles, and all 45 alive.
+- **A fix the measurement caught.** The first measurement showed 45 programs after play, against v206's 43: two were compiling in play. Everything warmed at load is compiled for the film pass's render target, where the program keys differ from the screen's. The dead's side compile now targets it too (`display.rt`), giving 40 programs, unchanged by play or the fight. That's fewer than v206, which also compiled the dead for the gun camera's layer, which they never use.
+- **The golden trace** matches v206 in every gameplay channel, both fights included.
+
+### Mansion: full, nothing that is not timing
+
+- **Golden trace:** byte-identical to main's.
+- **Frame logic:** 2.510 → 2.477 ms (−0.032, SE 0.044).
+- **Load phases:** total 41,251 → 41,611 ms (+360, SE 247). Within noise: every phase is under two standard errors.
+- **The hall's draw calls swapped again** (2061 ↔ 1953 between the standard and full passes). That's the load-timing effect documented under v206: its visible meshes are identical, and main shows either count depending on when loading ends.
+
+### Mode picker: standard, no differences
+
 ## v206 (the dead come ashore) against main
 
 Measured by `node scripts/release-tier.mjs --measure` against main (v205) on one machine, headless Chromium with software rendering. Frame times are relative to this machine only.

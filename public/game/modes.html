@@ -37,7 +37,6 @@ body{margin:0;overflow:hidden;background:var(--ink);color:var(--ivory);font-fami
 
 /* ---- The two halves --------------------------------------------------------------- */
 .half{position:fixed;inset:0;z-index:2;display:block;color:inherit;text-decoration:none;outline:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.tide{cursor:default}
 .panel{position:absolute;bottom:0;display:grid;gap:12px;width:min(500px,40vw);
   padding-bottom:max(70px,calc(env(safe-area-inset-bottom,0px) + 60px));transition:opacity .35s,transform .45s cubic-bezier(.2,.8,.2,1)}
 .panel{isolation:isolate}
@@ -62,6 +61,14 @@ body[data-active="siege"] .tide .panel,body[data-active="tide"] .siege .panel{op
 body[data-active="siege"] .siege .cta,.siege:focus-visible .cta{border-color:var(--gold);box-shadow:0 0 0 1px #d4b77a50,0 12px 44px #d4b77a2b;background:linear-gradient(#2a2216e6,#120f0ae6)}
 body[data-active="siege"] .siege .cta b{transform:translateX(5px)}
 .siege:focus-visible .cta{outline:2px solid var(--gold);outline-offset:4px}
+/* v207: Dead Tide opens as a preview, in the island's colours. */
+.tide .cta{border-color:#7fd3c780;background:linear-gradient(#0b1918d9,#050d0cd9)}
+.tide .cta b{color:var(--tide)}
+body[data-active="tide"] .tide .cta,.tide:focus-visible .cta{border-color:var(--tide);box-shadow:0 0 0 1px #7fd3c750,0 12px 44px #7fd3c72b;background:linear-gradient(#0f2422e6,#07100fe6)}
+body[data-active="tide"] .tide .cta b{transform:translateX(5px)}
+.tide:focus-visible .cta{outline:2px solid var(--tide);outline-offset:4px}
+.soon{margin:0;max-width:36ch;font:500 13px/1.4 var(--body);color:var(--tide-dim);text-shadow:0 2px 10px #000}
+body.stacked .soon{display:none}
 .locked{display:inline-flex;align-items:center;gap:12px;padding:15px 20px 14px;border:1px solid #7fd3c74d;background:#06121199;
   font:700 15px/1 var(--display);letter-spacing:.22em;text-transform:uppercase;color:var(--tide-dim)}
 .locked i{width:8px;height:8px;border-radius:50%;background:#ff4a3d;box-shadow:0 0 0 4px #ff4a3d26,0 0 14px #ff4a3d;animation:beacon 1.6s steps(1) infinite}
@@ -114,25 +121,25 @@ body.stacked .cta,body.stacked .locked{padding:13px 18px 12px;font-size:14px}
   </div>
 </a>
 
-<div class="half tide" id="tide" role="link" aria-disabled="true" tabindex="0" aria-label="Dead Tide: endless survival on the island. In development.">
+<a class="half tide" id="tide" href="tide.html" aria-label="Dead Tide: endless survival on the island. An early preview, in development.">
   <div class="panel">
-    <span class="eyebrow">The island</span>
+    <span class="eyebrow">The island · Preview</span>
     <h2 class="title">Dead <em>Tide</em></h2>
     <p class="tagline">No waves and no rest. The dead keep coming out of the surf, and every twenty kills the tide rises.</p>
     <ul class="facts"><li>Endless</li><li>Threat rises every 20 kills</li><li>45 dead at once</li></ul>
-    <span class="locked"><i aria-hidden="true"></i>In development</span>
-    <p class="note" id="tideNote" aria-live="polite"></p>
+    <span class="cta">Play the preview <b aria-hidden="true">→</b></span>
+    <p class="soon">In development: the dead come ashore now; threat levels, stations and the leaderboard are on the way.</p>
   </div>
-</div>
+</a>
 
 <div class="hints" aria-hidden="true"><span><kbd>←</kbd><kbd>→</kbd>Choose</span><span><kbd>Enter</kbd>Play</span><span>Gamepad ready</span></div>
-<div class="curtain" aria-hidden="true"><span>The gates open</span></div>
+<div class="curtain" aria-hidden="true"><span id="curtainText">The gates open</span></div>
 
 <script>
 (()=>{
 'use strict';
 const body=document.body,cv=document.getElementById('scene'),ctx=cv.getContext('2d');
-const siegeEl=document.getElementById('siege'),tideEl=document.getElementById('tide'),note=document.getElementById('tideNote');
+const siegeEl=document.getElementById('siege'),tideEl=document.getElementById('tide'),curtainText=document.getElementById('curtainText');
 const reduce=matchMedia('(prefers-reduced-motion: reduce)');
 let W=0,H=0,DPR=1,stacked=false,split=.5,active='siege',launching=false,lastClip='',dirty=true;
 
@@ -289,16 +296,15 @@ function draw(t){if(!W)return;const sm=seam();place(sm);screen();ctx.clearRect(0
 
 // ---- Choosing and launching -----------------------------------------------------------
 function choose(side){if(launching||side===active)return;active=side;body.dataset.active=side;dirty=true;}
-function launch(){if(launching)return;if(active!=='siege'){deny();return;}launching=true;
+// v207: either half launches its mode; Dead Tide opens its preview.
+function launch(){if(launching)return;launching=true;const el=active==='tide'?tideEl:siegeEl;
   try{sessionStorage.setItem('blackthorn-from','modes');}catch{}
-  body.classList.add('launching');setTimeout(()=>{location.href=siegeEl.getAttribute('href');},reduce.matches?0:460);}
-let denyTimer=0;
-function deny(){tideEl.classList.remove('denied');void tideEl.offsetWidth;tideEl.classList.add('denied');note.textContent='The island is still being built. Midnight Siege is ready now.';
-  clearTimeout(denyTimer);denyTimer=setTimeout(()=>tideEl.classList.remove('denied'),2600);}
+  curtainText.textContent=active==='tide'?'The tide rises':'The gates open';curtainText.parentElement.style.color=active==='tide'?'var(--tide)':'';
+  body.classList.add('launching');setTimeout(()=>{location.href=el.getAttribute('href');},reduce.matches?0:460);}
 siegeEl.addEventListener('pointerenter',()=>choose('siege'));tideEl.addEventListener('pointerenter',()=>choose('tide'));
 siegeEl.addEventListener('focus',()=>choose('siege'));tideEl.addEventListener('focus',()=>choose('tide'));
 siegeEl.addEventListener('click',e=>{if(e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey)return;e.preventDefault();choose('siege');launch();});
-tideEl.addEventListener('click',()=>{choose('tide');deny();});
+tideEl.addEventListener('click',e=>{if(e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey)return;e.preventDefault();choose('tide');launch();});
 addEventListener('keydown',e=>{const k=e.key.toLowerCase();
   if(['arrowleft','a'].includes(k)||(stacked&&['arrowup','w'].includes(k))){choose('siege');siegeEl.focus({preventScroll:true});e.preventDefault();}
   else if(['arrowright','d'].includes(k)||(stacked&&['arrowdown','s'].includes(k))){choose('tide');tideEl.focus({preventScroll:true});e.preventDefault();}

@@ -80,12 +80,15 @@ if(tide)appendFileSync(join(stage,'tide.mjs'),`
    stats(){const i=renderer.info;return {calls:i.render.calls,triangles:i.render.triangles,cpu,programs:i.programs?.length??0,geometries:i.memory.geometries,textures:i.memory.textures};},
    // Dead Tide marks when its modules have loaded, its island is built and its shaders are compiled.
    phases(){const at=n=>performance.getEntriesByName(n)[0]?.startTime??null;return {modules:at('tide:modules'),world:at('tide:world'),shaders:at('tide:shaders')};},
-   view(x,z,yaw,pitch){Object.defineProperty(document,'pointerLockElement',{configurable:true,get:()=>canvas});if(typeof shore==='object')shore.target=0;session.mode='playing';session.pointer=true;keys.clear();
+   // v207: when the dead finished building behind the title (-1 not yet; null: built while loading).
+   deadAt(){return typeof finishTheDead==='function'?(performance.getEntriesByName('tide:dead')[0]?.startTime??-1):null;},
+   // v207: the views are measured as in play, after Play has finished building the dead.
+   view(x,z,yaw,pitch){Object.defineProperty(document,'pointerLockElement',{configurable:true,get:()=>canvas});if(typeof finishTheDead==='function')finishTheDead();if(typeof shore==='object')shore.target=0;session.mode='playing';session.pointer=true;keys.clear();
      $('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');player.set(x,groundHeight(x,z),z);runState.grounded=true;runState.jumpV=0;session.lookYaw=yaw;session.lookPitch=pitch;},
    blast(x,z){combat.explode(new T.Vector3(x,groundHeight(x,z)+.3,z));},
    // v206: the 45-enemy stress test (the plan's hard cap): a mixed ring of the dead around you on
    // the south beach, unkillable, with you unkillable too. Builds from before v206 have no dead.
-   fight:typeof shore==='object'?n=>{clearTheDead();shore.target=0;window.__perf.view(0,40,0,-.05);runState.health=runState.maxHealth=1e9;
+   fight:typeof shore==='object'?async n=>{if(typeof finishTheDead==='function')await finishTheDead();clearTheDead();shore.target=0;window.__perf.view(0,40,0,-.05);runState.health=runState.maxHealth=1e9;
      const kinds=['walker','walker','walker','brute','walker','feral','walker','dog','walker','walker','ashfang','walker','feral','walker','brute','walker'];
      for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=9+(i%4)*1.6;const e=spawnKind(kinds[i%kinds.length],Math.sin(a)*r,40+Math.cos(a)*r*.55,0);e.hp=e.maxHp=1e9;}
      return zombies.filter(e=>!e.dead).length;}:null,
@@ -154,6 +157,9 @@ if(mansion){
   result.load={timeToPlayableMs:playable,untilPlayable:bytesUpTo(playable),total:bytesUpTo(Date.now()-t0),heapMB:await heap(),heapAfterGcMB:await heapGc(),
     phases:{modulesMs:Math.round(ph.modules),worldMs:Math.round(ph.world-ph.modules),shadersMs:Math.round(ph.shaders-ph.world)},files,
     mansionFiles:files.filter(f=>/^\/(index\.html|boot\.js|game\.js|core\.mjs|estate-layout|graveyard|cellar|shed|vertical|second-floor|upper-shell|exterior-stairs|mansion-expansion|facade|furnishings|rugs|signage|grounds|estate-detail|rotunda-bell|olivia|bella|blackthorn-boss|curse|world-event|blackout|camp-spawns|lighting|environment-lights|combat-lights|leaderboard|changelog)/.test(f))};
+  // v207: the dead build behind the title screen; wait for them, untouched, and record when.
+  {let at=await q(()=>window.__perf.deadAt());const until=Date.now()+300000;while(at===-1&&Date.now()<until){await new Promise(r=>setTimeout(r,250));at=await q(()=>window.__perf.deadAt());}
+   if(at!==null){result.load.deadReadyMs=Math.round(at);result.load.heapAfterDeadMB=await heapGc();log(`the dead ready behind the title after ${(at/1000).toFixed(1)}s`);}}
   await q(()=>window.__perf.fixRes());
   const s0=await q(()=>window.__perf.stats());result.gpu={shaderPrograms:s0.programs,geometries:s0.geometries,textures:s0.textures};
   const measure=async name=>{await frames(3);const a=await q(()=>window.__perf.stats()),d=await frames(VIEW_FRAMES),b=await q(()=>window.__perf.stats());

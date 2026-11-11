@@ -24,7 +24,9 @@ export function verifyModePicker(){
   assert(/<title>Blackthorn<\/title>/.test(picker));
   // ---- Navigation --------------------------------------------------------------------------
   assert(/<a class="half siege" id="siege" href="siege\.html"/.test(picker),'Midnight Siege opens siege.html');
-  assert(/id="tide" role="link" aria-disabled="true"/.test(picker)&&/In development/.test(picker),'Dead Tide is shown, marked in development');
+  // v207: Dead Tide opens its preview, still marked in development.
+  assert(/<a class="half tide" id="tide" href="tide.html"/.test(picker)&&/Play the preview/.test(picker)&&/In development/.test(picker),'Dead Tide opens its preview, marked in development');
+  assert(!/aria-disabled|deny\(/.test(picker),'and is no longer refused');
   assert(/sessionStorage\.setItem\('blackthorn-from','modes'\)/.test(picker),'Launching remembers that the player came from the picker');
   for(const key of ['arrowleft','arrowright','enter','getGamepads','prefers-reduced-motion','visibilitychange'])assert(picker.includes(key),`The picker handles ${key}`);
   const siege=read('siege.html');
@@ -36,5 +38,5 @@ export function verifyModePicker(){
   assert(/<button id="modesLink" class="textBtn hidden" hidden type="button">◂ ALL MODES<\/button>/.test(index),'Its modes link starts hidden');
   assert(/sessionStorage\.getItem\('blackthorn-from'\)==='modes'/.test(boot)&&/back\.hidden=false/.test(boot)&&/location\.href='modes\.html'/.test(boot),'boot.js reveals it only for players who came from the picker');
   assert(!/modes\.html/.test(read('game.js')),'The game itself knows nothing about the picker');
-  console.log(`PASS: mode picker — a ${(bytes/1024).toFixed(0)} KB page with no engine, modules or WebGL; Midnight Siege via siege.html, Dead Tide marked in development; keyboard, gamepad, reduced motion and background pausing; the mansion still loads only boot.js, with a hidden link back for picker players.`);
+  console.log(`PASS: mode picker — a ${(bytes/1024).toFixed(0)} KB page with no engine, modules or WebGL; Midnight Siege via siege.html, Dead Tide's preview via tide.html, marked in development; keyboard, gamepad, reduced motion and background pausing; the mansion still loads only boot.js, with a hidden link back for picker players.`);
 }
