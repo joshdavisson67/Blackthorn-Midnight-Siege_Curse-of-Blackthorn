@@ -177,7 +177,7 @@ const scenarios={
     if(t===0)return ()=>{qa.setKeys([]);if(s.padId==='lmg')G().run.kills=180;const a=s.rotation||0;qa.setPlayer(s.x+Math.sin(a)*3,s.z+Math.cos(a)*3);qa.setAim(yawToFrom(s.x+Math.sin(a)*3,s.z+Math.cos(a)*3,s.x,s.z),-.15);G().run.points=6000;};
     if(t===10)return ()=>qa.setKeys(['KeyW']);if(t===30)return ()=>qa.setKeys([]);
     if(t===40)return ()=>{key('KeyE');keyUp('KeyE');};return null;},
-    watch:()=>{const s=G();note('stations: prompt',!!$('interaction').textContent);for(const k of ['smg','shotgun','rifle','lmg','bushmaster','katana'])note('stations: '+k,s.run.inventory[k]?.owned);note('stations: perk',s.run.perkOwned.size>0);note('stations: armour',s.run.armorTier>0);note('stations: forged',Object.values(s.run.inventory).some(w=>w.forgeRank>0));note('stations: boathouse open',s.island.boathouse.open);
+    watch:()=>{const s=G();note('stations: prompt',!!$('interaction').textContent);for(const k of ['smg','shotgun','rifle','lmg','bushmaster','katana'])note('stations: '+k,s.run.inventory[k]?.owned);note('stations: perk',s.run.perkOwned.size>0);note('stations: armour',s.run.armorTier>0);note('stations: forged',Object.values(s.run.inventory).some(w=>w.forgeRank>0));note('stations: boathouse open',!!s.island.boathouse?.open);
       const z=s.zone;for(const n of ['RUIN','SHIPWRECK','CAMP','DOCK','EAST COVE','FORGE','BUNKER','NORTH BEACH','SUMMIT'])note('stations: '+n.toLowerCase(),z.includes(n));}}
 };
 
