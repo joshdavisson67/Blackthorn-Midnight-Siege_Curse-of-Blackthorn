@@ -28,6 +28,8 @@ const VIEWS=[
   ['wreck',S.wreck.x+19,1.68,S.wreck.z+6,S.wreck.x,1.5,S.wreck.z],['camp',S.camp.x+11,3.2,S.camp.z-9,S.camp.x,.8,S.camp.z],
   ['dock',S.dock.x-7,1.68,S.dock.z-13,S.dock.x+1,.8,S.dock.z+3],['cove',S.cove.x+9,1.68,S.cove.z+9,S.cove.x,1.4,S.cove.z],
   ['forge',S.forge.x-10,1.68,S.forge.z+5,S.forge.x,1.4,S.forge.z],['north-beach',S.north.x+14,1.68,S.north.z+8,S.north.x-12,1,S.north.z-4],
+  // v212: the stations, from 4 m in front.
+  ...islandSites().stations.map(p=>['station-'+p.id,p.x+Math.sin(p.angle)*4+Math.cos(p.angle)*1.2,1.68,p.z+Math.cos(p.angle)*4-Math.sin(p.angle)*1.2,p.x,1.1,p.z]),
   ['wash',-9,1.68,6,-22,-1,30]
 ];
 async function loadPlaywright(){for(const spec of [process.env.PLAYWRIGHT_MODULE,'playwright','/opt/npm-tools/node_modules/playwright/index.mjs'].filter(Boolean)){try{return await import(spec.startsWith('/')?pathToFileURL(spec).href:spec);}catch{}}
@@ -53,7 +55,7 @@ await new Promise(r=>server.once('listening',r));
 const {chromium}=await loadPlaywright(),browser=await chromium.launch({args:['--use-angle=gl-egl','--ignore-gpu-blocklist']});
 const ctx=await browser.newContext({viewport:{width:1280,height:720},deviceScaleFactor:1});
 await ctx.addInitScript(()=>{try{localStorage.setItem('blackthorn-quality','high');localStorage.setItem('blackthorn-touch-controls','off');}catch{}});
-const tab=await ctx.newPage();tab.setDefaultTimeout(900000);const errors=[];tab.on('pageerror',e=>errors.push(e.message));
+const tab=await ctx.newPage();tab.setDefaultTimeout(900000);const errors=[];tab.on('pageerror',e=>errors.push(e.message));tab.on('console',m=>{if(m.type()==='error')console.log('console error:',m.text().slice(0,300));});
 await tab.goto(`http://localhost:${server.address().port}/tide.html`,{waitUntil:'load'});
 await tab.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:900000});
 const err=await tab.evaluate(()=>document.getElementById('errorDetails')?.textContent||'');if(err)throw new Error('Load error: '+err);

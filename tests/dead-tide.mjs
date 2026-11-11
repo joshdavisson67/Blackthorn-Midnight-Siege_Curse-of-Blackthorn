@@ -18,11 +18,12 @@ assert.deepEqual(tidePage.map(([f])=>f),['style.css','tide.css','tide-boot.js'],
 assert(tidePage.every(([,v])=>v===String(V)),'with this version’s cache keys');
 assert(!mansionPage.some(([f])=>/tide/.test(f))&&!/tide/i.test(read('boot.js')),'The mansion’s page and boot script never mention Dead Tide');
 const tide=closure('tide-boot.js'),mansion=closure('boot.js');
-// Everything that builds, lays out, lights or runs the mansion, by name.
-const MANSION_ONLY=['boot.js','game.js','core.mjs','estate-layout.mjs','graveyard-layout.mjs','cellar-layout.mjs','shed-layout.mjs','vertical.mjs','cellar.mjs','graveyard.mjs','shed.mjs','mansion-expansion.mjs','second-floor.mjs','upper-shell.mjs','exterior-stairs.mjs','facade.mjs','furnishings.mjs','rugs.mjs','signage.mjs','grounds.mjs','estate-detail.mjs','rotunda-bell.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','curse.mjs','curse-ui.mjs','world-events.mjs','world-event-visuals.mjs','blackout.mjs','camp-spawns.mjs','lighting.mjs','environment-lights.mjs','combat-lights.mjs','minimap-settings.mjs','leaderboard.mjs','changelog.mjs','changelog-data.mjs','column-surfaces.mjs'];
+// Everything that builds, lays out, lights or runs the mansion, by name. (v212: not signage.mjs,
+// the plaques' lettering, which Dead Tide's stations use too.)
+const MANSION_ONLY=['boot.js','game.js','core.mjs','estate-layout.mjs','graveyard-layout.mjs','cellar-layout.mjs','shed-layout.mjs','vertical.mjs','cellar.mjs','graveyard.mjs','shed.mjs','mansion-expansion.mjs','second-floor.mjs','upper-shell.mjs','exterior-stairs.mjs','facade.mjs','furnishings.mjs','rugs.mjs','grounds.mjs','estate-detail.mjs','rotunda-bell.mjs','olivia.mjs','bella.mjs','blackthorn-boss.mjs','curse.mjs','curse-ui.mjs','world-events.mjs','world-event-visuals.mjs','blackout.mjs','camp-spawns.mjs','lighting.mjs','environment-lights.mjs','combat-lights.mjs','minimap-settings.mjs','leaderboard.mjs','changelog.mjs','changelog-data.mjs','column-surfaces.mjs'];
 for(const f of MANSION_ONLY){assert(existsSync(resolve(game,f)),`${f} exists`);assert(mansion.has(f),`the mansion loads ${f}`);}
 assert.deepEqual([...tide].filter(f=>MANSION_ONLY.includes(f)),[],'Dead Tide loads nothing that builds, lays out, lights or runs the mansion');
-const TIDE_ONLY=['tide-boot.js','tide.mjs','island.mjs'];
+const TIDE_ONLY=['tide-boot.js','tide.mjs','island.mjs','tide-palette.mjs'];
 assert.deepEqual([...mansion].filter(f=>TIDE_ONLY.includes(f)),[],'and the mansion loads nothing of Dead Tide');
 const shared=[...tide].filter(f=>mansion.has(f));
 for(const f of ['display.mjs','audio.mjs','first-person.mjs','player.mjs','hud.mjs','controls.mjs','weapon-runtime.mjs','enemy-combat.mjs','weapon-stats.mjs','batching.mjs','stations.mjs','grenade-throw.mjs','touch-controls.mjs','gamepad-controls.mjs','input-scheme.mjs'])
@@ -126,10 +127,18 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
    assert(fx*(H.x-b.x)+fz*(H.z-b.z)<0,'away from Radio Hill');
    const ground=groundHeight(b.x+fx*1.6,b.z+fz*1.6);assert(groundHeight(b.x-fx*6,b.z-fz*6)>ground+4,'and the ridge behind it stands over its roof (it comes out of the hill)');}
   // b. The pads: one for every weapon and the Forge, each on open, near-level ground at its landmark.
-  assert.deepEqual(stations.map(p=>p.id).sort(),['bushmaster','forge','glock','katana','lmg','rifle','shotgun','smg'],'Eight pads: every weapon, and the Forge');
+  // v212: seventeen pads: every weapon, the Forge, the armour, the four perks and four ammunition stations.
+  assert.deepEqual(stations.map(p=>p.id).sort(),['ammo-dock','ammo-forge','ammo-north','ammo-wreck','armor','bushmaster','eye','forge','glock','iron','katana','lmg','quick','rifle','shotgun','smg','stride'],'Seventeen pads');
+  {const kinds={};for(const p of stations)kinds[p.kind]=(kinds[p.kind]||0)+1;assert.deepEqual(kinds,{weapon:7,forge:1,armor:1,perk:4,ammo:4});
+   const perkPlaces=stations.filter(p=>p.kind==='perk').map(p=>p.landmark),ammoPlaces=stations.filter(p=>p.kind==='ammo').map(p=>p.landmark),armour=stations.find(p=>p.kind==='armor');
+   assert.equal(new Set(perkPlaces).size,4,'Each perk at a landmark of its own');
+   const quarter=p=>Math.floor((Math.atan2(p.z-H.z,p.x-H.x)+Math.PI)/(Math.PI/2))%4;assert.equal(new Set(stations.filter(p=>p.kind==='perk').map(quarter)).size,4,'one in each quarter of the island round Radio Hill');
+   assert.equal(new Set(ammoPlaces).size,4,'Ammunition at four landmarks');assert(!ammoPlaces.includes(armour.landmark)&&!perkPlaces.includes(armour.landmark),'The armour stands apart from the perks and the ammunition');
+   for(const a of stations.filter(p=>p.kind==='ammo'))for(const b of stations.filter(p=>p.kind==='ammo'))if(a!==b)assert(Math.hypot(a.x-b.x,a.z-b.z)>25,'Ammunition stations spread out (25 m or more apart)');
+   for(const p of stations)assert(Math.abs(Math.atan2(Math.sin(p.angle-Math.atan2(H.x-p.x,H.z-p.z)),Math.cos(p.angle-Math.atan2(H.x-p.x,H.z-p.z))))<1e-3,'Each faces Radio Hill’s summit');}
   const spec={bushmaster:'LOOKOUT COMPOUND',katana:'LOOKOUT COMPOUND',smg:'JUNGLE RUIN',shotgun:'SHIPWRECK COVE',rifle:'COASTAL CAMP',lmg:'SOUTH DOCK',glock:'EAST COVE',forge:'SOUL FORGE'};
   for(const p of stations){
-    assert.equal(p.landmark,spec[p.id],`The ${p.id} pad is at ${spec[p.id]} (spec 4.1)`);
+    if(spec[p.id])assert.equal(p.landmark,spec[p.id],`The ${p.id} pad is at ${spec[p.id]} (spec 4.1)`);
     const zone=I.zoneAt(p.x,p.z);assert(p.landmark==='LOOKOUT COMPOUND'?zone.includes('SUMMIT'):zone===p.landmark,`and stands inside it (${zone})`);
     const g=Math.hypot(groundHeight(p.x+1,p.z)-groundHeight(p.x-1,p.z),groundHeight(p.x,p.z+1)-groundHeight(p.x,p.z-1))/2;assert(g<.22,`on near-level ground (${g.toFixed(2)})`);
     assert(open(p.x,p.z,BR,brute.height),'in the open');
@@ -210,8 +219,10 @@ try{
   // Loading: the island is built, its shaders compiled, and the title screen waits.
   assert(typeof enter==='function'&&$('loading').classList.contains('hidden')&&!$('menu').classList.contains('hidden')&&G().mode==='menu','The island loads to its title screen');
   assert(G().renderer.compileCalls?.length===2,'Every shader is compiled under the loading screen (world and weapon)');
-  const top=new Set(G().world.children.map(o=>o.name));
-  assert.deepEqual([...top].sort(),['Blood particles','Brush','Bullet impact marks','Explosion effects','Island ground','Landmarks','Palm crowns','Palm trunks','Radio tower','Rocks','The sea','Tower beacon','Wreck'].sort(),'The world holds the island and the shared effects, nothing else');
+  // (v212: and the stations, in a group of their own: one group each, named for what it sells.)
+  const stationNames=new Set(G().stations.filter(s=>s.padId!=='ammo-tent').map(s=>s.name)),top=new Set(G().world.children.map(o=>o.name));
+  {const root=G().world.getObjectByName('Stations');assert.equal(root.children.filter(o=>o.isGroup&&stationNames.has(o.name)).length,G().island.stations.length,'one group for each station on a pad');}
+  assert.deepEqual([...top].sort(),['Blood particles','Brush','Bullet impact marks','Explosion effects','Island ground','Landmarks','Palm crowns','Palm trunks','Radio tower','Rocks','Stations','The sea','Tower beacon','Wreck'].sort(),'The world holds the island and the shared effects, nothing else');
   // v207: the dead are not built while loading. Behind the title screen they build a body a
   // frame, then their shaders compile in a scene of their own, lit by the island's, never drawn.
   assert(G().deadBuilt===false&&G().deadReady===false,'The dead are not built while loading');
@@ -256,13 +267,14 @@ try{
   assert(peak>summitY+.6&&peak+1.8<=summitY+S.eave,'A jump inside clears the eaves');
   qa.setKeys(['KeyW']);frames(200);qa.setKeys([]);assert(G().player.z<S.z-S.d/2-1&&!G().zone.includes('TENT'),'and you walk straight out the far side: it has no walls');
   qa.setPlayer(S.x-.9,S.z+1.5);qa.setAim(0,0);qa.setKeys(['KeyW']);frames(120);qa.setKeys([]);assert(G().player.z>S.z-1.2+.4,'The radio desk stops you');
-  // v211: the test ammo crate under the canopy: its prompt, and E restocks every gun you carry
-  // and adds a grenade; out of reach, nothing.
+  // v211: the ammo crate under the canopy (v212: an ammunition station, 350 essence): its prompt,
+  // and E restocks every gun you carry and adds a grenade; out of reach, nothing.
   {const A=I.sites.ammo,R=G().run;assert(Math.abs(A.x-S.x)<S.w/2-.3&&Math.abs(A.z-S.z)<S.d/2-.3,'The ammo crate is inside the radio tent');
-   qa.setPlayer(A.x-1.4,A.z);frames(2);assert($('interaction').textContent.includes('AMMO CRATE'),'Beside it, its prompt shows');
-   R.inventory.glock.reserve=0;R.inventory.glock.ammo=2;R.grenades=1;
+   qa.setPlayer(A.x-1.4,A.z);frames(2);assert($('interaction').textContent.includes('RADIO TENT AMMUNITION')&&$('interaction').textContent.includes('350 ESSENCE'),'Beside it, its prompt shows, at 350 essence');
+   R.inventory.glock.reserve=0;R.inventory.glock.ammo=2;R.grenades=1;const before=R.points=1000;
    key({code:'KeyE'});listeners.keyup({code:'KeyE'});frames(2);
-   assert(R.inventory.glock.reserve>=78+11&&R.grenades===2,`E restocks the pistol in full (reserve ${R.inventory.glock.reserve}: 78 and what the magazine lacks) and adds a grenade`);
+   assert(R.inventory.glock.reserve>=78+11&&R.grenades===2&&R.points===before-350,`E restocks the pistol in full (reserve ${R.inventory.glock.reserve}: 78 and what the magazine lacks), adds a grenade and costs 350`);
+   R.points=100;R.inventory.glock.reserve=0;key({code:'KeyE'});listeners.keyup({code:'KeyE'});frames(2);assert(R.inventory.glock.reserve===0&&R.points===100,'Short of 350, nothing is sold');R.points=500;
    assert(G().mode==='playing','with no pause');
    qa.setPlayer(A.x-4,A.z+4);frames(2);R.inventory.glock.reserve=0;key({code:'KeyE'});listeners.keyup({code:'KeyE'});frames(2);
    assert(R.inventory.glock.reserve===0&&!$('interaction').textContent,'Out of reach, no prompt and nothing happens');
@@ -301,7 +313,7 @@ try{
   $('resume').onclick();assert.equal(G().mode,'playing','Resume locks the mouse and plays on');
   key({code:'Escape'});$('mainMenuPause').onclick();assert(!$('pauseConfirm').classList.contains('hidden'));$('confirmYes').onclick();
   assert.equal(G().mode,'menu');assert(!$('menu').classList.contains('hidden')&&$('hud').classList.contains('hidden')&&!$('start').disabled,'Title Screen asks first, then returns to the title');
-  console.log('PASS: playing Dead Tide (v207: the dead built behind its title screen, a body a frame, their shaders compiled off to the side; v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, walk in under the radio tent and out the far side (only its desk stops you); its ammo crate restocks you, wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
+  console.log('PASS: playing Dead Tide (v207: the dead built behind its title screen, a body a frame, their shaders compiled off to the side; v205: with the shared katana drawn by key 7 and its three slashes): it loads to a circling title screen with only the island and shared effects in its world and every shader compiled; Wade Ashore captures the mouse and lands you on the south beach with the HUD up; you walk and sprint with your feet on the ground, jump and land, sprint up Radio Hill to the summit, walk in under the radio tent and out the far side (only its desk stops you); its ammo crate sells ammunition, wade into the shallows but not the open sea; the pistol fires, marks the sand, reloads and aims; a grenade bursts, a close blast hurts, and death, New Run, pause, Settings, the controls card, Resume and the title screen all work.');
   // ---- 5. The dead come ashore (v206) ------------------------------------------------------
   const {SHORE_RULES:R}=await import('../public/game/tide-dead.mjs'),TT=await import('../public/game/tide-threat.mjs'),LIVING=TT.targetPopulation(1),STATS=TT.threatStats(1);
   const alive=()=>G().zombies.filter(e=>!e.dead),dist=e=>Math.hypot(e.walkPos.x-G().player.x,e.walkPos.z-G().player.z);
@@ -508,6 +520,65 @@ try{
     for(const l of inland){const d=Math.hypot(l.x-l.px,l.z-l.pz);assert(d>=TT.SPAWN_RULES.interior.near,'never close');}
     for(const e of G().zombies.filter(e=>!e.dead&&e.spawnZone&&G().shore.zones.find(z=>z.name===e.spawnZone)?.kind==='interior'))assert(groundHeight(e.walkPos.x,e.walkPos.z)>0&&G().routes.direction(e.walkPos.x,e.walkPos.z,0)?.reachable,'and on land, with a route to you');
     console.log(`PASS: the threat tracker shows level, rank, kills and 0–20 progress top left; each new level pulses the number with a quiet cue, each rank glows its name with a deeper one, a multi-level jump cues once, with no banner and no pause; New Run starts it again; in play ${inland.length} of the dead rose inland at The Apocalypse, never within ${TT.SPAWN_RULES.interior.near} m.`);
+  }
+  // ---- 9. The stations (v212, Dead Tide step 5) --------------------------------------------------
+  {
+    const {PERKS}=await import('../public/game/stations.mjs'),{ARMOR,armorRank}=await import('../public/game/armor.mjs'),{FORGE}=await import('../public/game/soul-forge.mjs');
+    let narrowest=Infinity;const pads=G().island.stations,stations=G().stations,kit=G().stationKit,R=G().run;
+    qa.resetRun();await Promise.resolve();G().shore.target=0;G().run.health=1e9;frames(2);
+    // a. A station on every pad, and the tent's crate; no shrines anywhere.
+    assert.equal(stations.length,pads.length+1,'One station on every pad, and the tent’s ammunition crate');
+    for(const p of pads){const s=stations.find(s=>s.padId===p.id);assert(s&&Math.hypot(s.x-p.x,s.z-p.z)<1e-9,`The ${p.id} station stands on its pad`);}
+    assert(!stations.some(s=>s.type==='powerup'),'No shrines: no timed double damage, no endless grenades');
+    assert(!G().world.getObjectByName('THE TWOFOLD RELIC')&&!G().world.getObjectByName('THE ENDLESS ARSENAL'));
+    // Their still parts are merged by material: few draw calls for all of them.
+    {let meshes=0;G().world.getObjectByName('Stations').traverseVisible(o=>{if(o.isMesh||o.isLine)meshes++;});assert(meshes<=70,`The stations draw as ${meshes} meshes (merged by material)`);
+     // The painted parts' shared material reads its colour, finish and glow from the vertices:
+     // each of the shader's three patches found its place in this three.js.
+     let palette=null;G().world.getObjectByName('Stations').traverse(o=>{if(o.material?.userData?.stationPalette)palette??=o.material;});
+     const T3=await import('../public/game/three.module.js'),shader={vertexShader:T3.ShaderLib.physical.vertexShader,fragmentShader:T3.ShaderLib.physical.fragmentShader};palette.onBeforeCompile(shader);
+     assert(/vSurfaceFinish=surfaceFinish/.test(shader.vertexShader)&&/roughnessFactor = vSurfaceFinish\.x/.test(shader.fragmentShader)&&/metalnessFactor = vSurfaceFinish\.y/.test(shader.fragmentShader)&&/totalEmissiveRadiance = vSurfaceGlow/.test(shader.fragmentShader),'the palette shader is patched');
+     // Bullets stop at the stations' boxes, not at their merged triangles.
+     assert(!G().island.solidMeshes.some(m=>m.parent?.name==='Stations'||m.material?.userData?.stationPalette)&&G().island.solidMeshes.filter(m=>m.name==='Station hit box').length===G().island.stations.length,'the stations’ hit boxes stand in for their parts');}
+    // b. Walking up to each one shows its prompt; E buys it at the mansion's price.
+    const buy=(s,points)=>{R.points=points;qa.setPlayer(s.x+Math.sin(s.rotation||0)*1.6,s.z+Math.cos(s.rotation||0)*1.6);frames(2);
+      const shown=$('interaction').textContent;key({code:'KeyE'});listeners.keyup({code:'KeyE'});frames(2);return shown;};
+    const at=id=>stations.find(s=>s.padId===id);
+    for(const s of stations){qa.setPlayer(s.x+Math.sin(s.rotation||0)*1.6,s.z+Math.cos(s.rotation||0)*1.6);frames(2);assert($('interaction').textContent.includes(s.name),`In front of ${s.name}, its prompt shows`);}
+    // Weapons: each sold at its price, and in hand.
+    for(const [id,key,price] of [['smg','smg',1500],['shotgun','shotgun',1200],['bushmaster','bushmaster',2500],['rifle','rifle',4500],['lmg','lmg',5000],['katana','katana',at('katana').price]]){
+      assert(!R.inventory[key].owned);buy(at(id),price+10);assert(R.inventory[key].owned&&R.weapon===key&&R.points===10,`The ${id} station sells its weapon for ${price} and puts it in your hands`);}
+    // The M4's and the Warden's racks sell their ranks once owned, and hand the gun back after.
+    {const {nextRank}=await import('../public/game/weapon-ranks.mjs');for(const key of ['rifle','lmg']){qa.selectWeapon('glock');const next=nextRank(key,R.inventory[key].weaponRank);buy(at(key),next.price);assert(R.inventory[key].weaponRank===1&&R.points===0,`The ${key} rack sells rank I for ${next.price}`);}}
+    // Perks: each sold once, at its price, with its effect.
+    for(const p of PERKS){R.points=p.price;buy(at(p.id),p.price);assert(R.perkOwned.has(p.id)&&R.points===0,`${p.name} sold for ${p.price}`);
+      buy(at(p.id),5000);assert(R.points===5000,'and only once');}
+    assert(R.maxHealth===200,'Ironheart doubles maximum health');
+    // Armour, then the Nano Shield's ranks, at the bunker.
+    buy(at('armor'),ARMOR.bodyPrice);assert(R.armorTier===1&&R.armorMax===200&&R.points===0,'Aegis body armour at the bunker');
+    for(const rank of ARMOR.nanoRanks){buy(at('armor'),rank.price);assert(armorRank(R.armorTier)?.rank===rank.rank&&R.points===0,`then the Nano Shield's rank ${rank.rank}`);}
+    // The Soul Forge forges the weapon in hand.
+    {const held=R.weapon;buy(at('forge'),FORGE.prices[0]);assert(R.inventory[held].forgeRank===1&&R.points===0,'The Soul Forge forges the weapon in hand');}
+    // Ammunition: each station restocks for 350.
+    for(const id of ['ammo-north','ammo-wreck','ammo-dock','ammo-forge']){R.inventory.smg.reserve=0;buy(at(id),350);assert(R.inventory.smg.reserve>0&&R.points===0,`${id} restocks for 350`);}
+    // Short of the price, nothing is sold.
+    R.inventory.smg.reserve=0;buy(at('ammo-north'),349);assert(R.inventory.smg.reserve===0&&R.points===349,'Short of the price, nothing is sold');
+    // c. New Run: everything bought is gone, the armour and Forge stations are back at their first rank.
+    qa.resetRun();await Promise.resolve();G().shore.target=0;frames(2);
+    assert(!R.inventory.smg.owned&&!R.perkOwned.size&&R.armorTier===0&&at('armor').armorTier===0&&at('forge').forgeRank===0,'New Run starts the stations afresh');
+    // d. With the stations standing, the island still has no pockets, its beach loop and trails
+    // are open, and no one rises within 6 m of a station.
+    {const I=G().island,{trails}=await import('../public/game/island.mjs').then(m=>m.islandSites()),{enemyBody}=await import('../public/game/crowd.mjs'),b=enemyBody({brute:true}),BR=Math.max(.44,b.radius);
+     const open=(x,z,r,h)=>groundHeight(x,z)>=-ISLAND.wade&&!I.isBlocked(x,z,r,I.colliders,null,I.supportBelow(x,z,groundHeight(x,z),ISLAND.step),h);
+     for(const [who,radius,height] of [['walker',.44,1.8],['brute',BR,b.height]]){const routes=I.buildRoutes({radius,height});routes.rebuild(ISLAND.hill.x,ISLAND.hill.z+1);let cut=0;
+       const onRock=(x,z)=>I.platforms.some(p=>p.r!==undefined&&(x-p.x)**2+(z-p.z)**2<p.r*p.r);
+       for(let i=0;i<routes.blocked.length;i++){if(routes.blocked[i])continue;const x=(i%routes.w)*routes.cell-84,z=Math.floor(i/routes.w)*routes.cell-84;if(routes.distance[i]>=99999&&groundHeight(x,z)>-.6&&!onRock(x,z))cut++;}
+       assert.equal(cut,0,`With the stations, every open cell still has a route to the summit for a ${who}`);}
+     for(let a=-Math.PI;a<Math.PI;a+=.02){const Rc=coastRadius(a);let run=0,best=0;for(let r=Rc*.66;r<=Rc*1.05;r+=.5){if(open(Math.cos(a)*r,Math.sin(a)*r,BR,b.height)){run+=.5;best=Math.max(best,run);}else run=0;}narrowest=Math.min(narrowest,best);}
+     assert(narrowest>=6,`The beach is still open all the way round (${narrowest.toFixed(1)} m)`);
+     for(const t of trails)for(let k=1;k<t.points.length;k++){const [ax,az]=t.points[k-1],[bx,bz]=t.points[k],n=Math.ceil(Math.hypot(bx-ax,bz-az)/.5);for(let j=0;j<=n;j++){const x=ax+(bx-ax)*j/n,z=az+(bz-az)*j/n;assert(open(x,z,BR,b.height),`${t.name} is still clear`);}}
+     const net=G().shore.zones;for(const z of net)for(const p of z.points)for(const s of stations)if(s.padId!=='ammo-tent')assert(Math.hypot(s.x-p[0],s.z-p[1])>=6,`${z.name} is 6 m or more from ${s.name}`);}
+    console.log(`PASS: the stations (v212): ${stations.length} in all, on every pad and in the tent, no shrines; each shows its prompt and sells at the mansion's price (the six weapons, the M4's and the Warden's ranks, the four perks once each with Ironheart's double health, the armour and every Nano Shield rank, the Forge, ammunition at five places for 350), nothing short of the price; New Run starts them afresh; with them standing, no pockets for walkers or brutes, the beach loop at least ${narrowest.toFixed(1)} m and every trail open, and no spawn point within 6 m.`);
   }
 }finally{Math.random=random;}
 process.exit(0);

@@ -67,7 +67,7 @@ const {coast:COAST,hill:HILL,lowland:LOW,seabed:DEEP}=ISLAND;
 // how far in from the waterline its shelter stands; how far down the ridge's face B-01 is dug.
 // v211: B-01 comes out of the ridge's north-east (seaward) face, `out` m from its crest line.
 const DOCK=Object.freeze({bearing:1.36,length:15}),COVE=Object.freeze({bearing:.62,at:.79}),BUNKER=Object.freeze({out:9}),
-  AMMO=Object.freeze({x:2,z:-1.4,size:.8,reach:2});   // v211: the test ammo crate, in the tent's own frame
+  AMMO=Object.freeze({x:2,z:-1.4,size:.8,reach:2});   // v211: the tent's ammo crate, in the tent's own frame
 // v206: the routes' grid (cell size and half-width, m).
 export const NAV=Object.freeze({cell:.5,extent:84});
 const TAU=Math.PI*2,COVES=COAST.coves.map(([b,depth,width])=>[b,depth,1/width]);
@@ -121,7 +121,7 @@ export function islandSites(){
   const bunkerAngle=Math.PI-ridge.angle,[bx,bz]=turned(ridge.x,ridge.z,bunkerAngle,0,BUNKER.out);
   const sites={
     tent:{x:T.x,z:T.z,angle:0},tower:{x:ISLAND.tower.x,z:ISLAND.tower.z},
-    // v211: an ammunition crate under the tent's canopy, for testing (free; the real stations come in step 5).
+    // v211: an ammunition crate under the tent's canopy (v212: an ammunition station like the others, 350 essence).
     ammo:{x:T.x+AMMO.x,z:T.z+AMMO.z,reach:AMMO.reach},
     bunker:{x:bx,z:bz,angle:bunkerAngle},ruin:{x:knoll.x,z:knoll.z,angle:.3},wreck:{x:wx,z:wz,heading:W.bearing+Math.PI},
     camp:{x:bluff.x,z:bluff.z,angle:-.6},dock:{x:dx,z:dz,angle:Math.atan2(dx,dz),bearing:DOCK.bearing},
@@ -133,29 +133,44 @@ export function islandSites(){
     ['BUNKER B-01',...at(S.bunker,0,.5),10],['JUNGLE RUIN',S.ruin.x,S.ruin.z,11],['SHIPWRECK COVE',S.wreck.x+5,S.wreck.z,15],['COASTAL CAMP',S.camp.x,S.camp.z,11],
     ['SOUTH DOCK',...at(S.dock,1.5,-6),10],['EAST COVE',...at(S.cove,0,3),12],['SOUL FORGE',S.forge.x,S.forge.z,8.5],['NORTH BEACH',S.north.x,S.north.z,17]
   ].map(([name,x,z,r])=>Object.freeze({name,x,z,r}));
-  // The pads: one for every weapon the game sells, and the Forge (spec 4.1). Perks, ammunition,
-  // armour and the shrines get theirs with the stations themselves, in step 5.
-  const pad=(id,label,landmark,[x,z],angle=0)=>Object.freeze({id,label,landmark,x:+x.toFixed(3),z:+z.toFixed(3),angle});
+  // The pads: one for every weapon the game sells and the Forge (spec 4.1), and (v212) the
+  // armour, perk and ammunition stations, spread round the island so that kitting out means
+  // moving: the armour by B-01, one perk in each quarter (Quickhands at the ruin, Nightstride on
+  // North Beach, Ironheart at the camp, Deadeye at East Cove), ammunition on North Beach, at
+  // Shipwreck Cove, the South Dock and the Forge (and in the radio tent). No shrines: Dead Tide
+  // sells neither the timed double damage nor endless grenades. Each new pad was found on open,
+  // near-level ground in its landmark, off the trails and the beach's loop, clear of every
+  // spawn point. Every station faces Radio Hill's summit. Step 5 (v212) builds them.
+  const pad=(id,kind,label,landmark,[x,z])=>Object.freeze({id,kind,label,landmark,x:+x.toFixed(3),z:+z.toFixed(3),angle:+Math.atan2(HILL.x-x,HILL.z-z).toFixed(4)});
   const stations=[
-    pad('bushmaster','BUSHMASTER .450','LOOKOUT COMPOUND',[HILL.x+1,HILL.z-6.2]),
-    pad('katana','KATANA','LOOKOUT COMPOUND',[HILL.x-7,HILL.z+.5],Math.PI/2),
-    pad('smg','RAVEN SMG','JUNGLE RUIN',at(S.ruin,0,0),S.ruin.angle),
-    pad('shotgun','SHOTGUN','SHIPWRECK COVE',[S.wreck.x+11.5,S.wreck.z+4.5],Math.PI/2),
-    pad('rifle','M4','COASTAL CAMP',at(S.camp,.6,.4),S.camp.angle),
-    pad('lmg','WARDEN LMG','SOUTH DOCK',at(S.dock,3.2,-8),S.dock.angle),
-    pad('glock','GLOCK 21','EAST COVE',at(S.cove,0,4.2),S.cove.angle),
-    pad('forge','SOUL FORGE','SOUL FORGE',[S.forge.x,S.forge.z],S.forge.angle)
+    pad('bushmaster','weapon','BUSHMASTER .450','LOOKOUT COMPOUND',[HILL.x+1,HILL.z-6.2]),
+    pad('katana','weapon','KATANA','LOOKOUT COMPOUND',[HILL.x-7,HILL.z+.5]),
+    pad('smg','weapon','RAVEN SMG','JUNGLE RUIN',at(S.ruin,0,0)),
+    pad('shotgun','weapon','SHOTGUN','SHIPWRECK COVE',[S.wreck.x+11.5,S.wreck.z+4.5]),
+    pad('rifle','weapon','M4','COASTAL CAMP',at(S.camp,.6,.4)),
+    pad('lmg','weapon','WARDEN LMG','SOUTH DOCK',at(S.dock,3.2,-8)),
+    pad('glock','weapon','GLOCK 21','EAST COVE',at(S.cove,0,4.2)),
+    pad('forge','forge','SOUL FORGE','SOUL FORGE',[S.forge.x,S.forge.z]),
+    pad('armor','armor','AEGIS BODY ARMOR','BUNKER B-01',[25.2,-45.2]),
+    pad('quick','perk','QUICKHANDS','JUNGLE RUIN',[-41.5,-26.5]),
+    pad('stride','perk','NIGHTSTRIDE','NORTH BEACH',[3,-49.2]),
+    pad('iron','perk','IRONHEART','COASTAL CAMP',[-38.5,25.5]),
+    pad('eye','perk','DEADEYE','EAST COVE',[35.7,26.1]),
+    pad('ammo-north','ammo','AMMUNITION','NORTH BEACH',[-5,-49.2]),
+    pad('ammo-wreck','ammo','AMMUNITION','SHIPWRECK COVE',[-41,-7.7]),
+    pad('ammo-dock','ammo','AMMUNITION','SOUTH DOCK',[12.8,47.9]),
+    pad('ammo-forge','ammo','AMMUNITION','SOUL FORGE',[29.5,-9.5])
   ];
   // The trails: the spec's seven cross-routes and two that close its loops. The beaches are
   // the perimeter loop.
   const trail=(name,...points)=>Object.freeze({name,points:Object.freeze(points.map(p=>Object.freeze(p)))});
   const trails=[
     trail('RUIN TO RADIO HILL',[S.ruin.x+5,S.ruin.z+3],[-25,-21],[-17,-15],[HILL.x-8.5,HILL.z-.5]),
-    trail('WRECK TO CAMP',[S.wreck.x+11,S.wreck.z+3],[-41,10],[-35,17],at(S.camp,0,-6.5)),
+    trail('WRECK TO CAMP',[S.wreck.x+14.5,S.wreck.z+1.5],[-41,10],[-35,17],at(S.camp,0,-6.5)),
     trail('NORTH BEACH TO RADIO HILL',[-5,-56],[-10,-44],[-5,-30],[HILL.x,HILL.z-9]),
     trail('BUNKER TO RADIO HILL',at(S.bunker,0,4.5),[22,-44],[12,-40],[4,-30],[HILL.x+7,HILL.z-6.5]),   // v211: round the ridge's north-west end
     trail('RADIO HILL TO FORGE',[HILL.x+9,HILL.z+1],[14,-5],[23,-3.5],[S.forge.x-3.5,S.forge.z]),
-    trail('RADIO HILL TO DOCK',[HILL.x+2,HILL.z+9],[1,16],[5,32],[9,46],at(S.dock,2,-9)),
+    trail('RADIO HILL TO DOCK',[HILL.x+2,HILL.z+9],[1,16],[5,32],[9,46],at(S.dock,-.8,-10.5)),
     trail('CAMP TO EAST COVE',[S.camp.x+4,S.camp.z+2],[-14,34],[4,37],[22,32],at(S.cove,-4.5,5)),
     trail('FORGE TO EAST COVE',[S.forge.x+1,S.forge.z+4],[36,13],at(S.cove,7.5,-3)),
     trail('RUIN TO WRECK',[S.ruin.x-2,S.ruin.z+5],[-45,-13],[S.wreck.x+13,S.wreck.z-1])
@@ -380,7 +395,7 @@ void main(){
     A.box(steel,-1.3,.8,-1.25,.9,.38,.42);A.box(glow,-1.3,.9,-1.03,.6,.08,.01);                                    // the radio set and its dial
     A.block(-.9,-1.2,2.6,.8,1.2);                                                                                  // what the desk blocks
     A.crate(-2.1,1.3,1.1,.4);
-    // v211: the ammunition crate, olive with a yellow band, in the north-east corner (clear of the walk through).
+    // v211: the ammunition crate, olive with a yellow band, in the north-east corner (clear of the walk through; v212: sold like any ammunition station).
     A.box(ammoMat,AMMO.x,0,AMMO.z,AMMO.size,AMMO.size*.75,AMMO.size,{collide:true});A.box(band,AMMO.x,AMMO.size*.3,AMMO.z,AMMO.size+.02,.08,AMMO.size+.02);A.box(band,AMMO.x,AMMO.size*.75,AMMO.z,AMMO.size*.5,.03,AMMO.size*.12);
   }
   const lamp=new T.PointLight(0xffb867,2.4,7.5,1.6);lamp.position.set(TENT.x-.4,summit+TENT.eave-.25,TENT.z-.4);scene.add(lamp);lights.push(lamp);
@@ -491,7 +506,8 @@ void main(){
   // North Beach: driftwood above the tide line (too low to block).
   {const A=site(SITE.north.x,SITE.north.z,0,null,'north');for(const [x,z,l,ry] of [[-9,3,3.6,.3],[7,4.5,2.8,-.5],[14,1.5,3.2,1.1],[-17,5,2.4,-.2]])A.post(timber,x,.02,z,.14,l,{rz:Math.PI/2,rx:ry});}
   // The station pads (step 5 builds the stations on them): a pale slab apiece, flush with the ground.
-  for(const p of stations){const y=supportBelow(p.x,p.z,Infinity)+.012,m=new T.Mesh(BOX,padMat);m.position.set(p.x,y,p.z);m.scale.set(1.6,.04,1.05);m.rotation.set(0,p.angle,0);m.receiveShadow=true;props.add(m);}
+  // (v212: wide enough for a weapon's cabinet, and thick enough to meet the ground on a slight slope.)
+  for(const p of stations){const y=supportBelow(p.x,p.z,Infinity)-.06,m=new T.Mesh(BOX,padMat);m.position.set(p.x,y,p.z);m.scale.set(2.2,.16,1.4);m.rotation.set(0,p.angle,0);m.receiveShadow=true;props.add(m);}
   merge(props);
 
   // Where nothing may grow or lie: the landmarks, the pads, the trails, the landing spot, the
@@ -501,11 +517,13 @@ void main(){
   // Palms: leaning trunks and drooping crowns, instanced (two draw calls for all of them).
   const rand=seeded(210),palmSpots=[];
   // (None on Radio Hill's upper slopes: the climb stays open from every side.)
-  const clear=(x,z,gap)=>free(x,z,gap)&&groundHeight(x,z)>.5&&Math.hypot(x-HILL.x,z-HILL.z)>HILL.foot-9&&palmSpots.every(p=>Math.hypot(p.x-x,p.z-z)>gap);
+  // (v212: a palm keeps 2.2 m clear of what must stay open, whatever its spacing from the next palm;
+  // with seventeen station pads, the wider spacing left too few places.)
+  const clear=(x,z,gap)=>free(x,z,2.2)&&groundHeight(x,z)>.5&&Math.hypot(x-HILL.x,z-HILL.z)>HILL.foot-9&&palmSpots.every(p=>Math.hypot(p.x-x,p.z-z)>gap);
   // Thick round the ruin (the jungle), a grove behind Shipwreck Cove, then singles inland of every beach.
   for(let tries=0;tries<900&&palmSpots.length<22;tries++){const a=rand()*Math.PI*2,r=9+rand()*13,x=SITE.ruin.x+Math.cos(a)*r,z=SITE.ruin.z+Math.sin(a)*r*.9;if(clear(x,z,3.4))palmSpots.push({x,z});}
   for(let tries=0;tries<500&&palmSpots.length<34;tries++){const a=Math.PI*(.86+rand()*.4),r=coastRadius(a)*(.5+rand()*.26),x=Math.cos(a)*r,z=Math.sin(a)*r;if(clear(x,z,3.4))palmSpots.push({x,z});}
-  for(let tries=0;tries<3000&&palmSpots.length<72;tries++){const a=rand()*Math.PI*2,r=coastRadius(a)*(.56+rand()*.23),x=Math.cos(a)*r,z=Math.sin(a)*r;if(clear(x,z,5.5))palmSpots.push({x,z});}
+  for(let tries=0;tries<3000&&palmSpots.length<46;tries++){const a=rand()*Math.PI*2,r=coastRadius(a)*(.56+rand()*.23),x=Math.cos(a)*r,z=Math.sin(a)*r;if(clear(x,z,5.5))palmSpots.push({x,z});}
   const trunkGeo=new T.CylinderGeometry(.15,.27,1,7,4);trunkGeo.translate(0,.5,0);
   const crownGeo=(()=>{const pos=[],nor=[],uv=[];
     for(let f=0;f<8;f++){const a=f/8*Math.PI*2+(f%2)*.2,dir=new T.Vector3(Math.cos(a),0,Math.sin(a)),side=new T.Vector3(-dir.z,0,dir.x);

@@ -2,6 +2,7 @@ import * as T from './three.module.js';
 import {createDisplay} from './display.mjs?v=205';
 import {createAudio} from './audio.mjs?v=201';
 import {batchArticulated} from './batching.mjs?v=204';
+import {mergeStationPalette,mergeModelPalette,mergeStationParts,mergeStationPlaques} from './tide-palette.mjs?v=212';
 import {createFirstPerson} from './first-person.mjs?v=205';
 import {createGrenadeAssets,createGrenadeThrow} from './grenade-throw.mjs?v=186';
 import {createExplosionFx} from './explosion-fx.mjs?v=191';
@@ -9,7 +10,7 @@ import {createEffectPool} from './effect-pool.mjs?v=47';
 import {createWeaponRecoil,createCombatHud} from './combat-feedback.mjs?v=205';
 import {createReticleHud} from './reticles.mjs?v=205';
 import {weaponSurfaces} from './weapon-surfaces.mjs?v=153';
-import {katanaSurfaces} from './katana.mjs?v=205';
+import {katanaSurfaces,KATANA_STATION} from './katana.mjs?v=205';
 import {ambientEnvironment} from './graphics.mjs?v=205';
 import {SHOT_RUMBLE} from './weapon-stats.mjs?v=205';
 import {createRunState,createPlayer} from './player.mjs?v=198';
@@ -17,18 +18,20 @@ import {createHud} from './hud.mjs?v=205';
 import {createSession,createControls,WEAPON_CYCLE} from './controls.mjs?v=205';
 import {createWeaponRuntime} from './weapon-runtime.mjs?v=206';
 import {createCombat} from './enemy-combat.mjs?v=206';
-import {PERKS} from './stations.mjs?v=205';
+import {PERKS,createStations,rackStation,ARMOR_STATION,forgeStation} from './stations.mjs?v=205';
+import {createStationBuilder,createModelKit} from './station-models.mjs?v=205';
+import {createSignage} from './signage.mjs?v=94';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
-import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=211';
+import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=212';
 import {buildEnemyAssets} from './enemy-assets.mjs?v=207';
 import {createCrowd,enemyBody} from './crowd.mjs?v=123';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=211';
+import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=212';
 import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=210';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
@@ -39,8 +42,8 @@ import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRan
 // through the island's view of itself in tide-dead.mjs. v208: the threat director (step 3a,
 // tide-threat.mjs): kills raise the threat level, which sets the population, the next
 // arrivals' strength and the mix of kinds. v209 (step 3b): the spawn network (tide-dead.mjs)
-// and the threat tracker with its cue (below). Stations, the leaderboard and the run summary
-// (step 4) come next.
+// and the threat tracker with its cue (below). v210–v211: the island's map. v212 (step 5): the
+// stations on its pads (below). The leaderboard and the run summary come next.
 performance.mark?.('tide:modules');
 const domCache=new Map(),$=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);};
 const shownMarkup=new Map(),shownOpacity=new Map();
@@ -55,6 +58,80 @@ const {renderer,scene,camera}=display;
 const FOG=0x0b2224;scene.background=new T.Color(FOG);scene.fog=new T.FogExp2(FOG,.0105);
 const world=new T.Group();world.name='Dead Tide island';scene.add(world);
 const island=buildIsland({scene,world}),{supportBelow,isBlocked}=island,{colliders,solidMeshes}=island;
+// ---- The stations (v212, Dead Tide step 5) ------------------------------------------------------
+// The mansion's own station models and what they sell (stations.mjs, station-models.mjs), each on
+// its pad (island.mjs: islandSites().stations): every weapon at its landmark, the Soul Forge in
+// its clearing, the armour by B-01, one perk in each quarter of the island and ammunition on
+// North Beach, at Shipwreck Cove, the South Dock and the Forge, and the radio tent's ammo crate.
+// The same prices and effects as the mansion. No shrines: neither the timed double damage nor
+// endless grenades is sold here. They are placed before the routes are built, so the dead walk
+// round them, and they block as the island's own props do (never something to stand on).
+const signage=createSignage({anisotropy:Math.min(16,renderer.capabilities?.getMaxAnisotropy?.()??16)});
+// (They stand in a group of their own, so their still parts can be merged by material below.)
+const interactables=[],stationColliders=[],stationsRoot=new T.Group();stationsRoot.name='Stations';world.add(stationsRoot);
+const stationBuilder=createStationBuilder({world:stationsRoot,colliders:stationColliders,solidMeshes,interactables,label:signage.label});
+const PERK_DEFS=Object.fromEntries(PERKS.map(p=>[p.id,p]));
+// The M4 and the Warden LMG are the mansion's own kinds there (the shed's bench, the cellar's
+// exhibit); here they stand on racks like the others, built as an SMG's rack with their gun on it.
+const OWN_RACKS={rifle:{name:'M4 / ASSAULT RIFLE',price:4500,hex:'#e6bf61',modelCaption:'M4 · SELECT FIRE · UPGRADE RANKS ONCE OWNED'},
+  lmg:{name:'WARDEN / BELT-FED LMG',price:5000,hex:'#e6bf61',modelCaption:'WARDEN · BELT-FED · 3× SCOPE · UPGRADE RANKS ONCE OWNED'}};
+const WEAPON_STATIONS={bushmaster:['AR-15 / .450 BUSHMASTER',2500],katana:['TSURU KATANA',undefined],smg:['RAVEN SMG',1500],shotgun:['M12 SHOTGUN',1200],glock:['GLOCK 21 PISTOL',250]};
+function stationDef(p){
+  if(p.kind==='forge')return forgeStation('THE SOUL FORGE');
+  if(p.kind==='armor')return {...ARMOR_STATION};
+  if(p.kind==='ammo')return rackStation('ammo','AMMUNITION',350);
+  if(p.kind==='perk'){const d=PERK_DEFS[p.id];return {...d,type:'perk',modelCaption:d.desc};}
+  if(OWN_RACKS[p.id])return {...rackStation('smg',OWN_RACKS[p.id].name,OWN_RACKS[p.id].price),...OWN_RACKS[p.id]};
+  const [name,price]=WEAPON_STATIONS[p.id];return p.id==='katana'?{...KATANA_STATION}:rackStation(p.id,name,price);
+}
+const rackKit=createModelKit();
+for(const p of island.stations){
+  const y=groundHeight(p.x,p.z)+.02,def=stationDef(p),made=stationBuilder.add({x:p.x,z:p.z,y,rotation:p.angle,...def});
+  made.station.padId=p.id;made.station.landmark=p.landmark;
+  if(OWN_RACKS[p.id]){
+    made.station.type=p.id;
+    const shown=[];made.group.traverse(o=>{if(o.userData?.weaponType==='smg')shown.push(o);});
+    for(const o of shown){const gun=rackKit.gun(p.id);gun.position.copy(o.position);gun.scale.copy(o.scale).multiplyScalar(p.id==='lmg'?.88:1);o.parent.add(gun);o.parent.remove(o);}
+  }
+}
+// The tent's ammo crate (v211) is an ammunition station too.
+{const A=island.sites.ammo;interactables.push({type:'ammo',name:'RADIO TENT AMMUNITION',price:350,hex:'#67efbb',x:A.x,z:A.z,y:island.summit,padId:'ammo-tent',landmark:'LOOKOUT COMPOUND'});}
+// Their still parts merged (v212): the painted ones with their colours baked into a shared
+// material and the plaques' lettering into one atlas (tide-palette.mjs), the rest by material,
+// all indexed and in cells, as the mansion merges its world (though wider than the mansion's 24 m: the stations
+// stand apart on open ground, so a station's parts would draw in calls of their own otherwise).
+// The moving and changing parts (the Forge's stone, the armour and Nano Shield models, the
+// armour's and the Forge's plates) are marked dynamic by their kits and stay apart. Plaques cast no shadow.
+const STATION_CELL=48;
+stationsRoot.traverse(m=>{if(m.isMesh&&m.material?.userData?.sign)m.castShadow=m.receiveShadow=false;});
+// The Forge's soul stone is an octahedron, whose faces already have normals of their own: drawn
+// smooth-shaded it looks the same, and needs no flat-shaded shader of its own (its kit is ours).
+stationsRoot.getObjectByName('Faceted soul stone').material.flatShading=false;
+// Its seams are lines; drawn with the plain unlit material instead of a line material, they look
+// the same and share a shader the island already has.
+{const seams=stationsRoot.getObjectByName('Soul stone luminous seams');seams.material=new T.MeshBasicMaterial({color:seams.material.color});}
+{const parts=new Set();stationsRoot.traverse(m=>{if(m.isMesh)parts.add(m);});
+ // The armour and its Nano Shields show one at a time, each merged within itself.
+ for(const st of interactables)if(st.nanoModels)for(const model of [st.model,...st.nanoModels])mergeModelPalette(model,{textured:false});
+ mergeStationPalette(stationsRoot,{cell:STATION_CELL,textured:false});mergeStationPlaques(stationsRoot,{cell:STATION_CELL});
+ mergeStationParts(stationsRoot,{cell:STATION_CELL});
+ // Bullets, grenades and blasts stop at each station's box (its collider), not at its thousands
+ // of merged triangles: a box each, never drawn, stands in for them.
+ for(let i=solidMeshes.length-1;i>=0;i--)if(parts.has(solidMeshes[i]))solidMeshes.splice(i,1);
+ solidMeshes.push(...stationHitBoxes(stationColliders));}
+// The stations never move: once merged, the per-frame matrix pass skips them (only the Forge's
+// hovering stone, animated by the builder, keeps updating).
+{stationsRoot.updateMatrixWorld(true);const moving=new Set();for(const {core} of stationBuilder.visuals)core?.traverse(o=>moving.add(o));
+ stationsRoot.traverse(o=>{if(!moving.has(o))o.matrixAutoUpdate=false;});
+ for(const child of stationsRoot.children){let still=true;child.traverse(o=>{if(moving.has(o))still=false;});if(still)child.matrixWorldAutoUpdate=false;}}
+function stationHitBoxes(list){
+  const material=new T.MeshBasicMaterial({visible:false});
+  return list.map(c=>{const mesh=new T.Mesh(new T.BoxGeometry(c.w,c.maxY-c.minY,c.d),material);mesh.position.set(c.x,(c.minY+c.maxY)/2,c.z);mesh.name='Station hit box';mesh.updateMatrixWorld(true);return mesh;});
+}
+// The builder's colliders (upright boxes, minY to maxY) as the island's: never low enough to
+// climb onto from the ground round them.
+for(const c of stationColliders){let ground=-Infinity;const reach=Math.hypot(c.w,c.d)/2+.4;for(let a=0;a<6.3;a+=.3)for(const f of [.5,1]){const h=groundHeight(c.x+Math.cos(a)*reach*f,c.z+Math.sin(a)*reach*f);if(h>ground)ground=h;}
+  colliders.push({x:c.x,z:c.z,w:c.w,d:c.d,bottom:c.minY-2,top:Math.max(c.maxY,ground+1.05),cos:1,sin:0,kind:'station'});}
 // The guns' metal reflects the same soft surroundings as in the mansion.
 scene.environment=ambientEnvironment();scene.environmentIntensity=.48;
 const hemisphere=new T.HemisphereLight(0x6f8f96,0x121c1a,1.05);scene.add(hemisphere);
@@ -144,20 +221,6 @@ function updateThreat(dt){
 }
 // A new run starts again at level 1, quietly.
 function resetThreat(){Object.assign(threatTracker,{level:threatLevel(runState.kills),rank:threatRank(threatLevel(runState.kills)).index,kills:runState.kills,pulse:0,rankGlow:0});updateThreat(0);showThreat();}
-// ---- The test ammo crate (v211) ------------------------------------------------------------------
-// Under the radio tent's canopy, until the real stations arrive (step 5): free, and as often as
-// you like, so the threat's later ranks can be reached and tried. It restocks every gun you carry
-// (as the mansion's ammo stations do) and adds a grenade.
-const AMMO_CRATE=island.sites.ammo;
-function atAmmoCrate(){return session.mode==='playing'&&runState.health>0&&Math.hypot(player.x-AMMO_CRATE.x,player.z-AMMO_CRATE.z)<=AMMO_CRATE.reach&&Math.abs(player.y-island.summit)<1.2;}
-function ammoNeeded(){for(const k in runState.inventory)if(runState.inventory[k].owned&&!ammoFull(k))return true;return runState.grenades<4;}
-function ammoPrompt(){const key=padPlay()?'B':touchControls?.enabled?'USE':'E';return `<strong>${key}</strong> AMMO CRATE <span style="color:#d4b77a">FREE · TESTING</span><small>${ammoNeeded()?'Restock every gun you carry, and a grenade.':'You are fully stocked.'}</small>`;}
-function useAmmoCrate(){
-  if(!atAmmoCrate())return false;
-  if(!ammoNeeded()){notify('AMMUNITION FULL');return false;}
-  refillAmmo();   // reserves full, including what the magazine lacks (a reload tops it up), as the mansion's stations
-  notify('AMMUNITION RESTOCKED');tone(330,.1,.04,'square',440);updateHud();return true;
-}
 const weaponRecoil=createWeaponRecoil(),combatHud=createCombatHud({hit:$('hit'),headshot:$('headshotIndicator'),directions:$('damageDirections'),toggle:$('headshotToggle')});
 function addPoints(n){runState.points+=n;runState.totalScore+=n;return n;}
 // The weapon runtime reaches the run, the session and the view through one object.
@@ -167,7 +230,7 @@ link(runState,['inventory','weapon','perkOwned','points','reloadLeft','reloadDur
 link(session,['mode','aiming','lookYaw','lookPitch']);
 link(firstPerson,['flashTime','recoil','dualSide','viewFov'],['flashTime','recoil','dualSide','weaponViewFov']);
 const raycaster=new T.Raycaster();let combat=null;
-const {swing,updateMelee,freshInventory,shoot,reload,finishReload,holdToFire,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,ammoFull,refillAmmo,selectWeapon,applyWeaponRanks,viewGun,zoomOf,aimFovOf,aimHeight}=createWeaponRuntime({
+const {swing,updateMelee,freshInventory,shoot,reload,finishReload,holdToFire,grenade,grenadeCue,releaseGrenade,grantPowerup,dualOn,ammoFull,refillAmmo,restockWeapon,buyWeaponRank,selectWeapon,applyWeaponRanks,viewGun,zoomOf,aimFovOf,aimHeight}=createWeaponRuntime({
   level:{colliders,isBlocked,solidMeshes,floorOf:islandLevel.floorOf},
   view:{camera,gunGroups,bushDot,smgDual,dualGuns,dualMuzzle,flash,reticleHud,weaponRecoil,grenadeThrow,grenadeAssets},
   run:{scene:world,zombies,effects,markPool,rand,tone,noise,notify,rumble:padRumble,suppressedReport,updateHud,updateReloadHud,shotRumble:SHOT_RUMBLE,raycaster,player},
@@ -175,6 +238,11 @@ const {swing,updateMelee,freshInventory,shoot,reload,finishReload,holdToFire,gre
   combat:{get damageEnemy(){return combat.damageEnemy;},get bloodBurst(){return combat.bloodBurst;},get detonateRound(){return combat.detonateRound;}}
 });
 firstPerson.bind({player,state:runState,session,weaponRecoil,grenadeThrow,arms:{aimFovOf,zoomOf,dualOn,aimHeight,viewGun,swing}});
+// v212: what the stations sell, and E (B, USE) at the nearest one, as in the mansion. Dead Tide's
+// only rule of its own: an owned M4 or Warden with every rank earned is simply taken up again.
+const stationKit=createStations({stations:interactables,player,state:runState,isPlaying:()=>session.mode==='playing',
+  arms:{selectWeapon,buyWeaponRank,ammoFull,restockWeapon,refillAmmo,grantPowerup},hud:{notify,updateHud},sound:{tone},
+  rules:{equip(s){if((s.type==='rifle'||s.type==='lmg')&&runState.inventory[s.type].owned){selectWeapon(s.type);return true;}}}});
 // Combat on the island: hits, kills and essence, grenade blasts, blood, impact marks and the
 // power-ups the dead drop. Blasts and pickups are in the world's heights; enemies' heights
 // go through the island's standAt (v206).
@@ -218,7 +286,7 @@ const controlScheme=createControlScheme({win:window,controllerSupported:true,onC
 const {hasMouseLock,clearPlayInput,releaseMouse,requestPointer,resumeLabel,pauseGame,showPauseMenu,settingsOpen,openSettings,closeSettings,confirmOpen,askConfirm,cancelConfirm,acceptConfirm,resumeGame,
   directControls,padPlay,touchActions,padActions,onPointerLockChange,onPointerLockError,onVisibilityChange,onMouseMove,onMouseDown,onMouseUp,playKey,onKeyUp,onBlur}=createControls({
   page:{$,canvas,keys},session,state:runState,
-  act:{shoot,reload,grenade,selectWeapon,zoomOf,interact(){useAmmoCrate();},toggleFlashlight,openEstateMap(){},initAudio,fitTouchStick},
+  act:{shoot,reload,grenade,selectWeapon,zoomOf,interact(){stationKit.interact();},toggleFlashlight,openEstateMap(){},initAudio,fitTouchStick},
   ui:{get touchControls(){return touchControls;},get controlScheme(){return controlScheme;}},
   hooks:{
     onPause(){},onPauseMenu(){},
@@ -317,7 +385,7 @@ function resetRun({capture=true}={}){
   Object.assign(runState,{health:100,maxHealth:100,armor:0,armorMax:0,armorTier:0,points:500,totalScore:0,kills:0,runTime:0,lastHurt:-20,grenades:3,doubleTime:0,grenadeTime:0,grenadeCooldown:0});
   runState.perkOwned.clear();runState.inventory=freshInventory();applyWeaponRanks();
   Object.assign(runState,{reloadLeft:0,shotTimer:0,feetY:0,jumpV:0,grounded:true,shotId:0});clearFlashes();
-  weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();resetThreat();firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');
+  weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();resetThreat();stationBuilder.reset();firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');
   session.mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');
   if(capture)requestPointer();
   else{$('pauseTitle').textContent='The island is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}
@@ -388,8 +456,8 @@ function tick(now){
     grenadeThrow.update(dt,releaseGrenade,grenadeCue);combat.updateEffects(dt);explosionFx.update(dt);combat.updatePickups(dt);
     recover(dt,true);runState.doubleTime=Math.max(0,runState.doubleTime-dt);runState.grenadeTime=Math.max(0,runState.grenadeTime-dt);
     zone=island.zoneAt(player.x,player.z,player.y);setMarkup('location',`DEAD TIDE <span> / ${zone}</span>`);
-    const crate=atAmmoCrate();setMarkup('interaction',crate?ammoPrompt():'');
-    touchControls?.update({playing:true,aiming:session.aiming,canInteract:crate,flashlight:firstPerson.flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
+    stationKit.updateForges();const near=stationKit.closest();setMarkup('interaction',near?stationKit.prompt(near,padPlay()?'B':touchControls?.enabled?'USE':'E'):'');
+    touchControls?.update({playing:true,aiming:session.aiming,canInteract:!!near,flashlight:firstPerson.flashlightOn,canSwap:WEAPON_CYCLE.filter(k=>runState.inventory[k]?.owned).length>1});
     gunRoot.visible=true;
     const ads=firstPerson.updateGun(dt,{moving,sprint});setOpacity('crosshair',ads?0:1);
     hudTick-=dt;if(hudTick<=0){updateHud();hudTick=.1;}
@@ -398,7 +466,7 @@ function tick(now){
     const a=elapsed*.045+2.2,H=ISLAND.hill;camera.position.set(H.x+Math.cos(a)*MENU_ORBIT,22,H.z+Math.sin(a)*MENU_ORBIT);camera.lookAt(H.x,11,H.z);gunRoot.visible=false;
   }
   updateReloadHud();combatHud.update(dt,player,session.lookYaw+weaponRecoil.yaw);firstPerson.updateFlash(dt);fadeHud(dt,session.mode==='playing');
-  bloodPool.sync();markPool.sync();island.update(elapsed);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;
+  bloodPool.sync();markPool.sync();island.update(elapsed);stationBuilder.update(elapsed);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;
   display.render(gunRoot.visible||grenadeThrow.root.visible,world,firstPerson.viewFov);
 }
 window.addEventListener('resize',display.resize);display.resize();
