@@ -12,12 +12,14 @@
 // When the older trace predates the katana (v204 and earlier) its own additions are set
 // aside: its slot in the inventory and its flag among the guns in hand (`arms`), its stand's
 // row in the station tour and its entry in each row's run digest, and its own scenario.
-// The screen, view and page are hashed whole, so anything new in the scene or on the page
+// v208: its escalation scenarios add a `threat` channel, and scenarios new in the second trace
+// are listed. The screen, view and page are hashed whole, so anything new in the scene or on the page
 // changes them; the other channels must match exactly.
 import {readFileSync} from 'node:fs';
 const [before,after]=process.argv.slice(2).map(f=>JSON.parse(readFileSync(f,'utf8')));
 if(!before||!after){console.error('usage: node scripts/golden-compare.mjs before.json after.json');process.exit(2);}
-const CHANNELS=['player','zombies','pickups','run','session','arms','screen','view','dom','audio'];
+// v208: `threat` is Dead Tide's threat director (its escalation scenarios only; absent elsewhere).
+const CHANNELS=['player','zombies','pickups','run','session','arms','screen','view','dom','audio','threat'];
 const same=(x,y)=>JSON.stringify(x)===JSON.stringify(y);
 const katanaNew=!before.katana&&!!after.katana;
 // arms: 12 values, then 5 for each of the seven inventory slots (the katana's is the last),
@@ -42,4 +44,7 @@ const differing=before.stationTour.map((r,i)=>JSON.stringify(r)===clean(tour[i])
 console.log(`station tour: ${before.stationTour.length} rows; ${before.stationTour.length-differing.length} identical${katanaNew?` (the katana stand's ${after.stationTour.length-tour.length} row set aside)`:''}${differing.length?'; different: '+differing.join(', '):''}`);
 }
 if(katanaNew)console.log('the katana scenario is new in the second trace');
+// v208: scenarios only the second trace has (nothing to compare them with) are listed.
+const added=Object.keys(after).filter(n=>!['stationTour','boot','tide','katana'].includes(n)&&!before[n]);
+if(added.length)console.log(`new in the second trace: ${added.join(', ')}`);
 console.log(failures?`${failures} gameplay channel difference(s)`:'every gameplay channel matches (screen, view and page hashes aside)');

@@ -1,9 +1,10 @@
 import * as T from './three.module.js';
 import {PLAYER_RADIUS} from './crowd.mjs?v=123';
 import {shoreSpawns} from './island.mjs?v=206';
+import {THREAT_RULES,threatLevel,threatRank,targetPopulation,walkersOnly,chooseTideKind} from './tide-threat.mjs?v=208';
 
 // The dead come ashore (v206, Dead Tide step 2, slice 3): the island as the shared enemy
-// modules see it, and a stand-in director until the threat director arrives (step 3).
+// modules see it, and (v208, step 3a) the threat director that sends them.
 //
 // The island as one floor: the shared enemy AI, spawner and crowd were written for the
 // mansion's flat floors, where an enemy on your floor is within half a metre of your
@@ -43,29 +44,36 @@ export function playerOccupancy({crowd,island,player}){
   return (x,z,y)=>crowd.canOccupy(x,z,y-island.groundHeight(x,z),PLAYER_RADIUS,1.8,null,origin);
 }
 
-// ---- The stand-in director ------------------------------------------------------------------
-// Until the threat director (step 3): a steady eight walkers, the plan's threat-level-1
-// population, at the mansion's wave-1 strength (core.mjs waveConfig(1)). They rise out of the
-// surf at the shoreline points one at a time, never closer than 18 m and never where you are
-// looking within 40 m; with no safe point it waits and tries again rather than bending a rule.
-// The plan's hard cap of 45 living enemies holds whatever the target.
+// ---- The threat director (v208, Dead Tide step 3a) ---------------------------------------------
+// Replaces v206's stand-in (a steady eight walkers). Kills raise the threat level
+// (tide-threat.mjs): the level sets how many dead the shore keeps on the island, how strong
+// the next ones rise and which kinds they are. Arrivals keep the stand-in's rules: they rise
+// out of the surf at the shoreline points one at a time, 1.4 s apart, never closer than 18 m
+// and never where you are looking within 40 m; with no safe point the shore waits and tries
+// again rather than bending a rule. The hard cap of 45 living enemies holds whatever the
+// target. No waves: nothing waits for the island to be cleared, and nothing pauses.
+// (Rotating zones, minor points and the interior come in step 3b.)
 export const SHORE_RULES=Object.freeze({
-  living:8,cap:45,firstDelay:4,interval:1.4,retry:.5,near:18,
+  cap:THREAT_RULES.population.cap,firstDelay:4,interval:1.4,retry:.5,near:18,
   sight:Object.freeze({range:40,halfAngle:Math.PI*55/180}),
-  emerge:Object.freeze({time:1.6,depth:1.75}),
-  stats:Object.freeze({health:93,speed:1.145,damage:19.5})
+  emerge:Object.freeze({time:1.6,depth:1.75})
 });
 // v207: `ready` holds the shore back until the dead's bodies are built and their shaders
-// compiled (Dead Tide builds them behind its title screen).
-export function createShoreDirector({spawner,zombies,player,look,noise,ready=()=>true,rules=SHORE_RULES}){
+// compiled (Dead Tide builds them behind its title screen). v208: `kills` is the run's kill
+// count; `rng` is the game's generator, drawn from only when the level's mix has more than
+// walkers (so the walkers-only opening plays exactly as v207's stand-in did).
+export function createThreatDirector({spawner,zombies,player,look,noise,kills=()=>0,rng=Math.random,ready=()=>true,rules=SHORE_RULES}){
   const network=shoreSpawns(),points=[...network.major,...network.minor].flatMap(z=>z.points.map(([x,zz])=>[x,zz,0]));
-  let timer=rules.firstDelay,target=rules.living;
+  // `held` is a target set by hand (tests and the golden trace hold the shore at 0); `pending`
+  // is the kind rolled for the next arrival, kept until it comes ashore.
+  let timer=rules.firstDelay,held=null,pending=null;
+  const level=()=>threatLevel(kills()),target=()=>Math.min(rules.cap,held??targetPopulation(level()));
   const alive=()=>{let n=0;for(const e of zombies)if(!e.dead)n++;return n;};
   function inSight([x,z]){
     const dx=x-player.x,dz=z-player.z,d=Math.hypot(dx,dz);if(d>rules.sight.range||d<1e-6)return false;
     const yaw=look(),fx=-Math.sin(yaw),fz=-Math.cos(yaw);return Math.acos(Math.max(-1,Math.min(1,(dx*fx+dz*fz)/d)))<rules.sight.halfAngle;
   }
-  // One walker out of the surf, or false if no point is safe right now.
+  // One of the dead out of the surf, or false if no point is safe for its kind right now.
   function spawnOne(kind='walker'){
     const place=spawner.placement(kind),options=points.filter(p=>!inSight(p)&&place.valid(p,rules.near));
     const at=spawner.choosePoint(options,place);if(!at)return false;
@@ -73,16 +81,26 @@ export function createShoreDirector({spawner,zombies,player,look,noise,ready=()=
     e.shoreBorn=true;e.emergeLeft=e.emergeTime=rules.emerge.time;e.emergeDepth=rules.emerge.depth;e.group.position.y-=rules.emerge.depth;
     noise(.4,.05,700);return e;
   }
+  function nextKind(){if(!pending){const L=level();pending=walkersOnly(L)?'walker':chooseTideKind(L,rng());}return pending;}
+  // The next arrival. A kind with no safe point right now (a brute's wider routes may not
+  // reach you) keeps its turn for the next arrival, and a walker comes ashore in its place,
+  // so the shore never stalls on one kind and the mix is kept.
+  function arrive(){
+    const kind=nextKind();let e=spawnOne(kind);if(e){pending=null;return e;}
+    if(kind!=='walker'&&(e=spawnOne('walker')))return e;
+    return false;
+  }
   return {points,network,
-    get target(){return target;},set target(n){target=Math.max(0,Math.min(rules.cap,n));},
+    get level(){return level();},get rank(){return threatRank(level()).name;},get pending(){return pending;},
+    get target(){return target();},set target(n){held=Math.max(0,Math.min(rules.cap,n));},
     alive,spawnOne,
     // Whether the shore will try to send one soon (its routes must be current for that).
-    wanting(){return timer<=.7&&ready()&&alive()<Math.min(rules.cap,target);},
-    reset(){timer=rules.firstDelay;target=rules.living;},
+    wanting(){return timer<=.7&&ready()&&alive()<target();},
+    reset(){timer=rules.firstDelay;held=null;pending=null;},
     update(dt){
       timer-=dt;if(timer>0)return;
       if(!ready()){timer=rules.retry;return;}
-      if(alive()>=Math.min(rules.cap,target)){timer=rules.retry;return;}
-      timer=spawnOne()?rules.interval:rules.retry;
+      if(alive()>=target()){timer=rules.retry;return;}
+      timer=arrive()?rules.interval:rules.retry;
     }};
 }

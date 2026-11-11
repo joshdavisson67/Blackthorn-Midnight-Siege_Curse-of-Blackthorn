@@ -483,6 +483,51 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v208 (the threat director's core) against main (v207)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide: two measured pairs, 20 load-phase pairs, 24 frame-logic pairs) on one machine, headless Chromium with software rendering. This machine is slower than v207's: main itself takes about 6.5 s to playable here, against 4.6 s in v207's notes.
+
+### Mansion: quick
+
+Nothing it loads changed; five files differ only in their version number. The tier report is the proof.
+
+### Dead Tide: full protocol, one small new file
+
+| | main (v207) | v208 |
+|---|---:|---:|
+| Files / KB before playable | 62 / 2,018 | 63 / 2,025 |
+| Time to playable (load phases, 20 pairs) | 6,511 ms | 6,518 ms (+7, SE 51) |
+| ↳ modules | 273 ms | 286 ms (+13, SE 11) |
+| ↳ world | 854 ms | 841 ms (−13, SE 19) |
+| ↳ shaders | 5,383 ms | 5,391 ms (+8, SE 41) |
+| Shader programs, at load and after play | 40 | 40 |
+| Geometries / textures | 212 / 24 | 212 / 24 |
+| Heap after load, after a collection | 54.7 MB | 54.7 MB |
+| Frame logic, walking the empty island (24 pairs) | 0.224 ms | 0.222 ms (−0.001, SE 0.005) |
+
+- **The one new file** is `tide-threat.mjs`, the director's numbers, about 5 KB. That and the director's own lines in `tide-dead.mjs` make the 7 KB. Every phase is within noise.
+- **The golden trace:** the nine existing scenarios (the island's seven, `fight` and `summit`) are byte-identical to main's, because threat level 1 plays exactly as v207's stand-in. The three new escalation scenarios (`threshold`, `swarm`, `apocalypse`) differ from main, as they should: main's stand-in sends eight walkers at wave-1 strength whatever the kill count.
+
+### Dead Tide: the 45-enemy fight with the full mix
+
+The stress test now uses The Apocalypse's mix, the same ring in both builds: 19 walkers, 7 dogs, 7 ferals, 6 brutes, 3 Ashfangs and 3 lurkers, all unkillable, around an unkillable player on the south beach.
+
+- **Browser** (`perf-measure.mjs --page tide.html`, three runs of each build):
+  - all 45 alive throughout;
+  - 229 or 232 draw calls and 233K–237K triangles a frame in both builds (each build showed both counts, in different runs: timing, not the build);
+  - 7.0–8.2 ms of render CPU in both;
+  - heap 144.3 MB after a collection in both.
+  - v206–v207 measured 252 draw calls with the old ring, which had more walkers and no lurkers.
+- **Game logic** (`frame-logic.mjs --mode tide-fight`, six alternating pairs; lurkers that burst are replaced in the ring): main 3.685 ms, v208 3.680 ms a frame (mean of medians).
+- **In the tests** (`tests/dead-tide.mjs`), the director at level 52 sends all six kinds, fills to exactly 45 and never passes it.
+- **Not measured:** real GPUs, integrated graphics, or frame rates in a real browser.
+
+### Mode picker: standard, no differences
+
+Only its in-development line changed.
+
+Files: `v208-tide.jsonl` (both builds, with the fight), `v208-tide-load-phases.jsonl`, `v208-tide-frame-logic.jsonl`, `v208-tide-fight-logic.txt`, `v208-tier-summary.json`.
+
 ## v207 (the picker opens Dead Tide; the dead build behind its title) against main (v206)
 
 Measured by `node scripts/release-tier.mjs --measure` (24 frame-logic pairs, 20 load-phase runs each) on one machine, headless Chromium with software rendering, and one `perf-measure.mjs --page tide.html` run after the fix below.

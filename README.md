@@ -6,7 +6,7 @@ An original, single-player, first-person zombie survival game for desktop browse
 
 **Play in your browser:** https://joshdavisson67.github.io/Blackthorn-Midnight-Siege-v119-source/ (published automatically from `main` by `.github/workflows/pages.yml`). This copy's shared leaderboard is stored in Supabase; see below.
 
-**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the grey-box island with the dead coming ashore (version 207), before its threat director, stations and leaderboard. `modes.html` is the mode picker.
+**Dead Tide (preview):** open it from the mode picker (`modes.html`, *Play the preview*) or add `tide.html` to that address: the grey-box island with the dead coming ashore and the threat rising every 20 kills (version 208), before its threat tracker, rotating spawn zones, stations and leaderboard. `modes.html` is the mode picker.
 
 
 Enter the estate to capture the mouse. WASD moves, mouse looks, left click fires, right click aims, Shift sprints, Space jumps, R reloads, G throws a grenade, F toggles the flashlight, E buys or interacts, 1–6 switch owned guns and 7 draws the katana (version 205), M opens the estate map and pauses survival, and Escape releases the mouse and pauses. Click Resume to recapture the mouse. Play begins only after the browser confirms mouse lock; permission denial leaves the run safely paused with a retry control and browser permission guidance. Escape never attempts to recapture the cursor. Closing the map with Escape returns to pause; clicking Close or pressing M attempts capture before resuming.
@@ -28,6 +28,54 @@ Zombies now have five distinct estate-themed designs with modeled faces, layered
 Combat now uses ten prebuilt enemy templates with shared geometry/materials and independent animated skeletons. Shaders and enemy buffers are prepared during loading. Pickups and explosions use a fixed four-light pool; the flashlight switches intensity without changing the lighting shader configuration. Allocation-free collision queries and ragdoll constraint math, cached navigation adjacency, staggered line-of-sight checks, and unchanged-HUD suppression reduce CPU spikes. The FPS counter uses real elapsed time, including stalls.
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
+
+## The threat director's core (version 208)
+
+Dead Tide step 3a: the steady eight walkers of v206's stand-in give way to the design spec's threat director (section 6). There are still no waves anywhere: nothing waits for the island to be cleared, and nothing pauses when the threat rises. The mansion is unchanged.
+
+- **The threat level** is `floor(kills / 20) + 1`, with no maximum. Every kill counts, including those a lurker's burst makes.
+- **The ranks:** The Unease (levels 1–5, 0–99 kills), The Hunt (6–13, 100–259), The Swarm (14–23, 260–459) and The Apocalypse (24 on, 460 on).
+- **What the level sets** (`tide-threat.mjs`, every number in `THREAT_RULES`):
+  - **How many dead the shore keeps on the island:** `min(45, 8 + 2 × (level − 1))`, so 8 at the start, 18 at The Hunt, 34 at The Swarm and 45 from level 20. The hard cap of 45 holds whatever the target.
+  - **Their health:** +4% of the base a level for the first 25 levels (2× at level 26), then +1.5% a level, never above 4× (reached at level 160). The increases are added, not compounded, as agreed.
+  - **Their speed:** +2% of the base a level, never more than +50% (reached at level 26).
+  - **Their damage:** unchanged (spec 6.6), 19.5 a strike times each kind's own multiple.
+  - **The base** is the mansion's wave 1 (93 health, 1.145 speed, 19.5 damage), so level 1 plays exactly as v207. Each kind keeps its own multiples of the base (dogs, Ashfangs, brutes, ferals and lurkers as in the mansion), so the scales lift every kind alike and keep them apart.
+- **The mix** (agreed for now; tune later), the share of each kind at these levels, stepped evenly between them:
+
+  | Level | Walkers | Dogs | Ferals | Brutes | Ashfangs | Lurkers |
+  |---|---|---|---|---|---|---|
+  | 1–2 | 100% | – | – | – | – | – |
+  | 5 | 90% | 10% | – | – | – | – |
+  | 13 | 62% | 18% | 12% | 6% | 2% | – |
+  | 23 | 45% | 16% | 15% | 12% | 6% | 6% |
+  | 24 on | 42% | 15% | 16% | 13% | 7% | 7% |
+
+  Enraged dead join through the shared combat's blood rage, as in v206.
+- **Each arrival rises at the strength of the level when it comes ashore.** The dead already on the island keep the strength they rose with.
+- **Arrivals keep the stand-in's rules:** one at a time out of the surf, 1.4 s apart, after 4 s of grace; never within 18 m of you or where you are looking within 40 m; only where a route reaches you. With no safe point the shore waits and tries again.
+  - A kind with nowhere safe to rise keeps its turn, and a walker comes ashore in its place, so the shore never stalls and the mix is kept. (A brute's wider routes do not reach into the radio shack, which is to become an open tent later.)
+  - The kind is rolled from the game's own generator only when the level's mix has more than walkers, so the opening draws nothing new from it.
+- **Routes:** the brutes' wider routes are rebuilt only while a brute is on the island or next to come ashore.
+- **Proof:**
+  - `tests/tide-threat.mjs` (new): every formula at and around each threshold (kills 19/20/21, 99/100, 259/260, 459/460; levels 25/26, 159/160), the spec's own tables, the mix rows, shares that always add to 1, and rolls that pick each kind in its share.
+  - `tests/dead-tide.mjs`:
+    - the director on its own: walkers alone and no draw at levels 1–2, a roll per arrival from level 3, a brute that cannot rise waits while a walker comes, never more than 45;
+    - in play:
+      - the 100th kill raises the level, the rank and the target, and play goes on;
+      - arrivals at level 14 rise at its strength, kind by kind, while one risen at level 1 keeps its 93 health;
+      - The Apocalypse sends all six kinds and fills to exactly 45;
+      - every kind (walker, dog, Ashfang, feral, lurker, brute) climbs Radio Hill from its southern foot to you on the summit, the brute on its own wider routes;
+      - New Run starts again at level 1.
+  - **Dead Tide's golden trace:** all nine existing scenarios (the island's seven and both fights) are byte-identical to v207's. Three escalation scenarios are new, run last, with a `threat` channel: `threshold` (from 95 kills across into The Hunt), `swarm` (level 14) and `apocalypse` (level 24). `scripts/golden-compare.mjs` compares that channel and lists scenarios new in the second trace.
+  - **The 45-enemy fight** (`perf-measure.mjs --page tide.html` and `frame-logic.mjs --mode tide-fight`) is now The Apocalypse's full mix: 19 walkers, 7 dogs, 7 ferals, 6 brutes, 3 Ashfangs and 3 lurkers. In frame logic a lurker that bursts is replaced where it stood, so the fight stays at 45 and includes the bursts. Results are in `perf/README.md`.
+- **Release tiers:** the mansion quick (nothing it loads changed); Dead Tide full, with no regression (one new 5 KB file; load, memory, shader programs and frame logic within noise; the nine existing trace scenarios byte-identical); the mode picker standard, with no differences. Numbers in `perf/README.md`.
+- **The mode picker** now says the threat rises every 20 kills, with the threat tracker, stations and leaderboard still to come.
+- **Not verified:**
+  - how the escalation feels, including the opening pace (first contact about 35–40 s, unchanged);
+  - how dogs, Ashfangs, ferals, brutes and lurkers look on the island under its moonlight;
+  - real-browser frame rates with the full mix. Only headless measurements were made.
+- **Next (step 3b):** rotating major shoreline zones by rank, minor points used more as ranks rise, interior zones from The Swarm, weighted spawn choice, the top-left threat tracker and the escalation sound.
 
 ## The picker opens Dead Tide, and the dead build behind its title (version 207)
 
