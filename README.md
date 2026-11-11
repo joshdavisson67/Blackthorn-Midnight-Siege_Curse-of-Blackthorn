@@ -29,6 +29,65 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide's stations, set into the landmarks (version 213)
+
+The stations from v212, set into the landmarks round them, and the landmarks reworked to hold them. One ammunition station remains. The mansion is unchanged; no file it loads changed. (This work was first pushed to v212's branch after v212 had been merged, so it ships here, under new cache keys.)
+
+- **Where everything is now.** Most stations stand with their backs to something built round them; the free-standing ones still face Radio Hill's summit.
+
+  | Landmark | Stations |
+  |---|---|
+  | Lookout Compound (summit) | Bushmaster .450, Tsuru katana, and the island's only ammunition station (in the radio tent) |
+  | Bunker B-01 (north-east) | Aegis armour and the Nano Shield's ranks: against the right-hand wing wall (as you face the door), facing the reef |
+  | Jungle Ruin (north-west) | Raven SMG against the north wall; Quickhands against the inside of the east wall |
+  | North Beach (north) | Nightstride, near the water |
+  | Shipwreck Cove (west) | M12 shotgun, against the middle stack of crates |
+  | Coastal Camp (south-west) | M4 and Ironheart, against either side of the outhouse |
+  | South Dock (south) | Warden LMG, inside the boathouse |
+  | East Cove (south-east) | the Glock 21's rack and Deadeye, side by side in the shelter, facing the water |
+  | Soul Forge (east) | the Soul Forge |
+
+- **Ammunition:** v212's four ammunition pads are gone. The one left is the mansion's standard ammunition station, in the radio tent's corner where v211's test crate stood (350 essence).
+- **The boathouse:** beside the dock, its seaward end on piles over the surf, with a slip and a rowboat. It is locked until the threat reaches level 10:
+  - at its door, the prompt reads LOCKED, OPENS AT THREAT LEVEL 10;
+  - at level 10 its doors swing open, with a notice, for the rest of the run;
+  - New Run locks it again;
+  - the dead's routes are worked out again round its doorway whenever it opens or shuts;
+  - it is tall enough inside for a brute.
+- **The landmarks, reworked:**
+  - **Shipwreck Cove:** the wreck is twice the size and lies aground in the shallows along the shore (her landward side at the waterline, her bow turned a little up the beach). Three stacks of crates stand up the beach from her. The cove's spawn points moved past her bow and stern, still on both sides of her.
+  - **Coastal Camp:** about a quarter larger (the bluff's top too), facing Radio Hill:
+    - the fire in the middle, with log seats;
+    - five ridge tents in a half circle behind it;
+    - two torches at the opening;
+    - supplies, a woodpile and a table;
+    - the outhouse a little way out the back.
+  - **East Cove:** the shelter's bench is gone.
+  - **Soul Forge:** the clearing moved 3 m east, off Radio Hill's foot, and its flat top is larger (2 m of rise across it, from 3.7 m). The bunker ridge's knob moved off it.
+  - **Jungle Ruin:**
+    - more of the knoll is flat, and Radio Hill's shoulder is lower and further back (4 m of rise across the ruin, from 5);
+    - new: a west wall, a fallen length on the north side, a corner tower, two columns and half-buried blocks.
+  - **Bunker B-01:** a level apron of earth in front of its door, which only fills (the ridge behind keeps its height), so the armour stands on flat ground.
+  - The trails to the camp and round the bunker's armour moved with them, a barrel moved off a trail, and the ruin's inland spawn zone moved 2 m back from Quickhands.
+- **Proof:**
+  - `tests/dead-tide.mjs`:
+    - **the pads:** thirteen, by kind;
+      - the perks one to a landmark, one in each quarter round Radio Hill, and the armour apart from them;
+      - the one ammunition station in the tent;
+      - a free-standing station faces the summit; one set against something has it right behind and open ground in front;
+      - the paired stations (the Glock and Deadeye, the M4 and Ironheart) side by side, and every other pad apart;
+    - **the wreck:** aground in the shallows, along the shore, twice her old size;
+    - **the boathouse:** with its door open the dead can walk in; shut, they cannot, its doorway blocks, and opening it again opens the way;
+    - **in play:**
+      - the boathouse locked, its prompt at the door, still shut a kill short of level 10, and open at level 10;
+      - every station sells as before, the tent's ammunition at 350;
+      - New Run locks the boathouse again;
+      - with everything standing: no pockets for walkers or brutes, the beach loop and every trail open, no spawn point within 6 m of a station.
+  - **Dead Tide's golden trace:** the `stations` scenario visits all fourteen stations (the boathouse opened first, as level 10 opens it). Two runs are byte-identical.
+- **Looked at, in headless screenshots only:** every station, the wreck and her crates, the camp's opening and its outhouse, the boathouse outside and in, the East Cove shelter, B-01's armour, the ruin and the tent's ammunition.
+- **Release tiers:** TIERS
+- **Not verified:** how the reworked landmarks and the spread feel in play, and real-browser frame rates.
+
 ## Dead Tide's stations (version 212)
 
 Dead Tide step 5: the island's stations, on the pads v210 reserved and a few more. They use the mansion's own station models, prices and effects (`stations.mjs`, `station-models.mjs`), so nothing is rebalanced. The mansion is unchanged; no file it loads changed.

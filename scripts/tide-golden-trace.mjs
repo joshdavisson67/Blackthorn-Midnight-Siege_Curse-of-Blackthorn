@@ -170,13 +170,14 @@ const scenarios={
   session:{frames:480,script:f=>f===30?()=>key('Escape'):f===60?()=>$('settingsPause').onclick():f===90?()=>key('Escape'):f===120?()=>$('controlsPause').onclick():f===150?()=>key('Escape'):f===180?()=>$('resume').onclick():
     f===260?()=>key('Escape'):f===290?()=>$('mainMenuPause').onclick():f===320?()=>$('confirmYes').onclick():f===400?()=>enter():null,
     watch:()=>{note('session: paused',G().mode==='paused');note('session: title',G().mode==='menu');}},
-  // v210, the map; v212, the stations: walk up to each station in turn (seventeen pads, then the
-  // tent's crate), with essence to spare, and press E there (buying it, or a rank, or ammunition).
-  stations:{frames:18*80,script:f=>{const list=G().stations;if(!list)return null;const k=Math.floor((f-1)/80),s=list[k];if(!s)return null;const t=(f-1)%80;
-    if(t===0)return ()=>{qa.setKeys([]);const a=s.rotation||0;qa.setPlayer(s.x+Math.sin(a)*3,s.z+Math.cos(a)*3);qa.setAim(yawToFrom(s.x+Math.sin(a)*3,s.z+Math.cos(a)*3,s.x,s.z),-.15);G().run.points=6000;};
+  // v210, the map; v212, the stations: walk up to each station in turn (thirteen pads, then the
+  // tent's ammunition), with essence to spare, and press E there (buying it, or a rank, or ammunition).
+  // The Warden's boathouse is opened first, as threat level 10 opens it.
+  stations:{frames:14*80,script:f=>{const list=G().stations;if(!list)return null;const k=Math.floor((f-1)/80),s=list[k];if(!s)return null;const t=(f-1)%80;
+    if(t===0)return ()=>{qa.setKeys([]);if(s.padId==='lmg')G().run.kills=180;const a=s.rotation||0;qa.setPlayer(s.x+Math.sin(a)*3,s.z+Math.cos(a)*3);qa.setAim(yawToFrom(s.x+Math.sin(a)*3,s.z+Math.cos(a)*3,s.x,s.z),-.15);G().run.points=6000;};
     if(t===10)return ()=>qa.setKeys(['KeyW']);if(t===30)return ()=>qa.setKeys([]);
     if(t===40)return ()=>{key('KeyE');keyUp('KeyE');};return null;},
-    watch:()=>{const s=G();note('stations: prompt',!!$('interaction').textContent);for(const k of ['smg','shotgun','rifle','lmg','bushmaster','katana'])note('stations: '+k,s.run.inventory[k]?.owned);note('stations: perk',s.run.perkOwned.size>0);note('stations: armour',s.run.armorTier>0);note('stations: forged',Object.values(s.run.inventory).some(w=>w.forgeRank>0));
+    watch:()=>{const s=G();note('stations: prompt',!!$('interaction').textContent);for(const k of ['smg','shotgun','rifle','lmg','bushmaster','katana'])note('stations: '+k,s.run.inventory[k]?.owned);note('stations: perk',s.run.perkOwned.size>0);note('stations: armour',s.run.armorTier>0);note('stations: forged',Object.values(s.run.inventory).some(w=>w.forgeRank>0));note('stations: boathouse open',!!s.island.boathouse?.open);
       const z=s.zone;for(const n of ['RUIN','SHIPWRECK','CAMP','DOCK','EAST COVE','FORGE','BUNKER','NORTH BEACH','SUMMIT'])note('stations: '+n.toLowerCase(),z.includes(n));}}
 };
 
