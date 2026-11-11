@@ -483,6 +483,46 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v212 (Dead Tide's stations) against main (v211)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. The stations are new content, so their costs are reported here; the first build's were cut down before release (below).
+
+### Mansion: quick
+
+Nothing it loads changed; five files differ only in their version number.
+
+### Dead Tide: full protocol
+
+| | main (v211) | v212 |
+|---|---:|---:|
+| Files / KB before playable | 63 / 2,069 | 65 / 2,096 |
+| Time to playable (load phases, 20 pairs) | 7,536 ms | 10,200 ms (+2,664, SE 210) |
+| ↳ modules | 334 ms | 314 ms (−20, SE 11) |
+| ↳ world | 1,061 ms | 1,661 ms (+600, SE 29) |
+| ↳ shaders | 6,142 ms | 8,225 ms (+2,083, SE 195) |
+| Shader programs, at load and after play | 40 | 48 |
+| Geometries / textures | 223 / 24 | 274 / 29 |
+| Heap after load / after play, after a collection | 55.5 / 145.2 MB | 64.7 / 154.5 MB |
+| Draw calls in the fixed views | 32–115 | 32–163 (title 66 → 143) |
+| Triangles in the title view | 41K | 134K |
+| Frame logic, walking the empty island (24 pairs) | 0.276 ms | 0.330 ms (+0.054, SE 0.015) |
+| The 45-enemy fight: draw calls / triangles | 262–264 / 253K–257K | 306–310 / 318K–324K |
+
+- **What the first build cost**, before the merging (one standard run): 1,653 draw calls in the title view, 52 textures, 50 shader programs, 505 geometries, frame logic 0.25 → 0.60 ms.
+- **What was done** (`tide-palette.mjs`, Dead Tide only): untextured parts baked into one vertex-coloured material; everything still merged by material in 48 m cells, indexed; the plaques packed into one atlas; the armour models merged within themselves; the soul stone's flat-shading flag and the seams' line material dropped (two shaders fewer each); bullets test collider boxes, not merged triangles; the stations' matrices frozen once built.
+- **What is left is the models themselves.** The mansion's racks hold first-person-quality guns (about 60K of the 93K new triangles), and building seventeen stations takes about 0.25 s of JavaScript (most of the world phase's +600 ms; merging adds about 0.1 s).
+- **The shaders phase (+2.1 s)** does not follow the program count: it was the same with 54 programs and with 48, and still +0.7 s with the stations built but hidden. It includes the first frame drawn in software, the new buffers and textures uploaded, and collection of the build's garbage. A real GPU does this work far faster; that was not measured here.
+- **Frame logic +0.054 ms:** the per-frame station checks (nearest station, prompt, Forge rank), the station colliders and bullets' box tests.
+- **The golden trace** differs where the stations stand and are bought, as it must. Two runs of v212 are byte-identical.
+- **Not measured:** real GPUs, integrated graphics, or frame rates in a real browser.
+- **If the load time matters more than the stations being ready at once:** they could be built behind the title, as the dead are (v207), which would take most of the world and shader cost out of the time to playable.
+
+### Mode picker: standard, no differences
+
+Its tagline changed; nothing measurable did.
+
+Files: `v212-tide.jsonl`, `v212-tide-load-phases.jsonl`, `v212-tide-frame-logic.jsonl`, `v212-tier-summary.json`.
+
 ## v211 (bolder ground, B-01 turned, a test ammo crate) against main (v210)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering.

@@ -16,6 +16,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),argv=process.argv.slice(2),outDir=resolve(argv.find(a=>!a.startsWith('--'))||join(root,'.tier/shots'));
 const only=(()=>{const i=argv.indexOf('--only');return i>=0?argv[i+1].split(','):null;})(),hud=argv.includes('--hud');
 const {islandSites,ISLAND}=await import('../public/game/island.mjs'),S=islandSites().sites,H=ISLAND.hill;
+const at=(site,lx,lz)=>{const a=site.angle||0;return [site.x+lx*Math.cos(a)+lz*Math.sin(a),site.z-lx*Math.sin(a)+lz*Math.cos(a)];};
 const VIEWS=[
   ['overview-south',0,'=70',135,0,6,0],['overview-north-east',95,'=60',-95,0,6,0],['overview-west',-135,'=55',10,0,6,0],['overview-top',0,'=175',1,0,0,0],
   ['spawn',ISLAND.spawn.x,1.68,ISLAND.spawn.z,H.x,10,H.z],
@@ -28,7 +29,14 @@ const VIEWS=[
   ['wreck',S.wreck.x+19,1.68,S.wreck.z+6,S.wreck.x,1.5,S.wreck.z],['camp',S.camp.x+11,3.2,S.camp.z-9,S.camp.x,.8,S.camp.z],
   ['dock',S.dock.x-7,1.68,S.dock.z-13,S.dock.x+1,.8,S.dock.z+3],['cove',S.cove.x+9,1.68,S.cove.z+9,S.cove.x,1.4,S.cove.z],
   ['forge',S.forge.x-10,1.68,S.forge.z+5,S.forge.x,1.4,S.forge.z],['north-beach',S.north.x+14,1.68,S.north.z+8,S.north.x-12,1,S.north.z-4],
-  ['wash',-9,1.68,6,-22,-1,30]
+  // v212: the stations, from 4 m in front.
+  ...islandSites().stations.map(p=>['station-'+p.id,p.x+Math.sin(p.angle)*4+Math.cos(p.angle)*1.2,1.68,p.z+Math.cos(p.angle)*4-Math.sin(p.angle)*1.2,p.x,1.1,p.z]),
+  ['wash',-9,1.68,6,-22,-1,30],
+  // v212 (revised): the reworked landmarks: [name, site, eye across, eye forward, eye height, looking at across, forward, height].
+  ...[['wreck-stacks','wreck',6,17,1.9,0,2,1.6],['wreck-along','wreck',-17,9,1.68,3,0,1.5],['camp-opening','camp',0,13,2.2,0,-2,.8],['camp-outhouse','camp',-3.8,-15,1.9,-3.8,-9.2,1.1],
+    ['boathouse','dock',0,-11,1.9,6.2,-1,1.4],['boathouse-inside','dock',5,-3.6,1.7,8,-2.4,1],['cove-hut','cove',0,6,1.7,0,-1.5,1.1],['bunker-armour','bunker',4,9,1.7,3.6,2,1.2],
+    ['ruin-walls','ruin',1,8,2.2,0,-4,1.4]].map(([name,site,ex,ez,ey,tx,tz,ty])=>[name,at(S[site],ex,ez)[0],ey,at(S[site],ex,ez)[1],at(S[site],tx,tz)[0],ty,at(S[site],tx,tz)[1]]),
+  ['tent-ammo',S.tent.x-1.2,1.68,S.tent.z+3,S.ammo.x,.9,S.ammo.z]
 ];
 async function loadPlaywright(){for(const spec of [process.env.PLAYWRIGHT_MODULE,'playwright','/opt/npm-tools/node_modules/playwright/index.mjs'].filter(Boolean)){try{return await import(spec.startsWith('/')?pathToFileURL(spec).href:spec);}catch{}}
   console.error('Playwright is not installed.');process.exit(2);}
@@ -53,7 +61,7 @@ await new Promise(r=>server.once('listening',r));
 const {chromium}=await loadPlaywright(),browser=await chromium.launch({args:['--use-angle=gl-egl','--ignore-gpu-blocklist']});
 const ctx=await browser.newContext({viewport:{width:1280,height:720},deviceScaleFactor:1});
 await ctx.addInitScript(()=>{try{localStorage.setItem('blackthorn-quality','high');localStorage.setItem('blackthorn-touch-controls','off');}catch{}});
-const tab=await ctx.newPage();tab.setDefaultTimeout(900000);const errors=[];tab.on('pageerror',e=>errors.push(e.message));
+const tab=await ctx.newPage();tab.setDefaultTimeout(900000);const errors=[];tab.on('pageerror',e=>errors.push(e.message));tab.on('console',m=>{if(m.type()==='error')console.log('console error:',m.text().slice(0,300));});
 await tab.goto(`http://localhost:${server.address().port}/tide.html`,{waitUntil:'load'});
 await tab.waitForFunction(()=>document.getElementById('loading')?.classList.contains('hidden'),null,{timeout:900000});
 const err=await tab.evaluate(()=>document.getElementById('errorDetails')?.textContent||'');if(err)throw new Error('Load error: '+err);
