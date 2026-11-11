@@ -22,7 +22,9 @@ const VIEWS=[
   ['summit-compound',H.x+8,1.68,H.z+8,H.x-3,1.4,H.z-3],['summit-tent',S.tent.x+2,1.68,S.tent.z+8,S.tent.x,1.6,S.tent.z],
   ['summit-view-north-east',H.x,1.68,H.z,S.bunker.x,-6,S.bunker.z],['summit-view-south-west',H.x,1.68,H.z,S.camp.x,-6,S.camp.z],
   ['summit-view-west',H.x,1.68,H.z,S.wreck.x,-10,S.wreck.z],['summit-view-south-east',H.x,1.68,H.z,S.cove.x,-8,S.cove.z],
-  ['bunker',S.bunker.x-9,1.68,S.bunker.z+9,S.bunker.x,1.8,S.bunker.z],['ruin',S.ruin.x+10,2.4,S.ruin.z+10,S.ruin.x,1.6,S.ruin.z],
+  // v211: B-01 faces the north-east reef now; the second view looks at its ridge from Radio Hill's side.
+  ['bunker',S.bunker.x+Math.sin(S.bunker.angle)*11+3,1.68,S.bunker.z+Math.cos(S.bunker.angle)*11,S.bunker.x,2,S.bunker.z],['bunker-side',S.bunker.x+Math.sin(S.bunker.angle)*4+Math.cos(S.bunker.angle)*13,2.2,S.bunker.z+Math.cos(S.bunker.angle)*4-Math.sin(S.bunker.angle)*13,S.bunker.x-Math.sin(S.bunker.angle)*1.5,2,S.bunker.z-Math.cos(S.bunker.angle)*1.5],['bunker-ridge-from-hill',H.x+12,1.68,H.z-12,S.bunker.x,3,S.bunker.z],
+  ['ammo-crate',S.ammo.x-2.6,1.68,S.ammo.z+2.2,S.ammo.x,.5,S.ammo.z],['ravine',-24,1.68,40,-17,0,20],['east-downs',30,1.68,26,47,1.5,10],['north-crag',-2,1.68,-36,11,2,-45],['ruin',S.ruin.x+10,2.4,S.ruin.z+10,S.ruin.x,1.6,S.ruin.z],
   ['wreck',S.wreck.x+19,1.68,S.wreck.z+6,S.wreck.x,1.5,S.wreck.z],['camp',S.camp.x+11,3.2,S.camp.z-9,S.camp.x,.8,S.camp.z],
   ['dock',S.dock.x-7,1.68,S.dock.z-13,S.dock.x+1,.8,S.dock.z+3],['cove',S.cove.x+9,1.68,S.cove.z+9,S.cove.x,1.4,S.cove.z],
   ['forge',S.forge.x-10,1.68,S.forge.z+5,S.forge.x,1.4,S.forge.z],['north-beach',S.north.x+14,1.68,S.north.z+8,S.north.x-12,1,S.north.z-4],
