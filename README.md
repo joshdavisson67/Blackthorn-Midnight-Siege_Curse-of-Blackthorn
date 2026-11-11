@@ -54,6 +54,12 @@ Three changes to Dead Tide's island, from playing v210. The mansion is unchanged
     - the crate is inside the tent, its prompt shows beside it, E restocks the pistol in full and adds a grenade, and nothing happens out of reach.
   - All the v210 map checks still pass on the new ground: landmarks, pads, no climbable props, routes with no pockets for walkers or brutes, the beach loop, the hill's approaches, the trails, and all 72 spawn points.
   - **Dead Tide's golden trace** is re-baselined, since the ground changed. Two runs are byte-identical.
+- **Release tiers:**
+  - **Mansion: quick.** Nothing it loads changed.
+  - **Dead Tide: full.** +5 KB and two draw calls where the crate is in view. Building the world takes +73 ms (within two standard errors); memory, shader programs and frame logic are unchanged.
+  - **Mode picker: quick.** Nothing it loads changed.
+
+  Numbers in `perf/README.md`.
 - **Looked at, in headless screenshots only:** the bunker from its front and side, the crate, the ravine, the downs, the crag and the overviews.
 - **Not verified:** how any of it looks on a real GPU, or feels to play.
 

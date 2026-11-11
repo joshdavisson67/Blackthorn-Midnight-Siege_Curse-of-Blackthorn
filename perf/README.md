@@ -483,6 +483,41 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v211 (bolder ground, B-01 turned, a test ammo crate) against main (v210)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering.
+
+### Mansion: quick
+
+Nothing it loads changed; five files differ only in their version number.
+
+### Dead Tide: full protocol
+
+| | main (v210) | v211 |
+|---|---:|---:|
+| Files / KB before playable | 63 / 2,064 | 63 / 2,069 |
+| Time to playable (load phases, 20 pairs) | 7,280 ms | 7,322 ms (+42, SE 62) |
+| ↳ modules | 306 ms | 324 ms (+18, SE 13) |
+| ↳ world | 989 ms | 1,061 ms (+73, SE 37) |
+| ↳ shaders | 5,986 ms | 5,937 ms (−49, SE 49) |
+| Shader programs, at load and after play | 40 | 40 |
+| Geometries / textures | 222 / 24 | 223 / 24 |
+| Heap after load / after play, after a collection | 55.5 / 145.3 MB | 55.5 / 145.3 MB |
+| Draw calls in the fixed views | 32–112 | the same, +2 in four views (the crate) |
+| Frame logic, walking the empty island (24 pairs) | 0.283 ms | 0.288 ms (+0.004, SE 0.018) |
+| The 45-enemy fight: draw calls / triangles | 260–262 / 254K–257K | 262–264 / 253K–257K |
+
+- **What it costs:** +5 KB, one geometry, and two draw calls where the crate is in view. Memory, shader programs and frame logic are unchanged.
+- **Building the world:** +73 ms in the browser, which is within two standard errors. Building the island alone in Node, 25 runs of each version, gives the same median, with the fastest run 9 ms slower: the ground's height sums 17 shapes where it summed 9. The total time to playable is within noise.
+- **The golden trace** differs where the ground changed (walking, the hill, the fights), as it must. Two runs of v211 are byte-identical.
+- **Not measured:** real GPUs, integrated graphics, or frame rates in a real browser.
+
+### Mode picker: quick
+
+Nothing it loads changed.
+
+Files: `v211-tide.jsonl`, `v211-tide-load-phases.jsonl`, `v211-tide-frame-logic.jsonl`, `v211-tier-summary.json`.
+
 ## v210 (the island's map) against main (v209)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. This release changes the island itself, so its costs are new content, reported here, not regressions to chase to zero.
