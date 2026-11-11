@@ -104,7 +104,8 @@ try{
   // frame, then their shaders compile in a scene of their own, lit by the island's, never drawn.
   assert(G().deadBuilt===false&&G().deadReady===false,'The dead are not built while loading');
   frames(3);assert(G().deadBuilt===false,'They build a body a frame behind the title screen');
-  frames(20);assert(G().deadBuilt===true,'and are built within 23 title frames, Play untouched');for(let i=0;i<6;i++)await Promise.resolve();
+  frames(20);assert(G().deadBuilt===true,'and are built within 23 title frames, Play untouched');
+  frames(2);assert(G().bruteRoutesReady===true,'v209: then the brutes’ wider routes, still behind the title (so the first brute to come ashore stalls nothing)');for(let i=0;i<6;i++)await Promise.resolve();
   {const [warm,target]=G().renderer.compileScenes.at(-1);
    assert(G().deadReady===true&&G().renderer.compileCalls.length===3&&target===G().scene&&warm!==G().scene&&warm.children.length===0,'then their shaders compile once, in a scene of their own lit by the island’s, emptied after');
    assert.deepEqual([...new Set(G().world.children.map(o=>o.name))].sort(),[...top].sort(),'and nothing of them ever enters the world');}
@@ -231,17 +232,18 @@ try{
     const kindOf=e=>e.lurker?'lurker':e.feral?'feral':e.rareDog?'ashfang':e.dog?'dog':e.brute?'brute':'walker';
     // a. The director alone, on a stand-in spawner.
     {let kills=0,draws=0,roll=0,brutesOk=false;const zs=[],made=[];
-     const spawner={placement:kind=>({valid:()=>kind!=='brute'||brutesOk}),choosePoint:o=>o[0],spawnKind:kind=>{const e={kind,dead:false,group:{position:{y:0}}};zs.push(e);made.push(kind);return e;}};
+     const spawner={placement:kind=>({valid:(p,near=0)=>(kind!=='brute'||brutesOk)&&Math.hypot(p[0],p[1])>near}),choosePoint:o=>o[0],spawnKind:kind=>{const e={kind,dead:false,walkPos:{x:0,z:0},group:{position:{y:0}}};zs.push(e);made.push(kind);return e;}};
      const d=createThreatDirector({spawner,zombies:zs,player:{x:0,z:0},look:()=>0,noise(){},kills:()=>kills,rng:()=>{draws++;return roll;}});
      const run=s=>{for(let i=0;i<s*60;i++)d.update(1/60);};
-     run(30);assert(made.length===8&&made.every(k=>k==='walker')&&draws===0,'Level 1: eight walkers, and nothing drawn from the game’s generator (the opening plays exactly as v207’s)');
-     kills=39;run(10);assert(d.level===2&&made.length===10&&draws===0,'Level 2: ten, still walkers alone, still no draw');
-     kills=40;run(10);assert(d.level===3&&made.length===12&&draws===2,'Level 3: twelve, each arrival’s kind rolled once');
+     d.target=0;run(30);assert(made.length===0&&draws===0,'A held shore sends no one and draws nothing from the game’s generator (the island’s own scenarios play as before)');
+     d.reset();run(30);assert(made.length===8&&made.every(k=>k==='walker'),'Level 1: eight walkers');
+     kills=39;run(10);assert(d.level===2&&made.length===10&&made.every(k=>k==='walker'),'Level 2: ten, still walkers alone');
+     kills=40;run(10);assert(d.level===3&&made.length===12,'Level 3: twelve');
      kills=460;roll=.99;run(1.5);assert.equal(made.at(-1),'lurker','The Apocalypse, a high roll: a lurker');
      // A brute with no safe point keeps its turn; a walker comes ashore in its place.
-     roll=.8;const before=draws;run(1.5);assert(made.at(-1)==='walker'&&d.pending==='brute'&&draws===before+1,'A brute with nowhere safe to rise waits its turn, and a walker comes instead');
-     run(3);assert(made.slice(-2).every(k=>k==='walker')&&d.pending==='brute'&&draws===before+1,'still waiting, with no new roll');
-     brutesOk=true;run(1.5);assert(made.at(-1)==='brute'&&d.pending===null,'and comes ashore when it can');
+     roll=.8;const n=made.length;run(1.5);assert(made.length>n&&!made.slice(n).includes('brute')&&made.at(-1)==='walker'&&d.pending==='brute','A brute with nowhere safe to rise waits its turn, and walkers come instead');
+     run(3);assert(!made.slice(n).includes('brute')&&d.pending==='brute','still waiting');
+     brutesOk=true;run(1.5);assert(made.slice(n).includes('brute'),'and comes ashore when it can');
      d.target=500;assert.equal(d.target,45,'A target set by hand never passes 45');d.reset();assert(d.target===45&&d.pending===null,'New Run forgets it (45: the run’s kills here are 460)');
      zs.length=0;made.length=0;kills=1000;run(200);assert(zs.length===45,'However long it runs, never more than 45');}
     // b. Escalation mid-run, with no pause: kills raise the level, the rank and the target.
@@ -284,6 +286,102 @@ try{
     // f. New Run starts the threat again.
     qa.resetRun();await Promise.resolve();assert(G().run.kills===0&&G().shore.level===1&&G().shore.target===8&&G().shore.pending===null,'New Run starts again at threat level 1');
     console.log('PASS: the threat director: kills raise the threat level, rank and target with no pause; walkers alone (and no draw from the generator) at levels 1–2; a brute with nowhere safe to rise waits its turn while a walker comes; never more than 45; New Run starts again at level 1.');
+  }
+  // ---- 7. The spawn network (v209, Dead Tide step 3b) ----------------------------------------
+  {
+    const {createThreatDirector,SHORE_RULES:SR}=await import('../public/game/tide-dead.mjs'),N=TT.SPAWN_RULES;
+    // A stand-in spawner (every point valid beyond `near`) and a seeded generator; the island
+    // is emptied after each step so the director keeps sending (the steady state of a fight).
+    function rig({kills=0,seed=7}={}){
+      let s=seed>>>0;const rng=()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+      const zs=[],player={x:0,z:0},view={yaw:0},k={kills};
+      const spawner={placement:()=>({valid:(p,near=0)=>Math.hypot(p[0]-player.x,p[1]-player.z)>near,routes:{direction:()=>({distance:30,reachable:true})}}),choosePoint:o=>o[0],
+        spawnKind:(kind,x,z)=>{const e={kind,dead:false,walkPos:{x,z},group:{position:{y:0}}};zs.push(e);return e;}};
+      const d=createThreatDirector({spawner,zombies:zs,player,look:()=>view.yaw,noise(){},kills:()=>k.kills,rng});
+      return {d,zs,player,view,k};
+    }
+    const steps=(r,seconds,each=()=>{})=>{for(let i=0;i<seconds*60;i++){each(i);r.d.update(1/60);}};
+    const clear=r=>{for(const e of r.zs)e.dead=true;};
+    const inCone=(l,half)=>{const dx=l.x-l.px,dz=l.z-l.pz,d=Math.hypot(dx,dz);return Math.acos(Math.max(-1,Math.min(1,(dx*-Math.sin(l.yaw)+dz*-Math.cos(l.yaw))/d)))<half;};
+    // a. Open zones follow the rank: majors per majorZoneCount, the interior only from The Swarm.
+    for(const kills of [0,40,100,180,260,360,460,540,800]){
+      const r=rig({kills}),L=TT.threatLevel(kills);steps(r,10,()=>clear(r));
+      assert.equal(r.d.openZones.length,TT.majorZoneCount(L),`Level ${L}: ${TT.majorZoneCount(L)} major zones open`);
+      assert.equal(r.d.openInterior.length,TT.interiorOpen(L),`Level ${L}: ${TT.interiorOpen(L)} interior zones open`);
+      if(L<14)assert.equal(r.d.counts.interior,0,`No one rises inland before The Swarm (level ${L})`);
+    }
+    // b. Rotation: one open zone swapped for a closed one every 40 s, the count kept.
+    {const r=rig({kills:0});steps(r,5,()=>clear(r));const before=r.d.openZones;steps(r,N.rotate+2,()=>clear(r));const after=r.d.openZones;
+     assert(r.d.counts.rotations===1&&after.length===before.length&&after.filter(z=>!before.includes(z)).length===1,`After ${N.rotate} s one zone has closed and another opened (${before} → ${after})`);
+     steps(r,N.rotate*5,()=>clear(r));assert(r.d.counts.rotations===6,'and so on, every 40 s while the dead keep coming');}
+    // c. Shares: the minor points more often as the ranks rise; the interior only late.
+    const shares={};
+    for(const kills of [0,100,260,460]){const r=rig({kills,seed:kills+3});let i=0;
+      steps(r,400,f=>{clear(r);if(f%60===0){i++;r.player.x=Math.cos(i*.7)*20;r.player.z=Math.sin(i*1.3)*20;r.view.yaw=i*2.1;}});
+      const c=r.d.counts,total=c.major+c.minor+c.interior;shares[kills]={minor:c.minor/total,interior:c.interior/total,total,c};}
+    assert(shares[0].minor>.05&&shares[0].minor<.22,`The Unease: the minor points now and then (${(shares[0].minor*100).toFixed(0)}%)`);
+    assert(shares[0].minor<shares[100].minor&&shares[100].minor<shares[460].minor,`more often each rank (${[0,100,260,460].map(k=>(shares[k].minor*100).toFixed(0)+'%').join(', ')})`);
+    assert(shares[0].interior===0&&shares[100].interior===0&&shares[260].interior>0&&shares[460].interior>shares[260].interior,`The interior from The Swarm, more in The Apocalypse (${(shares[260].interior*100).toFixed(0)}%, ${(shares[460].interior*100).toFixed(0)}%)`);
+    // d. Every arrival keeps the safety rules: the shore's 18 m and 40 m view cone; inland, 28 m
+    // and a 160° cone at any distance. (Here the player moves and turns every second.)
+    {const r=rig({kills:540,seed:11});let i=0,inland=0,shore=0;
+     steps(r,300,f=>{clear(r);if(f%60===0){i++;r.player.x=Math.cos(i*.9)*25;r.player.z=Math.sin(i*1.7)*25;r.view.yaw=i*1.9;}
+       for(const l of r.d.log.splice(0)){const d=Math.hypot(l.x-l.px,l.z-l.pz);
+         if(l.kind==='interior'){inland++;assert(d>=N.interior.near&&!inCone(l,N.interior.halfAngle),`Inland only ${N.interior.near} m or more away and out of view (${d.toFixed(1)} m)`);}
+         else{shore++;assert(d>SR.near&&(d>SR.sight.range||!inCone(l,SR.sight.halfAngle)),`On the shore never within ${SR.near} m nor in view within ${SR.sight.range} m`);}}});
+     assert(inland>20&&shore>100,`(${shore} shore and ${inland} inland arrivals checked)`);}
+    // e. Batches: one at a time in The Unease; up to 2, then 3, from one zone at its other
+    // points as the ranks rise, never more than the shore is short.
+    for(const [kills,most] of [[0,1],[100,2],[260,2],[460,3]]){
+      const r=rig({kills,seed:5});let biggest=0;
+      for(let f=0;f<120*60;f++){const n=r.zs.length,short=r.d.target-r.d.alive();r.d.update(1/60);clear(r);
+        const got=r.zs.slice(n);if(!got.length)continue;biggest=Math.max(biggest,got.length);
+        assert(got.length<=Math.min(most,Math.max(1,short)),`At most ${most} at once, and no more than the shore is short`);
+        if(got.length>1){const zone=r.d.log.at(-1).zone;assert(r.d.log.slice(-got.length).every(l=>l.zone===zone),'a batch rises from one zone');
+          assert(new Set(got.map(e=>e.walkPos.x+','+e.walkPos.z)).size===got.length,'at different points');}}
+      assert.equal(biggest,most,`Level ${TT.threatLevel(kills)}: batches of up to ${most}`);
+    }
+    // f. A moving player: arrivals favour your flanks and back over the way ahead.
+    {const r=rig({kills:0,seed:9});let ahead=0,behind=0,t=0;
+     steps(r,600,f=>{clear(r);t+=1/60;const a=t*4/20;r.player.x=Math.cos(a)*20;r.player.z=Math.sin(a)*20;r.view.yaw=Math.atan2(Math.sin(a),-Math.cos(a))+Math.PI;
+       for(const l of r.d.log.splice(0)){if(l.kind==='interior')continue;const v=r.d.velocity,sp=Math.hypot(v.x,v.z);if(sp<1)continue;
+         const dx=l.x-l.px,dz=l.z-l.pz,d=Math.hypot(dx,dz),cos=(dx*v.x+dz*v.z)/(d*sp);if(cos>.5&&d<=N.weights.travel.far)ahead++;else if(cos<-.3)behind++;}});
+     assert(behind>ahead*2.5,`Circling at 4 m/s: ${behind} arrivals behind you, ${ahead} close ahead`);}
+    // g. A minor point sometimes sends a second from the same point once the first is clear.
+    {const r=rig({kills:460,seed:13});steps(r,300,()=>clear(r));assert(r.d.counts.follows>0,`Minor points send two now and then (${r.d.counts.follows} seconds)`);}
+    console.log(`PASS: the spawn network: major zones open by rank (3 at the start, all 8 from level 28), one swapped every ${N.rotate} s; the minor points more often each rank (${[0,100,260,460].map(k=>(shares[k].minor*100).toFixed(0)+'%').join(', ')}), sometimes twice; the interior only from The Swarm (${(shares[260].interior*100).toFixed(0)}%, then ${(shares[460].interior*100).toFixed(0)}%), always ${N.interior.near} m or more away and out of a 160° view; the shore's 18 m and 40 m view rules kept; batches of 1, 2 and 3 from one zone by rank, never more than the shore is short; arrivals favour a moving player's flanks and back.`);
+  }
+  // ---- 8. The threat tracker and its cue (v209) ----------------------------------------------
+  {
+    qa.resetRun();await Promise.resolve();G().shore.target=0;frames(2);const TR=G().threat,el=$('threatHud'),cues=TR.cues,ranks=TR.rankCues;
+    const read=()=>[$('threatLevel').textContent,$('threatRank').textContent,$('threatKills').textContent,$('threatNext').textContent,$('threatFill').style.width,el.getAttribute('data-rank')];
+    assert.deepEqual(read(),['1','THE UNEASE','0','0 / 20','0.0%','0'],'A run starts at threat level 1, The Unease, no kills, 0 of 20');
+    assert(!$('hud').classList.contains('hidden')&&el.classList.contains('topHud'),'The tracker is up, top left (the wave counter’s place)');
+    const kill=()=>{const e=G().spawnKind('walker',0,30,0);G().combat.damageEnemy(e,1e9,false,{part:'torso',direction:new T.Vector3(0,0,1),source:'glock'});frames(1);};
+    G().run.kills=18;frames(1);kill();assert.deepEqual(read().slice(0,4),['1','THE UNEASE','19','19 / 20']);assert.equal(read()[4],'95.0%','The bar shows 19 of 20');
+    const banner=$('banner').innerHTML;kill();
+    assert.deepEqual(read().slice(0,5),['2','THE UNEASE','20','0 / 20','0.0%'],'The 20th kill: level 2, and the bar starts again');
+    assert(el.classList.contains('pulse')&&!el.classList.contains('rankUp')&&TR.cues===cues+1&&TR.rankCues===ranks,'The number pulses and a quiet cue plays');
+    assert($('banner').innerHTML===banner&&G().mode==='playing','with no banner and no pause');
+    frames(60);assert(!el.classList.contains('pulse'),'The pulse fades within a second');
+    G().run.kills=99;frames(1);assert(read()[0]==='5'&&TR.cues===cues+2&&TR.rankCues===ranks,'A jump of several levels at once (2 to 5) plays one cue');
+    kill();assert(read()[0]==='6'&&read()[1]==='THE HUNT'&&read()[5]==='1'&&el.classList.contains('rankUp')&&TR.rankCues===ranks+1&&TR.cues===cues+3,'The 100th kill: The Hunt, its name glowing, with the deeper cue');
+    frames(120);assert(!el.classList.contains('rankUp'),'The glow fades');
+    G().run.kills=459;frames(1);kill();assert(read()[1]==='THE APOCALYPSE'&&read()[5]==='3'&&TR.rankCues===ranks+3&&TR.cues===cues+5,'The Swarm, then The Apocalypse, each with its cue');
+    qa.resetRun();await Promise.resolve();frames(2);assert.deepEqual(read(),['1','THE UNEASE','0','0 / 20','0.0%','0'],'New Run starts the tracker again');assert.equal(TR.cues,cues+5,'quietly');
+    // Every interior point is open ground on land, with a route to the summit.
+    {qa.resetRun();await Promise.resolve();G().shore.target=0;const H=ISLAND.hill;qa.setPlayer(H.x,H.z);frames(2);G().routes.rebuild(H.x,H.z);let n=0;
+     for(const z of G().shore.zones.filter(z=>z.kind==='interior'))for(const p of z.points){n++;assert(groundHeight(p[0],p[1])>.3&&!G().island.isBlocked(p[0],p[1],.5,G().island.colliders,null,groundHeight(p[0],p[1]),1.8)&&G().routes.direction(p[0],p[1],0)?.reachable,`${z.name} (${p[0]}, ${p[1]}) is open ground on land with a route to the summit`);}
+     assert.equal(n,18,'all 18 interior points (6 zones of 3)');}
+    // In play, the interior at The Apocalypse: from the south beach facing the sea, the dead rise
+    // inland too, never close and never in view.
+    qa.resetRun();await Promise.resolve();G().run.kills=460;G().run.health=1e9;qa.setPlayer(0,52);qa.setAim(Math.PI,0);
+    for(let i=0;i<60*60;i++){frames(1);G().run.health=1e9;qa.setAim(Math.PI,0);}
+    const inland=G().shore.log.filter(l=>l.kind==='interior');
+    assert(inland.length>0,`Inland arrivals at The Apocalypse (${inland.length})`);
+    for(const l of inland){const d=Math.hypot(l.x-l.px,l.z-l.pz);assert(d>=TT.SPAWN_RULES.interior.near,'never close');}
+    for(const e of G().zombies.filter(e=>!e.dead&&e.spawnZone&&G().shore.zones.find(z=>z.name===e.spawnZone)?.kind==='interior'))assert(groundHeight(e.walkPos.x,e.walkPos.z)>0&&G().routes.direction(e.walkPos.x,e.walkPos.z,0)?.reachable,'and on land, with a route to you');
+    console.log(`PASS: the threat tracker shows level, rank, kills and 0–20 progress top left; each new level pulses the number with a quiet cue, each rank glows its name with a deeper one, a multi-level jump cues once, with no banner and no pause; New Run starts it again; in play ${inland.length} of the dead rose inland at The Apocalypse, never within ${TT.SPAWN_RULES.interior.near} m.`);
   }
 }finally{Math.random=random;}
 process.exit(0);

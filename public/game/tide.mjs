@@ -28,8 +28,8 @@ import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=208';
-import {THREAT_RULES,threatLevel,threatStats} from './tide-threat.mjs?v=208';
+import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=209';
+import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=209';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
 // through tide-boot.js. It builds the island and nothing of the mansion, and plays with
@@ -38,8 +38,9 @@ import {THREAT_RULES,threatLevel,threatStats} from './tide-threat.mjs?v=208';
 // controller). v206: the dead come ashore, with the shared enemy AI, spawner and combat,
 // through the island's view of itself in tide-dead.mjs. v208: the threat director (step 3a,
 // tide-threat.mjs): kills raise the threat level, which sets the population, the next
-// arrivals' strength and the mix of kinds. Zones, the tracker and its sound (step 3b), then
-// stations, the leaderboard and the run summary (step 4) come next.
+// arrivals' strength and the mix of kinds. v209 (step 3b): the spawn network (tide-dead.mjs)
+// and the threat tracker with its cue (below). Stations, the leaderboard and the run summary
+// (step 4) come next.
 performance.mark?.('tide:modules');
 const domCache=new Map(),$=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);};
 const shownMarkup=new Map(),shownOpacity=new Map();
@@ -103,7 +104,10 @@ const routes=island.buildRoutes({radius:.44});let bruteRoutes=null,navTarget=nul
 Object.defineProperty(routes,'brutes',{get(){if(!bruteRoutes){const b=enemyBody({brute:true});bruteRoutes=island.buildRoutes({radius:Math.max(.44,b.radius),height:b.height});if(navTarget)bruteRoutes.rebuild(...navTarget);}return bruteRoutes;}});
 // v208: the brutes' routes are rebuilt only while a brute is on the island or next to come
 // ashore (the director's pending kind); walkers, dogs, ferals and lurkers share the fine grid.
-const brutesNeedRoutes=()=>{if(shore.pending==='brute')return true;for(const e of zombies)if(e.brute&&!e.dead)return true;return false;};
+// v209: and whenever the level's mix has brutes (from level 6), so they are current when one is
+// rolled (they are built behind the title screen now; a rebuild takes about 0.5 ms).
+const BRUTE_SHARE=TIDE_KINDS.indexOf('brute');
+const brutesNeedRoutes=()=>{if(shore.pending==='brute'||tideMix(threatLevel(runState.kills))[BRUTE_SHARE]>0)return true;for(const e of zombies)if(e.brute&&!e.dead)return true;return false;};
 const rebuildRoutes=()=>{navTarget=[player.x,player.z];routes.rebuild(player.x,player.z);if(bruteRoutes&&brutesNeedRoutes())bruteRoutes.rebuild(player.x,player.z);};
 const islandLevel=createIslandLevel({island,crowd,routes,hunter});
 let elapsed=0,lastTime=performance.now(),hudTick=0,zone='SOUTH BEACH';
@@ -115,6 +119,31 @@ const {walk,recover,hurtPlayer}=createPlayer({
 });
 const hud=createHud({dom:{$,setMarkup,setOpacity},session,state:runState,perks:PERKS,rules:{badges:()=>''}});
 const {notify,announce,updateReloadHud,updateVitals,markHit,flashDamage,clearFlashes,clearToast,clearBanner,fadeHud}=hud;
+// ---- The threat tracker (v209, Dead Tide step 3b) -----------------------------------------------
+// Top left, in the mansion's wave counter's place: the threat level, its rank, the kills and
+// the progress to the next level (spec section 7). Each new level pulses the number and plays a
+// low, quiet pulse; a new rank glows its name and plays a deeper one. No banner, no pause.
+const threatTracker={level:1,rank:0,kills:-1,pulse:0,rankGlow:0,cues:0,rankCues:0,shownClass:'',shownWidth:'',shownRank:''};
+function showThreat(){
+  const T=threatTracker,{level,into,of}=threatProgress(runState.kills),rank=threatRank(level);
+  setMarkup('threatLevel',String(level));setMarkup('threatRank',rank.name);setMarkup('threatKills',runState.kills.toLocaleString('en-US'));setMarkup('threatNext',`${into} / ${of}`);
+  const width=`${(into/of*100).toFixed(1)}%`;if(width!==T.shownWidth){T.shownWidth=width;$('threatFill').style.width=width;}
+  const r=String(rank.index);if(r!==T.shownRank){T.shownRank=r;$('threatHud').setAttribute('data-rank',r);}
+}
+function threatCue(rankUp){
+  if(rankUp){tone(55,1.8,.045,'sine',40);tone(110,1.4,.018,'triangle',82);tone(277,1.1,.007,'sine',262);noise(1,.018,260);}
+  else{tone(98,1,.03,'sine',74);tone(392,.6,.006,'triangle',372);}
+}
+function updateThreat(dt){
+  const T=threatTracker,level=threatLevel(runState.kills);
+  if(level>T.level){const rank=threatRank(level).index,rankUp=rank>T.rank;T.level=level;T.rank=rank;T.pulse=.9;if(rankUp)T.rankGlow=1.6;T.cues++;if(rankUp)T.rankCues++;threatCue(rankUp);}
+  T.pulse=Math.max(0,T.pulse-dt);T.rankGlow=Math.max(0,T.rankGlow-dt);
+  const cls=(T.pulse>0?'pulse':'')+(T.rankGlow>0?' rankUp':'');
+  if(cls!==T.shownClass){T.shownClass=cls;const el=$('threatHud');el.classList.toggle('pulse',T.pulse>0);el.classList.toggle('rankUp',T.rankGlow>0);}
+  if(runState.kills!==T.kills){T.kills=runState.kills;showThreat();}
+}
+// A new run starts again at level 1, quietly.
+function resetThreat(){Object.assign(threatTracker,{level:threatLevel(runState.kills),rank:threatRank(threatLevel(runState.kills)).index,kills:runState.kills,pulse:0,rankGlow:0});updateThreat(0);showThreat();}
 const weaponRecoil=createWeaponRecoil(),combatHud=createCombatHud({hit:$('hit'),headshot:$('headshotIndicator'),directions:$('damageDirections'),toggle:$('headshotToggle')});
 function addPoints(n){runState.points+=n;runState.totalScore+=n;return n;}
 // The weapon runtime reaches the run, the session and the view through one object.
@@ -249,7 +278,9 @@ display.useScreen({select:$('quality'),fps:$('fps'),layout(){applyFormFactor();f
 // ---- Runs, the title screen and the end of a run ---------------------------------------------
 function startFromMenu(){finishTheDead();resetRun();}
 // One step of the dead's build (a body); true once they are built.
-function growTheDead(){if(enemyReal)return true;const step=enemyBuild.next();if(!step.done)return false;enemyReal=step.value;warmTheDead();return true;}
+// v209: then, one more step, the brutes' wider routes (about 0.1 s), so the first brute to come
+// ashore no longer stalls a frame building them.
+function growTheDead(){if(enemyReal){if(!bruteRoutes)void routes.brutes;return true;}const step=enemyBuild.next();if(!step.done)return false;enemyReal=step.value;warmTheDead();return false;}
 function finishTheDead(){while(!growTheDead());return deadWarm;}
 function warmTheDead(){
   const warmScene=new T.Scene(),rage=enemyReal.templates.map(r=>{const group=r.group.clone(true);enemyReal.enrage({group});return group;});
@@ -272,7 +303,7 @@ function resetRun({capture=true}={}){
   Object.assign(runState,{health:100,maxHealth:100,armor:0,armorMax:0,armorTier:0,points:500,totalScore:0,kills:0,runTime:0,lastHurt:-20,grenades:3,doubleTime:0,grenadeTime:0,grenadeCooldown:0});
   runState.perkOwned.clear();runState.inventory=freshInventory();applyWeaponRanks();
   Object.assign(runState,{reloadLeft:0,shotTimer:0,feetY:0,jumpV:0,grounded:true,shotId:0});clearFlashes();
-  weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');
+  weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();resetThreat();firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');
   session.mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');
   if(capture)requestPointer();
   else{$('pauseTitle').textContent='The island is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}
@@ -317,7 +348,7 @@ document.addEventListener('keyup',onKeyUp);window.addEventListener('blur',onBlur
 // ---- Every frame ----------------------------------------------------------------------------
 const MENU_ORBIT=96;
 function tick(now){
-  if(!enemyReal)growTheDead();
+  if(!enemyReal||!bruteRoutes)growTheDead();
   requestAnimationFrame(tick);
   gamepad.poll(Math.min(Math.max(0,(now-lastTime)/1000),.05),{enabled:padPlay(),playing:session.mode==='playing'&&!controlsOpen(),layer:padLayer(),sensitivity:Number($('sensitivity').value),aiming:session.aiming&&!grenadeThrow.active,zoom:(zoomOf(runState.weapon)||1),onTarget:false});
   updateControllerStatus();document.body.classList.toggle('pad-playing',padPlay()&&session.mode==='playing');
@@ -339,7 +370,7 @@ function tick(now){
     // The dead: routes follow you, the shore sends more, and they hunt.
     // (Routes are only rebuilt while there are dead to lead, or the shore is about to send more.)
     followPlayer(hunter,player,island);navTimer-=dt;if(navTimer<=0&&(shore.alive()>0||shore.wanting())){rebuildRoutes();navTimer=.6;}
-    shore.update(dt);updateEnemies(dt);
+    shore.update(dt);updateEnemies(dt);updateThreat(dt);
     grenadeThrow.update(dt,releaseGrenade,grenadeCue);combat.updateEffects(dt);explosionFx.update(dt);combat.updatePickups(dt);
     recover(dt,true);runState.doubleTime=Math.max(0,runState.doubleTime-dt);runState.grenadeTime=Math.max(0,runState.grenadeTime-dt);
     zone=island.zoneAt(player.x,player.z,player.y);setMarkup('location',`DEAD TIDE <span> / ${zone}</span>`);setMarkup('interaction','');

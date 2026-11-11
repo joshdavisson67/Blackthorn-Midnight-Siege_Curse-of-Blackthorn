@@ -77,7 +77,8 @@ const enemy=e=>[e.dead?1:0,e.brute?1:0,e.dog?1:0,e.rareDog?1:0,e.feral?1:0,e.lur
 const birth=e=>[e.walkPos.x,e.walkPos.y,e.walkPos.z,e.group.position.y,e.hp,e.maxHp,e.speed,e.radius,e.bodyHeight,e.brute?1:0,e.dog?1:0,e.rareDog?1:0,e.feral?1:0,e.lurker?1:0,e.crawling?1:0,
   e.templateIndex,e.routeSide,e.flank,e.attack,e.navigation?.seed,e.life?.type,e.injury?.major,e.injury?.legless?1:0,e.injury?.props?.length,e.emergeLeft,e.face?.variant,e.style].map(r);
 // v208: the threat director's state (escalation scenarios only, so the others keep their shape).
-const threatState=s=>[s.shore.level,s.shore.rank,s.shore.target,s.shore.pending,s.shore.alive()].map(r);
+// v209: and the spawn network: the open major and interior zones and where arrivals came from.
+const threatState=s=>[s.shore.level,s.shore.rank,s.shore.target,s.shore.pending,s.shore.alive(),(s.shore.openZones||[]).join('+'),(s.shore.openInterior||[]).join('+'),s.shore.counts?JSON.stringify(s.shore.counts):'',s.threat?s.threat.cues:''].map(r);
 function snapshot(sc={}){const s=G(),R=s.run,inv=R.inventory,held=inv[R.weapon];return {...(sc.threat?{threat:threatState(s)}:{}),
   player:[s.player.x,s.player.y,s.player.z,R.health,R.armor,R.points,R.totalScore,R.kills,R.weapon,held?.ammo??null,held?.reserve??null,R.grenades,R.doubleTime,R.grenadeTime,s.effects.length,s.zone].map(r),
   zombies:(s.zombies||[]).map(enemy),
@@ -159,8 +160,8 @@ const scenarios={
   // threshold: from 95 kills, across into The Hunt (level 6) mid-fight; swarm: level 14;
   // apocalypse: level 24, every kind, filling towards 45.
   threshold:{frames:2400,dead:true,threat:true,setup:()=>escalate(95),script:holdBeach,watch:()=>{note('threshold: the hunt',G().shore.level>=6);note('threshold: specials',G().zombies.some(e=>e.dog||e.feral||e.brute||e.lurker));}},
-  swarm:{frames:2400,dead:true,threat:true,setup:()=>escalate(260),script:holdBeach,watch:()=>{note('swarm: dogs',G().zombies.some(e=>e.dog&&!e.rareDog));note('swarm: ferals',G().zombies.some(e=>e.feral));note('swarm: ashfangs',G().zombies.some(e=>e.rareDog));}},
-  apocalypse:{frames:3000,dead:true,threat:true,setup:()=>escalate(460),script:holdBeach,watch:()=>{const s=G();note('apocalypse: ashfangs',s.zombies.some(e=>e.rareDog));note('apocalypse: ferals',s.zombies.some(e=>e.feral));note('apocalypse: brutes',s.zombies.some(e=>e.brute));note('apocalypse: lurkers',s.zombies.some(e=>e.lurker));note('apocalypse: 25+',s.zombies.filter(e=>!e.dead).length>=25);}},
+  swarm:{frames:2400,dead:true,threat:true,setup:()=>escalate(260),script:holdBeach,watch:()=>{note('swarm: inland',G().shore.counts?.interior>0);note('swarm: dogs',G().zombies.some(e=>e.dog&&!e.rareDog));note('swarm: ferals',G().zombies.some(e=>e.feral));note('swarm: ashfangs',G().zombies.some(e=>e.rareDog));}},
+  apocalypse:{frames:3000,dead:true,threat:true,setup:()=>escalate(460),script:holdBeach,watch:()=>{const s=G();note('apocalypse: inland',s.shore.counts?.interior>0);note('apocalypse: minor',s.shore.counts?.minor>0);note('apocalypse: batches',s.shore.counts?.batches>0);note('apocalypse: ashfangs',s.zombies.some(e=>e.rareDog));note('apocalypse: ferals',s.zombies.some(e=>e.feral));note('apocalypse: brutes',s.zombies.some(e=>e.brute));note('apocalypse: lurkers',s.zombies.some(e=>e.lurker));note('apocalypse: 25+',s.zombies.filter(e=>!e.dead).length>=25);}},
   // The session: pause, Settings and the controls card, Resume, a pause to the title, and back in.
   session:{frames:480,script:f=>f===30?()=>key('Escape'):f===60?()=>$('settingsPause').onclick():f===90?()=>key('Escape'):f===120?()=>$('controlsPause').onclick():f===150?()=>key('Escape'):f===180?()=>$('resume').onclick():
     f===260?()=>key('Escape'):f===290?()=>$('mainMenuPause').onclick():f===320?()=>$('confirmYes').onclick():f===400?()=>enter():null,

@@ -87,3 +87,13 @@ for(const level of [4,10,18,30]){
   TIDE_KINDS.forEach((kind,k)=>near(counts[kind]/N,tideMix(level)[k],`Level ${level}: ${kind}s`,2e-5));
 }
 console.log('PASS: a roll picks each kind in proportion to its share (walkers at level 1 whatever the roll; level 24’s slices exactly).');
+
+// ---- v209: the spawn network by rank (spec 5.4) ----------------------------------------------
+const {SPAWN_RULES:S,majorZoneCount,minorShare,minorFollow,interiorOpen,interiorShare,batchSize}=M;
+for(const [level,open] of [[1,3],[3,4],[5,4],[6,4],[13,6],[14,6],[23,7],[24,7],[27,8],[28,8],[500,8]])assert.equal(majorZoneCount(level),open,`Level ${level}: ${open} major zones open`);
+for(let l=2;l<=200;l++)assert(majorZoneCount(l)>=majorZoneCount(l-1),'Never fewer zones open than the level before');
+for(const [lo,hi,a,b] of [[1,5,3,4],[6,13,4,6],[14,23,5,7],[24,60,1,8]])for(let l=lo;l<=hi;l++)assert(majorZoneCount(l)>=a&&majorZoneCount(l)<=b,`Level ${l} within its rank’s range (spec: 3–4, 4–6, 5–7, up to 8)`);
+for(const [level,minor,follow,inner,share,batch] of [[1,.12,.25,0,0,1],[5,.12,.25,0,0,1],[6,.22,.35,0,0,2],[13,.22,.35,0,0,2],[14,.32,.45,2,.1,2],[23,.32,.45,2,.1,2],[24,.4,.5,4,.18,3],[300,.4,.5,4,.18,3]])
+  assert.deepEqual([minorShare(level),minorFollow(level),interiorOpen(level),interiorShare(level),batchSize(level)],[minor,follow,inner,share,batch],`Level ${level}’s spawn network`);
+assert(S.interior.near>=28&&S.interior.halfAngle>=Math.PI*80/180&&S.rotate===40,'Inland never within 28 m nor in a 160° view; zones turn over every 40 s');
+console.log('PASS: the spawn network: 3–4 major zones open in The Unease, 4–6 in The Hunt, 6–7 in The Swarm, 7 to all 8 in The Apocalypse (never fewer than before); the minor points 12%, 22%, 32%, 40% of arrivals; the interior shut until The Swarm (2 zones, 10%), then 4 zones, 18%; batches of 1, 2, 2, 3.');
