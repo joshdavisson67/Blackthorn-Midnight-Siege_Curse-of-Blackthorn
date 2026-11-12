@@ -483,6 +483,45 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v217 (the picker's island art; Dead Tide no longer marked as a preview) against main (v216)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide, standard for the picker) on one machine, headless Chromium with software rendering, plus alternating picker pairs from `scripts/perf-measure.mjs --page modes.html`.
+
+### Mansion: quick
+
+Nothing it loads changed. Five of its files differ only in their version number.
+
+### Mode picker: standard, then a fix
+
+| | main (v216) | v217 |
+|---|---:|---:|
+| KB (6 requests) | 98 | 103 (+5: `modes.html` 30.4 → 35.9 KB) |
+| Animation frame, median of the per-run averages (6 pairs, after the fix) | 100.1 ms | 100.9 ms (within noise) |
+| Animation frame p95, mean of 6 runs (after the fix) | 112.2 ms | 113.9 ms (within noise) |
+| WebGL contexts / game code | none | none |
+
+- **A slowdown, found and fixed.** The release tool found no differences beyond its thresholds, but five alternating pairs of the first version showed the head slower in every pair: median 102.2 → 107.0 ms per frame (+5%). The fuller island (eleven palms, undergrowth, gradients for the shallows, ground and sand, the cliff and the tents) was redrawn every frame.
+- **The fix:** those still parts are drawn once per size into their own canvas and copied in each frame; only the shimmer, the camp's fire and torches, the wreck, the beacon, the foam and the dead are drawn live. After it, six alternating pairs put the head level with main (above). Both sides show occasional 2-second stalls in software rendering, so medians are given.
+- **The waders** (five dead in the surf) are now drawn where they were meant to be, each at its own size. Before, a missing index made their size an array, so all five were drawn as one figure. The draw cost is the same.
+
+### Dead Tide: full protocol
+
+Only `tide.html` changed (title-screen text). Six more files differ only in their version number.
+
+| | main (v216) | v217 |
+|---|---:|---:|
+| KB before playable | 3,188 | 3,188 |
+| Time to playable (load phases, 20 pairs) | 13,174 ms | 13,167 ms (−7, SE 77: within noise) |
+| ↳ modules / world / shaders | 329 / 1,737 / 11,108 ms | 321 / 1,755 / 11,091 ms (all within noise) |
+| Draw calls in the fixed views | 86–210 | 86–210 (identical) |
+| The 45-enemy fight: draw calls / triangles | 384–385 / 488K–489K | 383–385 / 485K–488K |
+| Frame logic (24 pairs, standard / full series) | 0.458 / 0.433 ms | 0.440 / 0.430 ms (within noise) |
+
+- **The fight's numbers** move by one draw call and a few thousand triangles between runs of the same build (main itself measured 384 and 385, and 488K and 489K), which is what the tool flagged; the golden trace is identical in every gameplay channel.
+- **Not measured:** real GPUs, phones, or frame rates in a real browser.
+
+Files: `v217-tide.jsonl`, `v217-tide-load-phases.jsonl`, `v217-tide-frame-logic.jsonl`, `v217-picker-pairs.jsonl`, `v217-tier-summary.json`.
+
 ## v216 (nothing floats, the camp's cliff, solid rocks, a fuller island) against main (v215)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering.

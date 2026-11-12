@@ -29,6 +29,35 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide's picker art and title screen, no longer a preview (version 217)
+
+From the user, after the island's art passes.
+
+- **The mode picker's Dead Tide half** now looks like the island does, still drawn as a stylised silhouette:
+  - a navy night sky and sea in place of the old teal, with a whiter moon;
+  - turquoise shallows round the island, brightest at the sand, with a little shimmer, and a pale beach along the waterline;
+  - jungle-green ground with undergrowth along its foot and eleven palms (six before);
+  - the Coastal Camp on its bluff: three tents, two flickering torches and a fire, above a dark rock cliff on the seaward side;
+  - the rusted freighter beached in the shallows, listing, with her bridge, funnel and derrick;
+  - the summit's radio shack, dish and lattice tower with its red beacon, as before.
+- **A fix there:** the five dead wading in the surf never stood in the surf. A missing index gave each one an array for its size, so all five were drawn as one figure on the hillside. They now stand in the surf, as they were meant to.
+- **Picker text:**
+  - the eyebrow reads "The island" (no "· Preview");
+  - the button reads "Wade ashore", like the island's own;
+  - the in-development note under it is gone.
+- **Dead Tide's title screen:**
+  - "Blackthorn · The second mode" and "Early preview" are gone;
+  - the tagline is now just "A moonlit island, long abandoned.";
+  - "In development" is gone from the small "One island · No waves" line too;
+  - the page description no longer calls it an early preview.
+- **Tests:** `tests/mode-picker.mjs` asserts "Wade ashore" and that no preview or in-development wording is left on the picker.
+- **Gameplay:** unchanged.
+- **Release tiers:**
+  - **The mansion:** quick; nothing it loads changed.
+  - **The mode picker:** standard. +5 KB. The first version drew about 5% slower per frame than main in every one of five alternating pairs, so the island's still parts are now drawn once per size into their own canvas and copied in each frame; after that, six alternating pairs put it level with main. No WebGL, no game code.
+  - **Dead Tide:** full, though only its title screen's text changed. Load, frame logic, views and the golden trace are unchanged; the 45-enemy fight's draw calls and triangles move by run-to-run noise. Details: `perf/README.md`.
+- **Not verified:** the picker on real phones; colours on a real GPU.
+
 ## Dead Tide: nothing floats, the camp's cliff, solid rocks and a fuller island (version 216)
 
 From the user's first look at the art pass.
