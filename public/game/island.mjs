@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {combineMeshes} from './batching.mjs?v=204';
-import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry,hullGeometry,columnGeometry} from './island-art.mjs?v=215';
+import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry,hullGeometry,columnGeometry} from './island-art.mjs?v=216';
 
 // Dead Tide's island (v204, Dead Tide step 2): the grey-box map. A central hill with the
 // radio tent and a lattice tower on its flat top, a lowland ring, beaches all round,
@@ -117,9 +117,59 @@ export function moundAt(name){const m=ISLAND.mounds.find(m=>m[0]===name);return 
 // with the hill, the mounds and gentle swells on the land (none on a flat top).
 // v212: the ground, with B-01's apron filled level in front of its door (at the height of the ground there).
 let APRON=null;
+// v216 (the user): the coastal camp stands on a plateau, flat right across its tents, outhouse and stations
+// (13.5 m from its middle) at the height of its middle; behind it, toward the sea, a cliff falls 1.3 m out
+// (too steep for anyone to climb: the dead will be given a way up later) to sand running down to the
+// water; in front and at the sides the plateau ramps into the land round it over 10 m or more (longer where the
+// land round it lies lower, so no ramp is steeper than about 25 degrees).
+export const CAMP_PLATEAU=Object.freeze({flat:13.5,front:10.2,face:1.3,ramp:10,longest:20,foot:2.3,beach:.25});
+let CAMPLAND=null;
+function campFrame(x,z){
+  const C=CAMPLAND??=(()=>{const a=Math.atan2(HILL.x-CAMP.x,HILL.z-CAMP.z);return {c:Math.cos(a),s:Math.sin(a),top:landHeight(CAMP.x,CAMP.z)};})();
+  const dx=x-CAMP.x,dz=z-CAMP.z;return {C,lx:dx*C.c-dz*C.s,lz:dx*C.s+dz*C.c,d:Math.hypot(dx,dz)};
+}
+const campBehind=lz=>smooth(-.5,-4,lz);   // 1 behind the camp (toward the sea), 0 from its middle forward
+// ...and toward the Wash, the ravine at its east side: there too it stands on a bluff, its edge a cliff above the
+// ravine (a gentle ramp down into a ravine so close would fill it). 1 within 20 degrees of the ravine's middle.
+let WASHDIR=null;
+function campWashward(lx,lz,d){if(!WASHDIR){const w=moundAt('THE WASH'),{lx:wx,lz:wz,d:wd}=campFrame(w.x,w.z);WASHDIR=[wx/wd,wz/wd];}return d>1e-6?smooth(Math.cos(.7),Math.cos(.35),(lx*WASHDIR[0]+lz*WASHDIR[1])/d):0;}
+// How much of a cliff the plateau's edge is there (to the sea, or to the ravine), and how much of that is the sea's.
+const campCliffWeight=(lx,lz,d)=>Math.max(campBehind(lz),campWashward(lx,lz,d));
+// The plateau's edge toward a direction (given by the sine of its angle from across the camp, so -1 straight
+// behind): flat to 13.5 m behind, where the cliff is; to 10.2 m in front and at the sides, enough for the tents
+// and torches, so the ramps leave the Wash (the ravine at its east side) its depth. The ground, the cliff's
+// rock and the ground's mesh all use this same edge.
+function campEdge(sinPhi){const P=CAMP_PLATEAU;let r=P.flat;for(let i=0;i<4;i++)r=P.front+(P.flat-P.front)*campBehind(r*sinPhi);return r;}
+function campGround(x,z,h){
+  const P=CAMP_PLATEAU,{C,lz,d}=campFrame(x,z);if(d>=P.flat+P.longest)return h;
+  const behind=campBehind(lz),{lx}=campFrame(x,z),cw=campCliffWeight(lx,lz,d),sea=cw>1e-6?behind/cw:0,edge=campEdge(d>1e-6?lz/d:0);
+  if(d<=edge){calm=1;return C.top;}
+  // (Where the land round it is higher, the hill's foot is cut back only as far as it must be.)
+  // (Its length is set once for each direction, by the land 10 m out, so the ramp never warps where the land
+  // dips or rises under it.)
+  const out=(edge+10)/d,ref=landHeight(CAMP.x+(x-CAMP.x)*out,CAMP.z+(z-CAMP.z)*out);
+  const L=Math.min(P.flat+P.longest-edge-1,ref>C.top?Math.max(7,(ref-C.top)*3.4):Math.max(P.ramp,(C.top-ref)*2.7)),ramp=C.top+(h-C.top)*smooth(edge,edge+L,d),k=(d-edge)/P.face;
+  // (Below the cliff the sand falls toward the sea, never above the land that was there, and is the land again 10 m out.)
+  // (To the sea its foot is the sand; to the ravine, the ravine's own side.)
+  const footAt=h+(Math.min(h,P.foot)-h)*sea,cliff=k<1?C.top+(footAt-C.top)*k:h+Math.min(0,P.foot-P.beach*(d-edge-P.face)-h)*smooth(edge+P.face+10,edge+P.face+4,d)*sea;
+  return ramp+(cliff-ramp)*cw;
+}
+// The ground as its mesh draws it. Its vertices are 1.5 m apart, too far to draw the cliff's step: lines
+// from the plateau's edge to the sand would stand out past the face. So under the rock (the face, and the
+// rim of rock 1.7 m deep along the top: CAMP_RIM) the mesh lies at the foot's height, all of it behind
+// the rock that covers it; where you stand is still the plateau (groundHeight), on the rim's rock.
+export const CAMP_RIM=1.7;
+export function campMeshHeight(x,z){const P=CAMP_PLATEAU,{lx,lz,d}=campFrame(x,z),edge=campEdge(d>1e-6?lz/d:0);
+  if(d<=edge-CAMP_RIM+.05||d>=edge+P.face+.05||campCliffWeight(lx,lz,d)<=.02)return groundHeight(x,z);
+  const C=CAMPLAND,dir=(r)=>[CAMP.x+(lx*C.c+lz*C.s)*r/d,CAMP.z+(-lx*C.s+lz*C.c)*r/d],foot=groundHeight(...dir(edge+P.face+.15));
+  if(C.top-foot<.6)return groundHeight(x,z);   // (where the face stands less than 0.6 m, there is no rock: the ground as it is)
+  return Math.min(groundHeight(x,z),foot);}
+// Where the camp's cliff face is, and its shoulders, where it curves round the plateau's back half and
+// meets the side ramps: ground no one stands on, by design.
+export function campCliff(x,z){const P=CAMP_PLATEAU,{lx,lz,d}=campFrame(x,z),edge=campEdge(d>1e-6?lz/d:0);return campCliffWeight(lx,lz,d)>.02&&d>edge-.3&&d<edge+P.longest;}
 export function groundHeight(x,z){
   if(!APRON){const R=moundAt('BUNKER RIDGE'),a=Math.PI-R.angle,[bx,bz]=turned(R.x,R.z,a,0,BUNKER.out),[fx,fz]=turned(bx,bz,a,0,1.6),[cx,cz,r,edge]=BUNKER.apron,[ax,az]=turned(bx,bz,a,cx,cz);APRON=[ax,az,r,edge,(r+edge)**2,landHeight(fx,fz)];}
-  const h=landHeight(x,z),dx=x-APRON[0],dz=z-APRON[1],d2=dx*dx+dz*dz;if(d2>=APRON[4])return h;
+  const h=campGround(x,z,landHeight(x,z)),dx=x-APRON[0],dz=z-APRON[1],d2=dx*dx+dz*dz;if(d2>=APRON[4])return h;
   // (It only fills: the ridge behind the door keeps its height.)
   const w=smooth(APRON[2]+APRON[3],APRON[2],Math.sqrt(d2));if(w>=1)calm=1;return h+Math.max(0,APRON[5]-h)*w;
 }
@@ -225,7 +275,7 @@ export function trailDistance(x,z){
 // Small seeded random numbers, so the island is the same on every load.
 function seeded(seed){return ()=>{seed=(seed+0x6D2B79F5)>>>0;let t=seed;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
 
-export function buildIsland({scene,world,textures=standInTextures()}){
+export function buildIsland({scene,world,textures=standInTextures(),audit=false}){
   const colliders=[],platforms=[],solidMeshes=[],lights=[],TEX=textures;
   const material=(color,extra={})=>new T.MeshStandardMaterial({color,roughness:.92,metalness:0,...extra});
   const TENT=ISLAND.tent,W=ISLAND.tower,summit=groundHeight(HILL.x,HILL.z),{sites:SITE,landmarks:LANDMARKS,stations,trails,boathouse:{floor:BOATHOUSE_FLOOR}}=islandSites();
@@ -263,7 +313,7 @@ export function buildIsland({scene,world,textures=standInTextures()}){
     const x0=-EXTENT+cx*CHUNK*SPACING,z0=-EXTENT+cz*CHUNK*SPACING,n=CHUNK+1;
     const pos=new Float32Array(n*n*3),nor=new Float32Array(n*n*3),col=new Float32Array(n*n*3),uv=new Float32Array(n*n*2),spl=new Float32Array(n*n*4);let dry=false;
     for(let j=0;j<n;j++)for(let i=0;i<n;i++){
-      const x=x0+i*SPACING,z=z0+j*SPACING,h=groundHeight(x,z),k=j*n+i;
+      const x=x0+i*SPACING,z=z0+j*SPACING,h=campMeshHeight(x,z),k=j*n+i;
       const gx=(groundHeight(x+.5,z)-groundHeight(x-.5,z)),gz=(groundHeight(x,z+.5)-groundHeight(x,z-.5)),len=Math.hypot(gx,1,gz);
       pos.set([x,h,z],k*3);nor.set([-gx/len,1/len,-gz/len],k*3);uv.set([x/8,z/8],k*2);
       spl.set(groundKind(x,z,h,Math.hypot(gx,gz)),k*4);c.copy(tint);c.toArray(col,k*3);if(h>-.25)dry=true;
@@ -347,7 +397,16 @@ void main(){
   let colliderGrid=null,platformGrid=null;
   const nearColliders=(x,z)=>{if(!colliderGrid||colliderGrid.count!==colliders.length)colliderGrid=gridOf(colliders);return colliderGrid.cells[cellAt(z)*SPAN+cellAt(x)];};
   const nearPlatforms=(x,z)=>{if(!platformGrid||platformGrid.count!==platforms.length)platformGrid=gridOf(platforms);return platformGrid.cells[cellAt(z)*SPAN+cellAt(x)];};
-  function supportBelow(x,z,y=Infinity,step=0){let h=groundHeight(x,z);const near=nearPlatforms(x,z);for(let i=0;i<near.length;i++){const p=near[i];if(p.top>h&&p.top<=y+step+1e-6&&inPlatform(p,x,z))h=p.top;}return h;}
+  // v216: and every solid thing's top: anything that blocks you holds you up if you come down on it, so
+  // nothing can be landed inside (a jump onto a rock, or over a low wall, ends on top of it). A rock's top
+  // is its own rounded crown (its collider's dome), never lower than the lip that stops you walking onto it.
+  function topOf(c,x,z){
+    if(c.dome){const d=Math.hypot(x-c.x,z-c.z);if(d>=c.r)return -Infinity;const D=c.dome;return Math.max(c.top,D.base+(D.peak-D.base)*(1-(d/D.rv)**2));}
+    if(c.r!==undefined)return (x-c.x)**2+(z-c.z)**2<c.r*c.r?c.top:-Infinity;
+    const dx=x-c.x,dz=z-c.z,lx=dx*c.cos-dz*c.sin,lz=dx*c.sin+dz*c.cos;return Math.abs(lx)<=c.w/2&&Math.abs(lz)<=c.d/2?c.top:-Infinity;
+  }
+  function supportBelow(x,z,y=Infinity,step=0){let h=groundHeight(x,z);const near=nearPlatforms(x,z);for(let i=0;i<near.length;i++){const p=near[i];if(p.top>h&&p.top<=y+step+1e-6&&inPlatform(p,x,z))h=p.top;}
+    const solid=nearColliders(x,z);for(let i=0;i<solid.length;i++){const t=topOf(solid[i],x,z);if(t>h&&t<=y+step+1e-6)h=t;}return h;}
   // v210: under the radio tent's canopy (its eaves are the ceiling; a brute stands under them).
   const tentInside=(x,z)=>Math.abs(x-TENT.x)<TENT.w/2&&Math.abs(z-TENT.z)<TENT.d/2;
   // v212: inside the boathouse (its own frame: x across from the dock, z out to sea).
@@ -361,12 +420,17 @@ void main(){
   // follow it up and down; the sea is wadeable to ISLAND.wade and slows you as it deepens.
   function move(pos,dx,dz,r=.32,{grounded=true,height=1.8,canOccupy=null}={}){
     const depth=Math.max(0,-groundHeight(pos.x,pos.z)),drag=1-.45*Math.min(1,depth/ISLAND.wade);dx*=drag;dz*=drag;
+    // v216: a body that is somehow inside something solid (dropped into it, say) may always step away from
+    // it, never further in, so nothing can hold anyone fast.
+    const stuck=isBlocked(pos.x,pos.z,r,colliders,null,pos.y,height);
+    const freeing=(x,z,y)=>{const near=nearColliders(x,z);for(let i=0;i<near.length;i++){const c=near[i];if(!touches(c,x,z,r,y,height))continue;
+      if(!touches(c,pos.x,pos.z,r,pos.y,height)||(x-c.x)**2+(z-c.z)**2<=(pos.x-c.x)**2+(pos.z-c.z)**2)return false;}return true;};
     function step(x,z){
       if(groundHeight(x,z)<-ISLAND.wade)return;
       const surface=supportBelow(x,z,pos.y,ISLAND.step),near=Math.abs(surface-pos.y)<=ISLAND.step;
       if(grounded&&surface>pos.y+ISLAND.step)return;
       const y=grounded&&near?surface:pos.y;
-      if(isBlocked(x,z,r,colliders,null,y,height))return;
+      if(isBlocked(x,z,r,colliders,null,y,height)&&!(stuck&&freeing(x,z,y)))return;
       if(y+height>ceilingAt(x,z,y))return;
       if(canOccupy&&!canOccupy(x,z,y))return;   // v206: bodies never overlap
       pos.x=x;pos.z=z;if(grounded&&near)pos.y=surface;
@@ -409,25 +473,38 @@ void main(){
   const PLANE=new T.PlaneGeometry(1,1),VINE=vineGeometry(1,1),SHRUB=shrubGeometry(9);
   // The ruin's column capital (a flared echinus) and a fallen drum (centred on its middle); a carved panel's darker stone.
   const CAPITAL=new T.CylinderGeometry(.6,.4,.3,32),DRUM=columnGeometry({radius:.42,height:1.5}).translate(0,-.75,0),carved=textured(TEX,'stone',{color:0x8c8a80,scale:.35});CAPITAL.translate(0,.15,0);
-  const thatch=textured(TEX,'thatch',{color:0xc0ae90,roughness:1}),forgeRock=textured(TEX,'rock',{color:0x9c9a92,scale:.4});
+  const thatch=textured(TEX,'thatch',{color:0xc0ae90,roughness:1}),forgeRock=textured(TEX,'rock',{color:0x9c9a92,scale:.4}),cliffRock=textured(TEX,'rock',{color:0x8e8c84,scale:.9,side:T.DoubleSide});
   const flame=new T.MeshStandardMaterial({color:0x3a1404,emissive:0xff8a2a,emissiveIntensity:2.2,roughness:.6}),warn=new T.MeshStandardMaterial({color:0x2a0705,emissive:0xff1a10,emissiveIntensity:1.2,roughness:.5}),rune=new T.MeshStandardMaterial({color:0x140a26,emissive:0x8a4dff,emissiveIntensity:1.05,roughness:.5});
   // No prop can be jumped onto: what blocks reaches at least 1.05 m above the highest ground
   // round it (on a slope that is above the prop's own top on its uphill side).
   const lifted=(wx,wz,reach,top)=>{let g=-Infinity;for(let a=0;a<6.3;a+=.2)for(const f of [.4,.7,1]){const h=groundHeight(wx+Math.cos(a)*(reach+.4)*f,wz+Math.sin(a)*(reach+.4)*f);if(h>g)g=h;}return Math.max(top,g+1.05);};
   function site(x,z,angle=0,base=null,kind='prop'){
     const at=(lx,lz)=>turned(x,z,angle,lx,lz),ground=(wx,wz)=>base??groundHeight(wx,wz);
-    const add=(geo,mat,wx,y,wz,sx,sy,sz,rx,ry,rz)=>{const m=new T.Mesh(geo,mat);m.position.set(wx,y,wz);m.scale.set(sx,sy,sz);m.rotation.set(rx,angle+ry,rz,'YXZ');m.castShadow=m.receiveShadow=true;props.add(m);return m;};
+    const add=(geo,mat,wx,y,wz,sx,sy,sz,rx,ry,rz,grounded=false)=>{const m=new T.Mesh(geo,mat);m.userData.grounded=grounded;m.userData.kind=kind;m.position.set(wx,y,wz);m.scale.set(sx,sy,sz);m.rotation.set(rx,angle+ry,rz,'YXZ');m.castShadow=m.receiveShadow=true;props.add(m);return m;};
+    // v216: the lowest ground under a footprint (half-sizes hx, hz, turned by a): a part standing on
+    // sloping ground reaches down to it, so no edge of it hangs in the air.
+    const lowest=(wx,wz,hx,hz,a)=>{let g=groundHeight(wx,wz);const c=Math.cos(a),s=Math.sin(a);for(const fx of [-1,-.5,0,.5,1])for(const fz of [-1,-.5,0,.5,1]){const h=groundHeight(wx+fx*hx*c+fz*hz*s,wz-fx*hx*s+fz*hz*c);if(h<g)g=h;}return g;};
+    // (On a site of fixed height, a part reaches down from its own foot only where the real ground lies lower.)
+    const downTo=(g,ly,low)=>base===null?Math.min(g,low)+ly:Math.min(g+ly,low);
     return {x,z,angle,at,
-      // A box sx wide, sy high and sz deep, its foot ly above the ground.
+      // A box sx wide, sy high and sz deep, its foot ly above the ground. (v216: standing on the ground,
+      // it reaches down to the lowest ground under it; its top stays where it was.)
       box(mat,lx,ly,lz,sx,sy,sz,{rx=0,ry=0,rz=0,collide=false,platform=false,tall=0,visible=true}={}){
-        const [wx,wz]=at(lx,lz),g=ground(wx,wz);if(visible)add(BOX,mat,wx,g+ly+sy/2,wz,sx,sy,sz,rx,ry,rz);
+        const [wx,wz]=at(lx,lz),g=ground(wx,wz);
+        if(visible){const tilt=Math.abs(rx)+Math.abs(rz),stand=ly<=.05&&tilt<.15,foot=stand?downTo(g,ly,lowest(wx,wz,sx/2,sz/2,angle+ry))-Math.sin(tilt)*Math.max(sx,sz)/2:g+ly,top=g+ly+sy;add(BOX,mat,wx,(foot+top)/2,wz,sx,top-foot,sz,rx,ry,rz,ly<=.05);}
         if(collide)boxCollider(wx,wz,sx,sz,g-2,lifted(wx,wz,Math.hypot(sx,sz)/2,g+ly+sy+tall),angle+ry,kind);
         if(platform)platforms.push({x:wx,z:wz,w:sx,d:sz,top:g+ly+sy,cos:Math.cos(angle+ry),sin:Math.sin(angle+ry)});
         return [wx,g,wz];},
       // A post of radius r and height h.
       post(mat,lx,ly,lz,r,h,{rx=0,rz=0,collide=false,reach=0,visible=true}={}){
-        const [wx,wz]=at(lx,lz),g=ground(wx,wz);if(visible)add(CYL,mat,wx,g+ly+h/2,wz,r,h,r,rx,0,rz);
+        // v216: its height is its foot's (ly above the ground) plus its real half-height as it lies: h/2
+        // standing, r laid on its side (a log rests on the ground, its middle not h/2 up in the air).
+        const [wx,wz]=at(lx,lz),g=ground(wx,wz),up=Math.abs(Math.cos(rx)*Math.cos(rz)),half=up*h/2+Math.sqrt(Math.max(0,1-up*up))*r;
+        if(visible){if(ly<=.05&&up>.99){const foot=downTo(g,ly,lowest(wx,wz,r,r,0)),top=g+ly+h;add(CYL,mat,wx,(foot+top)/2,wz,r,top-foot,r,rx,0,rz,true);}else add(CYL,mat,wx,g+ly+half,wz,r,h,r,rx,0,rz,ly<=.05);}
         if(collide)circleCollider(wx,wz,Math.max(.12,r+reach),g-2,lifted(wx,wz,Math.max(.12,r+reach),g+ly+h),kind);return [wx,g,wz];},
+      // v216: a log lying on the ground from one point to another, following its slope (sunk a little into it).
+      log(lx0,lz0,lx1,lz1,r,mat=timber){const [ax,az]=at(lx0,lz0),[bx,bz]=at(lx1,lz1),a=new T.Vector3(ax,ground(ax,az)+r*.7,az),b=new T.Vector3(bx,ground(bx,bz)+r*.7,bz),dir=b.clone().sub(a),len=dir.length();
+        const m=new T.Mesh(CYL,mat);m.userData.grounded=true;m.userData.kind=kind;m.position.copy(a).add(b).multiplyScalar(.5);m.scale.set(r,len,r);m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),dir.normalize());m.castShadow=m.receiveShadow=true;props.add(m);return m;},
       // A crate, or a barrel, standing on the ground: both block.
       crate(lx,lz,size=1.25,ry=0){return this.box(crate,lx,0,lz,size,size,size,{ry,collide:true});},
       barrel(lx,lz){return this.post(rustMat,lx,0,lz,.33,1.15,{collide:true,reach:.04});},
@@ -503,7 +580,7 @@ void main(){
   const hullMat=textured(TEX,'rust',{roughness:.82,metalness:.2,vertexColors:true,side:T.DoubleSide,scale:1.6}),rust=rustMat,cabin=textured(TEX,'concrete',{color:0xe6e0d2,roughness:.85});
   const ochre=textured(TEX,'rust',{color:0xf2c27a,roughness:.7,metalness:.3,scale:.5}),glass=new T.MeshStandardMaterial({color:0x091013,roughness:.25,metalness:.5});
   {const m=new T.Mesh(hull,hullMat);m.castShadow=m.receiveShadow=true;wreck.add(m);}
-  const at=t=>-L*.95/2+t*L*.95,dk=t=>deckAt(t);
+  const at=t=>-L*.95/2+t*L*.95,dk=t=>deckAt(t),wd=t=>hull.userData.width(t);
   // The bridge: two decks of superstructure aft, a wheelhouse window band facing forward, portholes, a rail.
   {const x=at(.17),y=dk(.17);
     part(wreck,BOX,cabin,x,y+.75,0,{sx:2.6,sy:1.5,sz:3.1});part(wreck,BOX,cabin,x-.15,y+2.05,0,{sx:1.9,sy:1.1,sz:2.5});
@@ -522,12 +599,17 @@ void main(){
   {const t=.76,x=at(t),y=dk(t),top=y+6.2;
     part(wreck,CYL,ochre,x,y+3.1,0,{sx:.13,sy:6.2,sz:.13});part(wreck,BOX,ochre,x,top-1.4,0,{sx:.14,sy:.14,sz:2.3});
     part(wreck,BOX,ochre,x,top-.75,0,{sx:.9,sy:.07,sz:.9});for(const side of [-1,1]){part(wreck,BOX,steel,x,top-.5,side*.44,{sx:.9,sy:.04,sz:.04});part(wreck,BOX,steel,x+side*.44,top-.5,0,{sx:.04,sy:.04,sz:.9});}
-    for(const side of [-1,1]){const foot=new T.Vector3(x-.15,y+.8,side*.32),tip=new T.Vector3(x-4.4,y+3.2,side*1.1);strut(wreck,ochre,foot,tip,.13);
+    // (v216: the booms lowered onto the after hatch, their tops held by the topping lifts; the shrouds made fast
+    // to the bulwarks; nothing hangs in the air.)
+    for(const side of [-1,1]){const foot=new T.Vector3(x-.15,y+.8,side*.32),tip=new T.Vector3(at(.62)+.75,dk(.62)+.52,side*.75);strut(wreck,ochre,foot,tip,.13);
       strut(wreck,steel,new T.Vector3(x,top-1.4,side*1.1),tip,.025);}
-    strut(wreck,steel,new T.Vector3(x,top,0),new T.Vector3(at(.99),dk(.99)+.6,0),.03);                   // the forestay
-    for(const side of [-1,1])strut(wreck,steel,new T.Vector3(x,top-1.4,side*1.1),new T.Vector3(x+.6,y+.1,side*B*.44),.025);}   // the shrouds
-  // Bollards along her rails, and her fallen rail stanchions near the bow.
-  for(const t of [.3,.56,.9])for(const side of [-1,1])part(wreck,CYL,steel,at(t),dk(t)+.18,side*B*.36,{sx:.13,sy:.36,sz:.13});
+    strut(wreck,steel,new T.Vector3(x,top,0),new T.Vector3(at(.985),dk(.985)+.7,0),.03);                 // the forestay
+    {const t2=t+.6/(L*.95);for(const side of [-1,1])strut(wreck,steel,new T.Vector3(x,top-1.4,side*1.1),new T.Vector3(at(t2),dk(t2)+.74,side*wd(t2)*.96),.025);}}   // the shrouds
+  // Bollards along her deck, inside her rails.
+  for(const t of [.3,.56,.88])for(const side of [-1,1])part(wreck,CYL,steel,at(t),dk(t)+.18,side*wd(t)*.68,{sx:.13,sy:.36,sz:.13});
+  // v216: her stem, and a cap rail along each gunwale, so her edges read as steel, not paper.
+  strut(wreck,rust,new T.Vector3(at(1)-.02,hull.userData.keel(1),0),new T.Vector3(at(1)-.02,dk(1)+.78,0),.16);
+  for(const side of [-1,1])for(let k=0;k<16;k++){const t0=.02+k*.98/16,t1=t0+.98/16;strut(wreck,rust,new T.Vector3(at(t0),dk(t0)+.77,side*wd(t0)),new T.Vector3(at(t1),dk(t1)+.77,side*wd(t1)),.09);}
   merge(wreck);
   boxCollider(wx,wz,L*.95*K,B*1.05*K,groundHeight(wx,wz)-2,groundHeight(wx,wz)+3.6*K,-heading,'wreck');
 
@@ -622,15 +704,30 @@ void main(){
   // opening, which faces Radio Hill; seats round the fire, supplies, a woodpile and a table; and a
   // little way out the back, the outhouse, with the M4 and Ironheart against its sides.
   {const A=site(SITE.camp.x,SITE.camp.z,SITE.camp.angle,null,'camp'),R=CAMP.ring;
-    for(let k=0;k<10;k++){const a=k/10*TAU;A.box(stone,Math.cos(a)*.9,0,Math.sin(a)*.9,.34,.22,.28,{ry:-a});}           // the fire ring
+    for(let k=0;k<10;k++){const a=k/10*TAU;A.box(forgeRock,Math.cos(a)*.9,0,Math.sin(a)*.9,.34,.22,.28,{ry:-a});}       // the fire ring (v216: dark, sooty stones)
     A.box(plank,0,.08,0,1.1,.13,.15,{ry:.6});A.box(plank,0,.14,0,1.1,.13,.15,{ry:-.5});A.box(glow,0,.02,0,.75,.07,.75);A.block(0,0,2.1,2.1,.4);   // its logs and embers
     {const [fx,fz]=A.at(0,0);fireLight.position.set(fx,groundHeight(fx,fz)+.7,fz);}                             // v215: and its light
-    for(const a of [1.15,TAU/2,TAU-1.15]){const L=A.sub(Math.sin(a)*2.3,Math.cos(a)*2.3,a+Math.PI/2);L.post(timber,0,0,0,.2,1.4,{rz:Math.PI/2});L.block(0,0,1.4,.45,.4);}   // log seats
+    // v216: the cliff behind the camp, as a face of rough rock over the ground's own steep step (which the
+    // ground's 1.5 m mesh can only draw as a saw edge): from below the sand at its foot up to a lip at the
+    // plateau's edge, following the edge round as far as the cliff stands 0.6 m or more. Seen, not felt:
+    // the ground itself says where anyone stands, and the face never reaches out past the cliff's foot.
+    {const P=CAMP_PLATEAU,pos=[],index=[],ROWS=7,columns=[],lump=(u,v)=>.2*Math.sin(u*2.3+v*1.7)+.14*Math.sin(u*5.1-v*2.9+1.3)+.08*Math.sin(u*11.7+v*4.1);
+      for(let phi=Math.PI-1.2;phi<=TAU+.5+1e-6;phi+=.045){const lx=Math.cos(phi),lz=Math.sin(phi),E=campEdge(lz),top=supportBelow(...A.at(lx*(E-.05),lz*(E-.05)),Infinity),[fx,fz]=A.at(lx*(E+P.face+.15),lz*(E+P.face+.15)),foot=groundHeight(fx,fz);
+        if(top-foot<.6){columns.push(null);continue;}const col=[];
+        for(let j=0;j<=ROWS;j++){const v=j/ROWS,y=foot-.7+(top+.1-(foot-.7))*v,r=E+.1+(P.face+.05)*Math.pow(1-v,.8)-Math.max(0,lump(phi*14,v*3))*(1-v*.5)*(v<.95?1:0)*.6;
+          const [x,z]=A.at(lx*r,lz*r);col.push(pos.length/3);pos.push(x,y,z);}
+        // ...and on over the plateau's edge, a low rim of rock 1.7 m deep (over where the mesh slopes down to the face).
+        for(const [inward,lift] of [[.5,.14],[1.1,.1],[CAMP_RIM,-.06]]){const r=E+.1-inward,[x,z]=A.at(lx*r,lz*r);col.push(pos.length/3);pos.push(x,top+lift+.05*Math.abs(lump(phi*17,inward)),z);}
+        columns.push(col);}
+      for(let i=0;i<columns.length-1;i++){const a=columns[i],b=columns[i+1];if(!a||!b)continue;for(let j=0;j<a.length-1;j++)index.push(a[j],b[j],a[j+1],a[j+1],b[j],b[j+1]);}
+      const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(index);g.computeVertexNormals();g.computeBoundingSphere();
+      const face=new T.Mesh(g,cliffRock);face.name='Camp cliff';face.castShadow=face.receiveShadow=true;props.add(face);}
+    for(const a of [1.15,TAU/2,TAU-1.15]){const L=A.sub(Math.sin(a)*2.3,Math.cos(a)*2.3,a+Math.PI/2);L.post(timber,0,-.04,0,.2,1.4,{rz:Math.PI/2});L.block(0,0,1.4,.45,.4);}   // log seats
     for(let k=0;k<CAMP.tents;k++){const ph=Math.PI/2+k*Math.PI/(CAMP.tents-1);ridgeTent(A.sub(Math.sin(ph)*R,Math.cos(ph)*R,ph-Math.PI/2),3,2.3,1.75);}
     for(const side of [-1,1]){const [x,z]=[side*CAMP.torch[0],CAMP.torch[1]];                                        // the torches at the opening
       A.post(timber,x,0,z,.06,1.95,{collide:true});A.box(timber,x,1.9,z,.24,.12,.24);A.box(flame,x,2.02,z,.17,.32,.17);}
     A.crate(-9.1,-3.4,1.25,.3);A.crate(-9.6,-2,1.1,-.2);A.box(crate,-9.1,1.25,-3.4,1.05,1.05,1.05,{ry:.5});A.barrel(-8.4,-5);   // supplies, a crate on top
-    {const P=A.sub(7.3,3.6,-.4);for(let k=0;k<3;k++)for(let j=0;j<3-k;j++)P.post(timber,0,.17+k*.3,(j-(2-k)/2)*.32,.15,1.7,{rz:Math.PI/2});P.block(0,0,1.8,1.1,.9);}   // the woodpile
+    {const P=A.sub(7.3,3.6,-.4);for(let k=0;k<3;k++)for(let j=0;j<3-k;j++)P.post(timber,0,-.02+k*.26,(j-(2-k)/2)*.3,.15,1.7,{rz:Math.PI/2});P.block(0,0,1.8,1.1,.9);}   // the woodpile
     {const D=A.sub(8.4,-1.6,.6);D.box(timber,0,.74,0,1.6,.06,.8);for(const [x,z] of [[-.7,-.32],[.7,-.32],[-.7,.32],[.7,.32]])D.box(timber,x,0,z,.06,.74,.06);D.box(glow,.4,.8,0,.16,.22,.16);D.block(0,0,1.6,.8,1.1);}   // a table and its lantern
     {const O=CAMP.outhouse,H=A.sub(O.x,O.z,O.ry);                                                                       // the outhouse, its door toward the camp
       H.box(plank,0,0,0,O.w,O.h-.15,O.d,{collide:true});H.box(timber,0,.04,O.d/2+.01,.72,1.95,.03);H.box(steel,.25,1.6,O.d/2+.03,.12,.12,.02);
@@ -678,11 +775,21 @@ void main(){
     for(let k=0;k<4;k++){const a=k*Math.PI/2+1.25,x=Math.cos(a)*6.3,z=Math.sin(a)*6.3;A.box(forgeRock,x,0,z,.95,2.7+(k%2)*.4,.7,{ry:-a+Math.PI/2,rz:(k%2?-.06:.05),collide:true});
       A.box(rune,x-Math.cos(a)*.37,1.1,z-Math.sin(a)*.37,.12,.9,.04,{ry:-a+Math.PI/2});}
   }
-  // North Beach: driftwood above the tide line (too low to block).
-  {const A=site(SITE.north.x,SITE.north.z,0,null,'north');for(const [x,z,l,ry] of [[-9,3,3.6,.3],[7,4.5,2.8,-.5],[14,1.5,3.2,1.1],[-17,5,2.4,-.2]])A.post(timber,x,.02,z,.14,l,{rz:Math.PI/2,rx:ry});}
+  // North Beach: driftwood above the tide line (too low to block). (v216: lying on the sand along its slope,
+  // each turned its own way: the old ones floated, their middles half their length up.)
+  {const A=site(SITE.north.x,SITE.north.z,0,null,'north');for(const [x,z,l,ry] of [[-9,3,3.6,.3],[7,4.5,2.8,-.5],[14,1.5,3.2,1.1],[-17,5,2.4,-.2]]){const dx=Math.cos(ry)*l/2,dz=Math.sin(ry)*l/2;A.log(x-dx,z-dz,x+dx,z+dz,.14,plank);}}
   // The station pads (step 5 builds the stations on them): a pale slab apiece, flush with the ground.
   // (v212: wide enough for a weapon's cabinet, and thick enough to meet the ground on a slight slope.)
   for(const p of stations){if(!p.slab)continue;const y=supportBelow(p.x,p.z,Infinity)-.06,m=new T.Mesh(BOX,padMat);m.position.set(p.x,y,p.z);m.scale.set(2.2,.16,1.4);m.rotation.set(0,p.angle,0);m.receiveShadow=true;props.add(m);}
+  // v216: what stands on the ground but does not meet it. Each part placed with its foot on the ground
+  // (or a log on it) is checked before the props are merged: its lowest points against the ground
+  // under each of them. buildIsland({audit:true}) lists any that float, for the tests.
+  const floating=[];
+  if(audit){props.updateMatrixWorld(true);const v=new T.Vector3();
+    for(const m of props.children){if(!m.isMesh||!m.userData.grounded)continue;const p=m.geometry.attributes.position,step=Math.max(1,Math.floor(p.count/240)),pts=[];let low=Infinity;
+      for(let i=0;i<p.count;i+=step){v.fromBufferAttribute(p,i).applyMatrix4(m.matrixWorld);pts.push(v.clone());if(v.y<low)low=v.y;}
+      let gap=-Infinity,at=null;for(const q of pts){if(q.y>low+.06)continue;const g=supportBelow(q.x,q.z,q.y+.02),d=q.y-g;if(d>gap){gap=d;at=q;}}
+      if(gap>.08)floating.push({kind:m.userData.kind,material:m.material.name,x:+at.x.toFixed(2),z:+at.z.toFixed(2),gap:+gap.toFixed(2)});}}
   merge(props);
   // v212: the boathouse door: two leaves on their hinges, apart from the merged props since they swing
   // open, and a collider of its own across the doorway while it is shut.
@@ -726,16 +833,15 @@ void main(){
   // v215: ringed bark up the trunks (its texture wrapped round them, a metre a ring band), and crowns of
   // drooping fronds with young ones rising (island-art.mjs), swaying a little.
   const barkMap=TEX.bark.clone();barkMap.repeat.set(1,7.5);barkMap.needsUpdate=true;
-  const trunks=new T.InstancedMesh(trunkGeo,new T.MeshStandardMaterial({map:barkMap,color:0xcfc3b2,roughness:.95}),palmSpots.length),crowns=new T.InstancedMesh(palmCrownGeometry(7),foliage(TEX,'frond',{color:0xd8e8cc,sway:.06}),palmSpots.length);
-  trunks.name='Palm trunks';crowns.name='Palm crowns';
-  const m4=new T.Matrix4(),q4=new T.Quaternion(),e4=new T.Euler(),v4=new T.Vector3(),s4=new T.Vector3();
-  palmSpots.forEach((p,i)=>{
-    const h=6+rand()*3.2,out=Math.atan2(p.z,p.x),lean=.12+rand()*.2,y=groundHeight(p.x,p.z)-.1;
-    e4.set(Math.sin(out)*lean,0,-Math.cos(out)*lean);q4.setFromEuler(e4);m4.compose(v4.set(p.x,y,p.z),q4,s4.set(1,h,1));trunks.setMatrixAt(i,m4);
-    const top=new T.Vector3(0,h,0).applyQuaternion(q4).add(v4.set(p.x,y,p.z));e4.set(0,rand()*Math.PI*2,0);q4.setFromEuler(e4);m4.compose(top,q4,s4.setScalar(.85+rand()*.35));crowns.setMatrixAt(i,m4);
+  const m4=new T.Matrix4(),q4=new T.Quaternion(),e4=new T.Euler(),v4=new T.Vector3(),s4=new T.Vector3(),trunkAt=[],crownAt=[];
+  // (v216: each palm's trunk and crown, kept to be drawn once v216's palms have joined them, below.)
+  const placePalm=(p,r)=>{
+    const h=6+r()*3.2,out=Math.atan2(p.z,p.x),lean=.12+r()*.2,y=groundHeight(p.x,p.z)-.12;
+    e4.set(Math.sin(out)*lean,0,-Math.cos(out)*lean);q4.setFromEuler(e4);m4.compose(v4.set(p.x,y,p.z),q4,s4.set(1,h,1));trunkAt.push(m4.clone());
+    const top=new T.Vector3(0,h,0).applyQuaternion(q4).add(v4.set(p.x,y,p.z));e4.set(0,r()*Math.PI*2,0);q4.setFromEuler(e4);m4.compose(top,q4,s4.setScalar(.85+r()*.35));crownAt.push(m4.clone());
     circleCollider(p.x,p.z,.28,y-1,y+h,'palm');p.top=top;
-  });
-  trunks.castShadow=crowns.castShadow=true;trunks.receiveShadow=crowns.receiveShadow=true;trunks.computeBoundingSphere();crowns.computeBoundingSphere();world.add(trunks,crowns);solidMeshes.push(trunks,crowns);
+  };
+  palmSpots.forEach(p=>placePalm(p,rand));
 
   // Rocks: half-buried boulders. v210: on Radio Hill's flanks, thick on the bunker's ridge and
   // the cove's headland, and as reefs in the deep water off the north-east and north-west shores
@@ -750,9 +856,14 @@ void main(){
     const a=bearing+(rand()-.5)*.5,r=coastRadius(a)*(1.13+rand()*.2),x=Math.cos(a)*r,z=Math.sin(a)*r,size=.9+rand()*1.7;
     if(groundHeight(x,z)<-ISLAND.wade-.5&&rockOk(x,z,size)){rockSpots.push({x,z,size,reef:true});k++;}}
   // v215: weathered boulders (island-art.mjs), in the rock texture, a little damp-dark.
-  const rocks=new T.InstancedMesh(boulderGeometry(5),textured(TEX,'rock',{color:0xb8b8b0,roughness:.92,scale:.5}),rockSpots.length);rocks.name='Rocks';
+  const boulder=boulderGeometry(5),boulderPoints=boulder.attributes.position,bv=new T.Vector3();
+  const rocks=new T.InstancedMesh(boulder,textured(TEX,'rock',{color:0xb8b8b0,roughness:.92,scale:.5}),rockSpots.length);rocks.name='Rocks';
   rockSpots.forEach((s,i)=>{const y=s.reef?-.35*s.size:groundHeight(s.x,s.z)-s.size*.35;e4.set(rand()*.6,rand()*Math.PI*2,rand()*.6);q4.setFromEuler(e4);m4.compose(v4.set(s.x,y,s.z),q4,s4.set(s.size*(1+rand()*.3),s.size*(s.reef?1:.75),s.size));rocks.setMatrixAt(i,m4);
-    const top=y+s.size*.62;s.top=top;if(s.reef)return;circleCollider(s.x,s.z,s.size*.82,y-1,top,'rock');if(s.size<1.25)platforms.push({x:s.x,z:s.z,r:s.size*.7,top});});
+    // v216: its collider from the rock as you see it: as wide as it shows above the ground (less your
+    // body's own reach, so you stop at its face), and its top its crown, a dome you can land and stand on.
+    let peak=-Infinity,rv=.3;const g=groundHeight(s.x,s.z);for(let k=0;k<boulderPoints.count;k++){bv.fromBufferAttribute(boulderPoints,k).applyMatrix4(m4);if(bv.y>peak)peak=bv.y;if(bv.y>groundHeight(bv.x,bv.z)+.03)rv=Math.max(rv,Math.hypot(bv.x-s.x,bv.z-s.z));}
+    s.top=peak;if(s.reef)return;const rc=Math.max(.3,rv-.22),dome={peak,base:g,rv},lip=Math.min(peak,Math.max(g+.45,g+(peak-g)*(1-(rc/rv)**2)));
+    colliders.push({x:s.x,z:s.z,r:rc,bottom:y-1,top:lip,dome,kind:'rock'});s.radius=rc;});
   rocks.castShadow=rocks.receiveShadow=true;rocks.computeBoundingSphere();world.add(rocks);solidMeshes.push(rocks);
 
   // Brush (v210): low scrub where the dead will rise inland, in the wash and round the ruin. It
@@ -760,32 +871,50 @@ void main(){
   const brushSpots=[],bush=(x,z,size)=>{if(groundHeight(x,z)>.6&&Math.hypot(x-HILL.x,z-HILL.z)>HILL.flat+2&&stations.every(p=>Math.hypot(p.x-x,p.z-z)>3)&&trailDistance(x,z)>1.6)brushSpots.push({x,z,size});};
   for(const zone of shoreSpawns().interior)for(const [px,pz] of zone.points)for(let k=0;k<4;k++){const a=rand()*Math.PI*2,r=.8+rand()*2.6;bush(px+Math.cos(a)*r,pz+Math.sin(a)*r,.7+rand()*.7);}
   for(let k=0;k<26;k++){const a=rand()*Math.PI*2,r=coastRadius(a)*(.5+rand()*.26);bush(Math.cos(a)*r,Math.sin(a)*r,.6+rand()*.6);}
+  // v216 (the user: the island felt barren): about forty more palms and ninety more shrubs, along the backs
+  // of the beaches, in groves round the landmarks and scattered inland, from their own draws (so nothing
+  // placed before them moves), clear of the rocks, the paths, the stations and each other.
+  const extra=seeded(216),firstPalms=palmSpots.length,clearOfRocks=(x,z,gap)=>rockSpots.every(s=>Math.hypot(s.x-x,s.z-z)>(s.radius??s.size)+gap);
+  const morePalm=(x,z,gap)=>{if(clear(x,z,gap)&&clearOfRocks(x,z,1.6)&&!campCliff(x,z)&&shoreFraction(x,z)<.86){palmSpots.push({x,z});return true;}return false;};
+  for(let tries=0;tries<3000&&palmSpots.length<firstPalms+22;tries++){const a=extra()*TAU,r=coastRadius(a)*(.66+extra()*.16);morePalm(Math.cos(a)*r,Math.sin(a)*r,4.2);}   // the backs of the beaches
+  for(const [site,reach,count] of [[SITE.camp,19,4],[SITE.cove,13,4],[SITE.dock,14,3],[SITE.north,15,4],[SITE.forge,14,3]]){let made=0;
+    for(let tries=0;tries<300&&made<count;tries++){const a=extra()*TAU,r=reach*(.6+extra()*.4);if(morePalm(site.x+Math.cos(a)*r,site.z+Math.sin(a)*r,3.6))made++;}}
+  for(let tries=0;tries<1500&&palmSpots.length<firstPalms+44;tries++){const a=extra()*TAU,r=coastRadius(a)*(.3+extra()*.4);morePalm(Math.cos(a)*r,Math.sin(a)*r,5);}   // inland
+  for(let i=firstPalms;i<palmSpots.length;i++)placePalm(palmSpots[i],extra);
+  const firstBrush=brushSpots.length;
+  for(const p of palmSpots.slice(firstPalms))for(let k=0;k<2;k++){const a=extra()*TAU,r=1.4+extra()*2;bush(p.x+Math.cos(a)*r,p.z+Math.sin(a)*r,.6+extra()*.6);}
+  for(let tries=0;tries<400&&brushSpots.length<firstBrush+92;tries++){const a=extra()*TAU,r=coastRadius(a)*(.3+extra()*.52),x=Math.cos(a)*r,z=Math.sin(a)*r;if(!campCliff(x,z)&&clearOfRocks(x,z,.8)&&free(x,z,.4,.84))bush(x,z,.6+extra()*.8);}
+  const trunks=new T.InstancedMesh(trunkGeo,new T.MeshStandardMaterial({map:barkMap,color:0xcfc3b2,roughness:.95}),palmSpots.length),crowns=new T.InstancedMesh(palmCrownGeometry(7),foliage(TEX,'frond',{color:0xd8e8cc,sway:.06}),palmSpots.length);
+  trunks.name='Palm trunks';crowns.name='Palm crowns';trunkAt.forEach((m,i)=>trunks.setMatrixAt(i,m));crownAt.forEach((m,i)=>crowns.setMatrixAt(i,m));
+  trunks.castShadow=crowns.castShadow=true;trunks.receiveShadow=crowns.receiveShadow=true;trunks.computeBoundingSphere();crowns.computeBoundingSphere();world.add(trunks,crowns);solidMeshes.push(trunks,crowns);
+
   // v215: leafy shrubs (island-art.mjs), where the grey-box had green stones. (The same places, and the
   // same draws from `rand`, so everything placed after them stands where it did.)
+  const slopeAt=(x,z)=>Math.hypot(groundHeight(x+.5,z)-groundHeight(x-.5,z),groundHeight(x,z+.5)-groundHeight(x,z-.5));
   const brush=new T.InstancedMesh(shrubGeometry(3),foliage(TEX,'leaves',{color:0xc8d8bc,sway:.035}),brushSpots.length);brush.name='Brush';
-  brushSpots.forEach((b,i)=>{e4.set(rand()*.5,rand()*Math.PI*2,rand()*.5);q4.setFromEuler(e4);e4.set(0,e4.y,0);q4.setFromEuler(e4);m4.compose(v4.set(b.x,groundHeight(b.x,b.z)-.05,b.z),q4,s4.set(b.size*(1.25+rand()*.5),b.size*1.05,b.size*(1.25+rand()*.4)));brush.setMatrixAt(i,m4);});
+  brushSpots.forEach((b,i)=>{e4.set(rand()*.5,rand()*Math.PI*2,rand()*.5);q4.setFromEuler(e4);e4.set(0,e4.y,0);q4.setFromEuler(e4);m4.compose(v4.set(b.x,groundHeight(b.x,b.z)-.05-slopeAt(b.x,b.z)*b.size*.7,b.z),q4,s4.set(b.size*(1.25+rand()*.5),b.size*1.05,b.size*(1.25+rand()*.4)));brush.setMatrixAt(i,m4);});   // (v216: sunk by the slope, so no edge floats)
   brush.castShadow=brush.receiveShadow=true;brush.computeBoundingSphere();world.add(brush);
 
   // v215: ferns and grass (art only: nothing here blocks or hides anyone). Ferns deep round the ruin and
   // under the palms; grass tufts wherever the ground is grassy, dune grass behind the beaches. Their own
   // seeded draws, after everything above, so nothing that was placed before moves.
   const plantRand=seeded(215),onTrail=(x,z,r)=>trailDistance(x,z)<r||stations.some(p=>Math.hypot(p.x-x,p.z-z)<2.4)||Math.hypot(x-ISLAND.spawn.x,z-ISLAND.spawn.z)<3||Math.hypot(x-HILL.x,z-HILL.z)<HILL.flat+1.2;
-  const slopeAt=(x,z)=>Math.hypot(groundHeight(x+.5,z)-groundHeight(x-.5,z),groundHeight(x,z+.5)-groundHeight(x,z-.5));
   const fernSpots=[],tuftSpots=[];
-  for(let tries=0;tries<2600&&fernSpots.length<170;tries++){
+  for(let tries=0;tries<7000&&fernSpots.length<420;tries++){
     let x,z;if(tries%3===0&&palmSpots.length){const p=palmSpots[Math.floor(plantRand()*palmSpots.length)],a=plantRand()*6.3,r=.9+plantRand()*2.4;x=p.x+Math.cos(a)*r;z=p.z+Math.sin(a)*r;}
-    else{const a=plantRand()*6.3,r=4+plantRand()*24;x=SITE.ruin.x+Math.cos(a)*r;z=SITE.ruin.z+Math.sin(a)*r*.9;}
+    else if(tries%3===1){const a=plantRand()*6.3,r=4+plantRand()*24;x=SITE.ruin.x+Math.cos(a)*r;z=SITE.ruin.z+Math.sin(a)*r*.9;}
+    else{const a=plantRand()*6.3,r=coastRadius(a)*(.25+plantRand()*.5);x=Math.cos(a)*r;z=Math.sin(a)*r;}   // (v216: and inland everywhere)
     const h=groundHeight(x,z);if(h<.6||onTrail(x,z,1.3))continue;const w=groundKind(x,z,h,slopeAt(x,z));if(w[1]<.45)continue;
     fernSpots.push({x,z,y:h,size:.7+plantRand()*.6,turn:plantRand()*6.3});}
-  for(let tries=0;tries<16000&&tuftSpots.length<2200;tries++){
+  for(let tries=0;tries<30000&&tuftSpots.length<4200;tries++){
     const a=plantRand()*6.3,r=coastRadius(a)*Math.sqrt(plantRand())*.97,x=Math.cos(a)*r,z=Math.sin(a)*r,h=groundHeight(x,z);if(h<.35||onTrail(x,z,.9))continue;
     const w=groundKind(x,z,h,slopeAt(x,z)),dune=shoreFraction(x,z)>.74;if(w[1]<(dune?.3:.5)||plantRand()>w[1]*1.1)continue;
     tuftSpots.push({x,z,y:h,w:.5+plantRand()*.5,h:(dune?.55:.35)+plantRand()*(dune?.5:.4),turn:plantRand()*6.3,dune});}
   const ferns=new T.InstancedMesh(fernGeometry(),foliage(TEX,'fern',{color:0xd2e2c4,sway:.05}),fernSpots.length);ferns.name='Ferns';
-  fernSpots.forEach((f,i)=>{e4.set(0,f.turn,0);q4.setFromEuler(e4);m4.compose(v4.set(f.x,f.y-.04,f.z),q4,s4.setScalar(f.size));ferns.setMatrixAt(i,m4);});
+  fernSpots.forEach((f,i)=>{e4.set(0,f.turn,0);q4.setFromEuler(e4);m4.compose(v4.set(f.x,f.y-.04-slopeAt(f.x,f.z)*f.size*.5,f.z),q4,s4.setScalar(f.size));ferns.setMatrixAt(i,m4);});
   const tufts=new T.InstancedMesh(tuftGeometry(),foliage(TEX,'tuft',{color:0xbccab2,sway:.09}),tuftSpots.length);tufts.name='Grass';
   const duneTuft=new T.Color(1.18,1.1,.8),plainTuft=new T.Color(.92,1,.9);
-  tuftSpots.forEach((t,i)=>{e4.set(0,t.turn,0);q4.setFromEuler(e4);m4.compose(v4.set(t.x,t.y-.03,t.z),q4,s4.set(t.w,t.h,t.w));tufts.setMatrixAt(i,m4);tufts.setColorAt(i,t.dune?duneTuft:plainTuft);});
+  tuftSpots.forEach((t,i)=>{e4.set(0,t.turn,0);q4.setFromEuler(e4);m4.compose(v4.set(t.x,t.y-.03-slopeAt(t.x,t.z)*t.w*.5,t.z),q4,s4.set(t.w,t.h,t.w));tufts.setMatrixAt(i,m4);tufts.setColorAt(i,t.dune?duneTuft:plainTuft);});
   // (They take the moon's shadow but cast none: thousands of small cards would double their draws for little.)
   for(const m of [ferns,tufts]){m.castShadow=false;m.receiveShadow=true;m.computeBoundingSphere();world.add(m);}
 
@@ -852,7 +981,7 @@ void main(){
       }};
   }
 
-  return {boathouse:boathouseDoor,colliders,platforms,solidMeshes,lights,sea,seaMat,depthMap,beacon,beaconLight,lamp,palms:palmSpots,rocks:rockSpots,landRocks,brush:brushSpots,props,tower,wreck,summit,moonDir,buildRoutes,
+  return {floating,boathouse:boathouseDoor,colliders,platforms,solidMeshes,lights,sea,seaMat,depthMap,beacon,beaconLight,lamp,palms:palmSpots,rocks:rockSpots,landRocks,brush:brushSpots,props,tower,wreck,summit,moonDir,buildRoutes,
     sites:SITE,landmarks:LANDMARKS,stations,trails,
     wreckAt:{x:wx,z:wz,heading},groundHeight,supportBelow,ceilingAt,isBlocked,move,updateHeight,zoneAt,update,
     tentInside,visibleFloor:(x,z,support)=>support,floorHeight:(x,z)=>groundHeight(x,z)};

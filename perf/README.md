@@ -483,6 +483,40 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v216 (nothing floats, the camp's cliff, solid rocks, a fuller island) against main (v215)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering.
+
+### Mansion and mode picker: quick
+
+Nothing either loads changed. Five of the mansion's files differ only in their version number.
+
+### Dead Tide: full protocol
+
+| | main (v215) | v216 |
+|---|---:|---:|
+| KB before playable | 3,173 | 3,188 |
+| Time to playable (load phases, 20 pairs) | 12,745 ms | 13,484 ms (+738, SE 96) |
+| ↳ modules / world / shaders | 334 / 1,553 / 10,858 ms | 350 / 1,814 / 11,320 ms (+16 within noise / +261 / +462) |
+| Shader programs, at load and after play | 68 | 70 |
+| Geometries | 292 | 293 |
+| Draw calls in the fixed views | 81–234 | 86–236 (+2 to +5) |
+| Triangles in the fixed views | 121K–320K | 200K–320K (+62K to +79K) |
+| The 45-enemy fight: draw calls / triangles | 382 / 430K | 386 / 490K |
+| Frame logic (24 pairs, standard / full series) | 0.426 / 0.446 ms | 0.452 / 0.458 ms (+0.025, SE 0.028 / +0.013, SE 0.015: within noise) |
+
+- **Triangles: +60K to +80K in every view.** That is about twice the plants: 44 more palms and their crowns, about 90 more shrubs, 250 more fern clumps and 2,000 more grass tufts. The palms and shrubs also cast moon shadows. Draw calls barely move, because each kind of plant is one instanced draw.
+- **World building +0.26 s.** Placing the extra plants (each tested against the paths, stations and rocks), sizing every rock's collider from its shape, and the camp cliff's rock face.
+- **Two more shader programs:** the cliff face's double-sided rock material and a depth variant.
+- **Frame logic: within noise.** The solid-top support looks at the colliders near a point as well as the platforms; the escape check runs only for a body already inside something.
+- **The golden trace: 33 gameplay channels differ, by design.**
+  - The walk from the spawn passes a new palm at (−1.3, 30.1) 17 m north of the spawn and slides round it.
+  - The dead's paths follow the camp's new ground and the new and resized colliders.
+  - No scenario failed.
+- **Not measured:** real GPUs, phones, or frame rates in a real browser.
+
+Files: `v216-tide.jsonl`, `v216-tide-load-phases.jsonl`, `v216-tide-frame-logic.jsonl`, `v216-tier-summary.json`.
+
 ## v215 (Dead Tide's art pass) against main (v214)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. The art pass is new content on a desktop-first budget agreed with the user (design spec 10.4), so its costs are reported here.

@@ -191,13 +191,14 @@ export function boulderGeometry(seed=5){
 // bulwarks with holes rusted through it. Vertex colours darken her lower hull (the boot top).
 // Open shapes: draw it double-sided.
 export function hullGeometry({length=13,beam=4.2,depth=2.4,holes=[]}={}){
-  const N=30,pos=[],col=[],index=[],half=beam/2,L=length;
+  const N=44,pos=[],col=[],index=[],half=beam/2,L=length;
   const width=t=>{let w=half;if(t>.66)w*=Math.max(.02,1-Math.pow((t-.66)/.34,1.7));if(t<.05)w*=.9+t*2;return w;};
   const deck=t=>depth+.22*Math.pow(2*t-1,2)+(t>.8?1.1*(t-.8)/.2:0);
-  const keel=t=>t>.8?Math.pow((t-.8)/.2,1.4)*depth*.8:t<.04?(.04-t)*6:0;
+  // (v216: her forefoot cut away less, so the bow stays down in the sand.)
+  const keel=t=>t>.82?Math.pow((t-.82)/.18,1.6)*depth*.35:t<.04?(.04-t)*4:0;
   const rows=[];
   for(let i=0;i<=N;i++){const t=i/N,x=-L/2+t*L,w=width(t),d=deck(t),k=keel(t);
-    const side=[[w,d+.75],[w,d],[w*.985,k+(d-k)*.55],[w*.86,k+.38],[w*.52,k+.05]],row=[];
+    const side=[[w,d+.75],[w,d],[w*.995,k+(d-k)*.68],[w*.97,k+(d-k)*.42],[w*.88,k+.45],[w*.68,k+.16],[w*.38,k+.03]],row=[];   // (v216: a rounder bilge)
     const ring=[...side.map(([z,y])=>[-z,y]),[0,k],...side.slice().reverse()];
     for(const [z,y] of ring){row.push(pos.length/3);pos.push(x,y,z);const boot=y<1.1?.62:1;col.push(boot,boot*.92,boot*.9);}
     rows.push(row);}
@@ -210,7 +211,7 @@ export function hullGeometry({length=13,beam=4.2,depth=2.4,holes=[]}={}){
     const a=pos.length/3;for(const t of [t0,t1])for(const s of [-1,1]){pos.push(-L/2+t*L,deck(t)-.02,s*width(t)*.97);col.push(1,1,1);}
     index.push(a,a+2,a+1,a+1,a+2,a+3);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.setIndex(index);g.computeVertexNormals();g.computeBoundingSphere();
-  g.userData.deck=deck;g.userData.width=width;return g;
+  g.userData.deck=deck;g.userData.width=width;g.userData.keel=keel;return g;
 }
 // A column shaft (v215, the ruin): fluted, standing on y 0, `height` tall; `broken` metres of
 // jagged loss off its top (0: whole). Tapers a little upward, as an ancient shaft does.

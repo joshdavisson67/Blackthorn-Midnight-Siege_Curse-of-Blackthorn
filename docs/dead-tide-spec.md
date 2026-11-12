@@ -854,6 +854,21 @@ Phase 5's visual polish, decided with the user before any art was made. The user
 
 Collision footprints, station pads and routes keep their positions, so gameplay stays as tested. Any change to them is reported.
 
+**Follow-up (v216, from the user's first look):**
+
+- **Nothing floats.** Every part that stands on the ground meets it under every edge, and a test checks this.
+- **The Coastal Camp stands on a flat plateau**, at the height of its middle.
+  - **To the sea behind it:** a cliff, about 4.6 m of rock face, too steep to climb. The user will later give the dead a way to climb it.
+  - **To the Wash at its east side:** a bluff, also cliff.
+  - **To the hill and the west:** ramps.
+- **Solid things are solid.**
+  - A rock's collider matches the rock you see, and you can stand on its crown.
+  - Everything that blocks also holds you up if you come down on it, so nothing can be landed inside.
+  - A body somehow inside anything can always step out.
+- **The wreck:** her fittings sit on her, and her bow is in the sand.
+- **The island is fuller:** about twice the palms, shrubs, ferns and grass.
+
+
 ---
 
 # 11. ESSENCE ECONOMY

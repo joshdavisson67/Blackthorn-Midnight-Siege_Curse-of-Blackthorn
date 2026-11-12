@@ -53,7 +53,7 @@ console.log(`PASS: Dead Tide loads only its page, tide.css, tide-boot.js and ${t
 }
 
 // ---- 3. The island ----------------------------------------------------------------------
-const {ISLAND,coastRadius,shoreFraction,groundHeight,buildIsland}=await import('../public/game/island.mjs');
+const {ISLAND,coastRadius,shoreFraction,groundHeight,buildIsland,campCliff,CAMP_PLATEAU,islandSites}=await import('../public/game/island.mjs');
 const T=await import('../public/game/three.module.js');
 {
   let low=Infinity,high=-Infinity,steepest=0;for(let a=0;a<Math.PI*2;a+=.005){const r=coastRadius(a);low=Math.min(low,r);high=Math.max(high,r);}
@@ -69,11 +69,20 @@ const T=await import('../public/game/three.module.js');
     const slope=(groundHeight(Math.cos(a)*(r-.5),Math.sin(a)*(r-.5))-groundHeight(Math.cos(a)*(r+.5),Math.sin(a)*(r+.5)));
     assert(slope>.05&&slope<.25,`The beach meets the sea on a gentle slope at bearing ${a.toFixed(2)}`);
   }
-  for(let x=-90;x<=90;x+=.5)for(let z=-90;z<=90;z+=.5){if(groundHeight(x,z)<-ISLAND.wade)continue;
+  for(let x=-90;x<=90;x+=.5)for(let z=-90;z<=90;z+=.5){if(groundHeight(x,z)<-ISLAND.wade||campCliff(x,z))continue;
     const g=Math.hypot(groundHeight(x+.25,z)-groundHeight(x-.25,z),groundHeight(x,z+.25)-groundHeight(x,z-.25))/.5;steepest=Math.max(steepest,g);}
-  assert(steepest<.85,`Everywhere you can stand is walkable (steepest ${(Math.atan(steepest)*180/Math.PI).toFixed(0)}°)`);
+  assert(steepest<.85,`Everywhere you can stand is walkable (steepest ${(Math.atan(steepest)*180/Math.PI).toFixed(0)}°), but for the camp's cliff`);
+  // v216: the coastal camp's plateau is flat across its tents and stations, and its seaward side is a cliff
+  // too steep to walk up (steeper than a step at every sub-step of a walk: more than 0.31 m in 0.1 m).
+  {const P=CAMP_PLATEAU,S=islandSites().sites.camp,at=(lx,lz)=>[S.x+lx*Math.cos(S.angle)+lz*Math.sin(S.angle),S.z-lx*Math.sin(S.angle)+lz*Math.cos(S.angle)],top=groundHeight(S.x,S.z);
+   for(let a=0;a<6.3;a+=.2)for(const r of [3,8,P.front-.2]){const [x,z]=at(Math.cos(a)*r,Math.sin(a)*r);assert(Math.abs(groundHeight(x,z)-top)<1e-9,'The camp stands on a flat plateau');}
+   let face=Infinity;for(let a=-Math.PI/2-.45;a<=-Math.PI/2+.45;a+=.05){const [x0,z0]=at(Math.cos(a)*(P.flat+.1),Math.sin(a)*(P.flat+.1)),[x1,z1]=at(Math.cos(a)*(P.flat+.2),Math.sin(a)*(P.flat+.2));face=Math.min(face,(groundHeight(x0,z0)-groundHeight(x1,z1))/.1);}
+   assert(face>3.1,`Behind the camp a cliff falls too steeply to climb (${face.toFixed(1)} m per m)`);
+   const [bx,bz]=at(0,-P.flat-P.face-.2);assert(top-groundHeight(bx,bz)>4,'from the plateau to the sand below');}
 }
-const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsland({scene,world});
+const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsland({scene,world,audit:true});
+// v216: nothing that stands on the ground hangs off it: every part placed on the ground meets it under every edge.
+assert.deepEqual(I.floating,[],`Nothing floats: ${JSON.stringify(I.floating.slice(0,5))}`);
 {
   const S=ISLAND.tent,W=ISLAND.tower,H=ISLAND.hill,flat=(x,z)=>Math.hypot(x-H.x,z-H.z)<H.flat;
   for(const [dx,dz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){assert(flat(S.x+dx*(S.w/2+.15),S.z+dz*(S.d/2+.15)),'The radio tent stands on the flat summit');assert(flat(W.x+dx*W.base/2,W.z+dz*W.base/2),'and so does the tower');}
@@ -89,7 +98,7 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
   for(const n of ['Island ground','The sea','Landmarks','Radio tower','Tower beacon','Wreck','Palm trunks','Palm crowns','Rocks','Brush'])assert(names.has(n),`The island has ${n.toLowerCase()}`);
   let meshes=0,triangles=0;world.traverse(o=>{if(o.isMesh){meshes++;const g=o.geometry;triangles+=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
   // v215 (the art pass, spec 10.4): textured, with ferns and grass, on a desktop-first budget.
-  assert(meshes<85&&triangles<95000,`The island stays within its art budget: ${meshes} meshes, ${Math.round(triangles/1000)}k triangles`);
+  assert(meshes<85&&triangles<140000,`The island stays within its art budget (v216: twice the plants): ${meshes} meshes, ${Math.round(triangles/1000)}k triangles`);
   // The beacon blinks: on for 0.55 s of every 1.6 s.
   I.update(.1);assert(I.beaconLight.intensity>0);I.update(.9);assert.equal(I.beaconLight.intensity,0);I.update(1.7);assert(I.beaconLight.intensity>0,'The tower’s red beacon blinks');
   console.log(`PASS: the island: a coast 50–75 m out, Radio Hill highest and flat-topped with the radio tent and tower on it, a sloping beach on every bearing, walkable everywhere you can stand, the wreck at the water’s edge, ${I.palms.length} palms and ${I.rocks.length} rocks on land, the south-beach landing spot clear, ${meshes} meshes and ${Math.round(triangles/1000)}k triangles, and a blinking beacon.`);
@@ -122,7 +131,7 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
   // and the wash is at least 1.7 m below its banks; nothing anyone walks on is steeper than 42°.
   for(const n of ['BUNKER RIDGE','RUIN KNOLL','CAMP BLUFF','COVE HEAD'])assert(rises[n]>5,`${n} stands over 5 m (${rises[n].toFixed(1)})`);
   for(const n of ['NORTH CRAG','EAST DOWNS'])assert(groundHeight(moundAt(n).x,moundAt(n).z)>3.8,`${n} is a hill of its own`);
-  {let steep=0;for(let x=-90;x<=90;x+=.5)for(let z=-90;z<=90;z+=.5){if(groundHeight(x,z)<-ISLAND.wade)continue;steep=Math.max(steep,Math.hypot(groundHeight(x+.25,z)-groundHeight(x-.25,z),groundHeight(x,z+.25)-groundHeight(x,z-.25))/.5);}
+  {let steep=0;for(let x=-90;x<=90;x+=.5)for(let z=-90;z<=90;z+=.5){if(groundHeight(x,z)<-ISLAND.wade||campCliff(x,z))continue;steep=Math.max(steep,Math.hypot(groundHeight(x+.25,z)-groundHeight(x-.25,z),groundHeight(x,z+.25)-groundHeight(x,z-.25))/.5);}
    assert(steep<Math.tan(42*Math.PI/180),`No walkable ground steeper than 42° (${(Math.atan(steep)*180/Math.PI).toFixed(1)}°)`);}
   // v211: B-01 comes out of its ridge: its door faces the north-east reef, away from Radio Hill,
   // with the ridge rising behind it over its roof.
@@ -179,7 +188,22 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
    let seed=7,blocked=0,raised=0;const rnd=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;
    for(let i=0;i<60000;i++){const near=i%3?I.colliders[Math.floor(rnd()*I.colliders.length)]:null,x=near?near.x+(rnd()-.5)*6:(rnd()-.5)*200,z=near?near.z+(rnd()-.5)*6:(rnd()-.5)*200,r=[.1,.32,.44,BR,1.5,2.5][i%6],y=groundHeight(x,z)+(i%5?0:rnd()*3);
      const every=I.colliders.some(c=>touches(c,x,z,r,y,1.8));assert.equal(I.isBlocked(x,z,r,I.colliders,null,y,1.8),every,'Blocked, by the grid as by every collider');if(every)blocked++;
-     let h=groundHeight(x,z);for(const p of I.platforms)if(p.top>h&&p.top<=y+.31+1e-6&&inP(p,x,z))h=p.top;assert.equal(I.supportBelow(x,z,y,.31),h,'Held up, by the grid as by every platform');if(h>groundHeight(x,z))raised++;}
+     // (v216: and by every solid thing's top: a rock's is its rounded crown, never below its lip.)
+     const topOf=(c,x,z)=>{if(c.dome){const d=Math.hypot(x-c.x,z-c.z);return d<c.r?Math.max(c.top,c.dome.base+(c.dome.peak-c.dome.base)*(1-(d/c.dome.rv)**2)):-Infinity;}return inP(c,x,z)?c.top:-Infinity;};
+     let h=groundHeight(x,z);for(const p of I.platforms)if(p.top>h&&p.top<=y+.31+1e-6&&inP(p,x,z))h=p.top;for(const c of I.colliders){const t=topOf(c,x,z);if(t>h&&t<=y+.31+1e-6)h=t;}
+     assert.equal(I.supportBelow(x,z,y,.31),h,'Held up, by the grid as by every platform and every solid top');if(h>groundHeight(x,z))raised++;}
+   // v216 (the user jumped onto a rock and stuck in it): solid things are solid. A rock blocks you at its face
+   // and will not let you walk up onto it, but holds you up on its crown when you land there; and a body that
+   // finds itself inside anything may step out of it, never further in.
+   {const rock=I.colliders.find(c=>c.dome&&c.top-groundHeight(c.x,c.z)<.7&&c.r>.5);assert(rock,'A rock low enough to jump onto');
+    const g=groundHeight(rock.x,rock.z),D=rock.dome,side=rock.x+rock.r+.25;
+    assert(I.isBlocked(side,rock.z,.32,I.colliders,null,groundHeight(side,rock.z),1.8),'A rock blocks you at its face');
+    assert(I.supportBelow(rock.x,rock.z,g,.31)<g+.31+1e-9,'and you cannot step up onto it');
+    assert(Math.abs(I.supportBelow(rock.x,rock.z,D.peak+.3,.01)-Math.max(rock.top,D.peak))<1e-9,'Landing on it, you stand on its crown');
+    assert(!I.isBlocked(rock.x,rock.z,.32,I.colliders,null,D.peak,1.8),'and nothing there holds you fast');
+    const box=I.colliders.find(c=>c.r===undefined&&c.w>1&&c.d>1&&c.kind!=='boathouse door'),y0=groundHeight(box.x,box.z),pos={x:box.x+.05*box.cos,y:y0,z:box.z-.05*box.sin};
+    const before={...pos};I.move(pos,-.1*box.cos,.1*box.sin,.32);assert(pos.x===before.x&&pos.z===before.z,'Inside something, you cannot go further in');
+    I.move(pos,.3*box.cos,-.3*box.sin,.32);assert(Math.hypot(pos.x-box.x,pos.z-box.z)>.3,'but you can always step out of it');}
    assert(blocked>5000&&raised>50,`(${blocked} blocked and ${raised} raised points among them)`);}
   // d. Routes: every place anyone can stand has a way to everywhere else, for walkers and for
   // brutes (no pockets, no cut-off corners), and a brute fits under the tent.
@@ -190,7 +214,7 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
     const R=I.buildRoutes({radius,height});R.rebuild(H.x,H.z+1);let openCells=0,cut=0;
     // (Not counted: a stray cell at the very edge of the wading depth, against the dock, and the
     // tops of small rocks, which you climb onto and the dead walk round.)
-    const onRock=(x,z)=>I.platforms.some(p=>p.r!==undefined&&(x-p.x)**2+(z-p.z)**2<p.r*p.r);
+    const onRock=(x,z)=>I.colliders.some(c=>c.dome&&(x-c.x)**2+(z-c.z)**2<c.r*c.r);   // (v216: a rock's crown, which you can land on)
     for(let i=0;i<R.blocked.length;i++){if(R.blocked[i])continue;openCells++;const x=(i%R.w)*R.cell-84,z=Math.floor(i/R.w)*R.cell-84;if(R.distance[i]>=99999&&groundHeight(x,z)>-.6&&!onRock(x,z))cut++;}
     assert.equal(cut,0,`Every open cell has a route to the summit for a ${who} (${cut} of ${openCells} cut off)`);nets[who]=R;
   }
@@ -626,7 +650,7 @@ try{
      const open=(x,z,r,h)=>groundHeight(x,z)>=-ISLAND.wade&&!I.isBlocked(x,z,r,I.colliders,null,I.supportBelow(x,z,groundHeight(x,z),ISLAND.step),h);
      I.boathouse.setOpen(true);   // (as from threat level 10; shut, its inside is closed off)
      for(const [who,radius,height] of [['walker',.44,1.8],['brute',BR,b.height]]){const routes=I.buildRoutes({radius,height});routes.rebuild(ISLAND.hill.x,ISLAND.hill.z+1);let cut=0;
-       const onRock=(x,z)=>I.platforms.some(p=>p.r!==undefined&&(x-p.x)**2+(z-p.z)**2<p.r*p.r);
+       const onRock=(x,z)=>I.colliders.some(c=>c.dome&&(x-c.x)**2+(z-c.z)**2<c.r*c.r);   // (v216: a rock's crown, which you can land on)
        for(let i=0;i<routes.blocked.length;i++){if(routes.blocked[i])continue;const x=(i%routes.w)*routes.cell-84,z=Math.floor(i/routes.w)*routes.cell-84;if(routes.distance[i]>=99999&&groundHeight(x,z)>-.6&&!onRock(x,z))cut++;}
        assert.equal(cut,0,`With the stations, every open cell still has a route to the summit for a ${who}`);}
      I.boathouse.setOpen(false);
