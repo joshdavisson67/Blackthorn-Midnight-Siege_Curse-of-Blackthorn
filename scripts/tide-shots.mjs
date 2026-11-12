@@ -36,7 +36,10 @@ const VIEWS=[
   ...[['wreck-stacks','wreck',6,17,1.9,0,2,1.6],['wreck-along','wreck',-17,9,1.68,3,0,1.5],['camp-opening','camp',0,13,2.2,0,-2,.8],['camp-outhouse','camp',-3.8,-15,1.9,-3.8,-9.2,1.1],
     ['boathouse','dock',0,-11,1.9,6.2,-1,1.4],['boathouse-inside','dock',5,-3.6,1.7,8,-2.4,1],['cove-hut','cove',0,6,1.7,0,-1.5,1.1],['bunker-armour','bunker',4,9,1.7,3.6,2,1.2],
     ['ruin-walls','ruin',1,8,2.2,0,-4,1.4]].map(([name,site,ex,ez,ey,tx,tz,ty])=>[name,at(S[site],ex,ez)[0],ey,at(S[site],ex,ez)[1],at(S[site],tx,tz)[0],ty,at(S[site],tx,tz)[1]]),
-  ['tent-ammo',S.tent.x-1.2,1.68,S.tent.z+3,S.ammo.x,.9,S.ammo.z]
+  ['tent-ammo',S.tent.x-1.2,1.68,S.tent.z+3,S.ammo.x,.9,S.ammo.z],
+  // v216: the camp's cliff from the sand below it, and the wreck's bow from the beach ahead of her.
+  ...[['camp-cliff','camp',0,-21,1.7,0,-12,4.5],['camp-cliff-side','camp',9,-19,1.7,-2,-12,4]].map(([name,site,ex,ez,ey,tx,tz,ty])=>[name,at(S[site],ex,ez)[0],ey,at(S[site],ex,ez)[1],at(S[site],tx,tz)[0],ty,at(S[site],tx,tz)[1]]),
+  (()=>{const h=S.wreck.heading,c=Math.cos(h),s=Math.sin(h),bx=S.wreck.x+c*12.4,bz=S.wreck.z+s*12.4;return ['wreck-bow',bx+c*9-s*3,1.68,bz+s*9+c*3,bx,2.5,bz];})()
 ];
 async function loadPlaywright(){for(const spec of [process.env.PLAYWRIGHT_MODULE,'playwright','/opt/npm-tools/node_modules/playwright/index.mjs'].filter(Boolean)){try{return await import(spec.startsWith('/')?pathToFileURL(spec).href:spec);}catch{}}
   console.error('Playwright is not installed.');process.exit(2);}

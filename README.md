@@ -29,6 +29,47 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide: nothing floats, the camp's cliff, solid rocks and a fuller island (version 216)
+
+From the user's first look at the art pass.
+
+- **Nothing floats.**
+  - **Logs:** a post laid on its side rested on the ground half its length up. The camp's log seats sat 0.5 m in the air, its woodpile 0.85 m, the North Beach driftwood up to 1.8 m. Laid-down posts now rest on their sides, and the driftwood lies along the sand's slope, each log turned its own way.
+  - **Slopes:** a part standing on sloping ground reaches down to the lowest ground under it, its top where it was; so do the boathouse's piles and the bunker's parts.
+  - **Plants:** shrubs, ferns and grass sink by the slope under them.
+  - **A check that stays:** `buildIsland({audit:true})` checks every part placed on the ground against the ground under its lowest points, and `tests/dead-tide.mjs` asserts that none floats.
+- **The Coastal Camp's plateau and cliff.**
+  - **The plateau:** the camp stands on flat ground at the height of its middle (it sloped 3 m across, so its tents hung off the edge). It reaches 13.5 m from the middle behind, toward the sea, and 10.2 m in front and at the sides.
+  - **Behind it:** toward the sea, a cliff falls about 4.6 m to sand running down to the water. Too steep to climb, by the player or by the dead, as the user asked; they will be given a way up later.
+  - **Toward the Wash:** the ravine at its east side is close, and a walkable ramp into it would fill it, so the camp stands on a bluff above it there too.
+  - **The ramps:** to the hill and to the west, the plateau ramps into the land round it, never steeper than the island's steepest walkable ground (40°).
+  - **The cliff's look:** a face of rough rock with a rocky rim along its top. The ground's mesh, whose vertices are 1.5 m apart, could only draw such a step as a saw edge, so it now lies behind the rock there.
+  - **The fire ring** is dark, sooty stone.
+- **Solid things are solid.**
+  - **Jumping onto a rock** could drop you inside it and hold you fast; the same happened at the ruin.
+  - **Tops:** every collider's top now holds you up if you come down on it, so nothing can be landed inside.
+  - **Rocks:** each rock's collider comes from the rock as you see it. It is as wide as the rock shows above the ground, so you stop at its face. You cannot walk up onto it, but its crown is a dome you can land on and stand on.
+  - **A safety net:** a body that finds itself inside anything may step out of it, never further in.
+  - **Tests:** cover all of this.
+- **The wreck.**
+  - Her bollards and the feet of her shrouds were outside her hull, in the air. They are on her deck and bulwarks now.
+  - Her derrick's booms rest on the after hatch.
+  - Her forefoot is cut away less, so her bow stays in the sand.
+  - Her hull is lofted more finely, with a rounder bilge, a stem bar and a cap rail along each gunwale.
+- **A fuller island**, by about twice:
+  - 90 palms (46 before): along the backs of the beaches, in groves round the camp, the coves, the dock, North Beach and the Forge, and inland;
+  - 175 shrubs (about 85 before);
+  - 420 fern clumps (170 before), everywhere there are palms or shade;
+  - 4,200 grass tufts (2,200 before).
+  - Everything placed before stays where it was; the new palms block like the old ones.
+- **Tools:** `scripts/tide-shots.mjs` adds the camp's cliff from the sand below (`camp-cliff`, `camp-cliff-side`) and the wreck's bow from the beach (`wreck-bow`).
+- **Gameplay changes, by design:**
+  - the camp's ground (plateau, cliffs, ramps);
+  - the rocks' and the new palms' colliders;
+  - landing on solid tops.
+- **Release tiers:** TIERS
+- **Not verified:** frame rates on real GPUs or phones; colours on a real GPU (the screenshots are software-rendered).
+
 ## Dead Tide's art pass (version 215)
 
 The island's first art pass, after reference photos from the user. The direction agreed before work began is in the design spec, section 10.4:

@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {PLAYER_RADIUS} from './crowd.mjs?v=123';
-import {shoreSpawns,islandSites} from './island.mjs?v=215';
+import {shoreSpawns,islandSites} from './island.mjs?v=216';
 import {THREAT_RULES,SPAWN_RULES,threatLevel,threatRank,targetPopulation,walkersOnly,chooseTideKind,majorZoneCount,minorShare,minorFollow,interiorOpen,interiorShare,batchSize} from './tide-threat.mjs?v=210';
 
 // The dead come ashore (v206, Dead Tide step 2, slice 3): the island as the shared enemy
