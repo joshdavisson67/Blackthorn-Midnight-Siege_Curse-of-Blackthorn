@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 // v208 (Dead Tide step 3a): the threat director's numbers, every formula and threshold, from
-// the design spec's section 6 as agreed (health added, not compounded; the mix table).
+// the design spec's section 6 as agreed (health compounded since v218; the mix table).
 // Run on its own: node tests/tide-threat.mjs. The director in play is tested in
 // tests/dead-tide.mjs.
 const M=await import('../public/game/tide-threat.mjs');
@@ -33,14 +33,19 @@ for(let l=1;l<=19;l++)assert.equal(targetPopulation(l),8+2*(l-1));
 for(let l=20;l<=500;l++)assert.equal(targetPopulation(l),45,'45 from level 20, never more');
 console.log('PASS: the population starts at 8, adds 2 a level and holds at 45 from level 20 (the spec’s table).');
 
-// ---- Health: +4% of base a level for 25 levels, then +1.5%, capped at 4× (added) ---------------
-near(healthScale(1),1,'Level 1 is the base');near(healthScale(2),1.04,'+4% at level 2');near(healthScale(6),1.2,'1.2× at level 6');
-near(healthScale(26),2,'2× after 25 increases (level 26)');near(healthScale(27),2.015,'then +1.5% a level');near(healthScale(36),2.15,'(2.15× at level 36)');
-for(let l=2;l<=26;l++)near(healthScale(l)-healthScale(l-1),.04,`+4% of base from level ${l-1} to ${l}`);
-for(let l=27;l<=159;l++)near(healthScale(l)-healthScale(l-1),.015,`+1.5% of base from level ${l-1} to ${l}`,1e-9);
-near(healthScale(159),3.995,'3.995× at level 159',1e-9);assert.equal(healthScale(160),4,'4× from level 160');
-for(const l of [160,161,500,5001,1e6])assert.equal(healthScale(l),4,`never above 4× (level ${l})`);
-console.log('PASS: health adds 4% of base a level for 25 levels (2× at level 26), then 1.5% a level, reaching the 4× cap at level 160 and never passing it.');
+// ---- Health (v218): ×1.04 a level for 25 levels, then ×1.015, capped at 4× (compounded) --------
+near(healthScale(1),1,'Level 1 is the base');near(healthScale(2),1.04,'+4% at level 2');near(healthScale(6),1.04**5,'1.22× at level 6');
+near(healthScale(26),1.04**25,'2.67× after 25 increases (level 26)');near(healthScale(27),1.04**25*1.015,'then +1.5% a level');
+for(let l=2;l<=26;l++)near(healthScale(l)/healthScale(l-1),1.04,`+4% of the last level's health from level ${l-1} to ${l}`,1e-12);
+for(let l=27;l<=53;l++)near(healthScale(l)/healthScale(l-1),1.015,`+1.5% of the last level's health from level ${l-1} to ${l}`,1e-12);
+assert(healthScale(53)<4&&healthScale(53)>3.98,`3.99× at level 53 (${healthScale(53)})`);assert.equal(healthScale(54),4,'4× from level 54');
+for(const l of [54,55,67,160,500,5001,1e6])assert.equal(healthScale(l),4,`never above 4× (level ${l})`);
+for(let l=2;l<=200;l++)assert(healthScale(l)>=healthScale(l-1),`never falls (level ${l})`);
+// Compounding is never weaker than the old added curve, and well ahead past the first few levels.
+const added=l=>{const n=Math.max(0,l-1);return Math.min(4,1+.04*Math.min(n,25)+.015*Math.max(0,n-25));};
+for(let l=1;l<=200;l++)assert(healthScale(l)>=added(l)-1e-12,`at least the v217 health at level ${l}`);
+assert(healthScale(67)/added(67)>1.5,'about 1.5× the v217 health at level 67');
+console.log('PASS: health compounds 4% a level for 25 levels (2.67× at level 26), then 1.5% a level, reaching the 4× cap at level 54 and never passing it; never weaker than v217’s added curve.');
 
 // ---- Speed: +2% of base a level, at most +50% -------------------------------------------------
 near(speedScale(1),1,'Level 1 is the base');near(speedScale(2),1.02,'+2% at level 2');near(speedScale(25),1.48,'1.48× at level 25');
@@ -50,7 +55,7 @@ console.log('PASS: speed adds 2% of base a level, reaching +50% at level 26 and 
 
 // ---- Stats: the mansion's wave 1 at level 1, scaled; damage unchanged -------------------------
 assert.deepEqual({...threatStats(1)},{health:93,speed:1.145,damage:19.5},'Level 1 is the mansion’s wave 1, exactly as v206’s stand-in');
-near(threatStats(14).health,93*1.52,'Level 14 health');near(threatStats(14).speed,1.145*1.26,'and speed');
+near(threatStats(14).health,93*1.04**13,'Level 14 health');near(threatStats(14).speed,1.145*1.26,'and speed');
 for(const l of [2,24,160,5001])assert.equal(threatStats(l).damage,19.5,`Damage never scales (level ${l}, spec 6.6)`);
 assert.equal(threatStats(500).health,93*4);assert.equal(threatStats(500).speed,1.145*1.5);
 assert.equal(threatStats(7),threatStats(7),'A level’s stats are made once');assert(Object.isFrozen(threatStats(7)));

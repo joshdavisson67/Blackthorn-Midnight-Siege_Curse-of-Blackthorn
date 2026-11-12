@@ -29,6 +29,32 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide: the dead's health compounds (version 218)
+
+From the user, after a run to threat level 67: it played far too easy.
+
+- **The dead's health now compounds.** Each threat level multiplies the last level's health by 1.04 for the first 25 increases, then by 1.015, never above 4× the base. Before, the same rates were added to the base each level.
+- **What changes:**
+
+  | Threat level | Before (added) | Now (compounded) |
+  |---|---|---|
+  | 10 | 1.36× | 1.42× |
+  | 26 | 2.00× | 2.67× |
+  | 40 | 2.21× | 3.28× |
+  | 54 | 2.42× | 4× (the cap) |
+  | 67 | 2.62× | 4× |
+  | 160 | 4× | 4× |
+
+  - The two curves stay close for the first ten levels.
+  - The full 4× now comes at level 54, about 100 levels sooner than before (level 160).
+  - At level 67 the dead are about 1.5× as tough as before; a walker has 372 health (243 before).
+  - Every kind keeps its own multiple of the base (dogs, brutes, Ashfangs, ferals, lurkers).
+  - Speed, damage, the population and the mix are unchanged.
+- **The design spec** (6.4) records the decision.
+- **Tests:** `tests/tide-threat.mjs` checks the compounding level by level, the cap at level 54, and that the new curve is never weaker than the old one.
+- **Gameplay changes, by design:** the dead's health from threat level 2 on.
+- TIERS
+
 ## Dead Tide's picker art and title screen, no longer a preview (version 217)
 
 From the user, after the island's art passes.
