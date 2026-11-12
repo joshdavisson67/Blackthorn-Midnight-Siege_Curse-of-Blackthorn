@@ -409,6 +409,7 @@ void main(){
   const PLANE=new T.PlaneGeometry(1,1),VINE=vineGeometry(1,1),SHRUB=shrubGeometry(9);
   // The ruin's column capital (a flared echinus) and a fallen drum (centred on its middle); a carved panel's darker stone.
   const CAPITAL=new T.CylinderGeometry(.6,.4,.3,32),DRUM=columnGeometry({radius:.42,height:1.5}).translate(0,-.75,0),carved=textured(TEX,'stone',{color:0x8c8a80,scale:.35});CAPITAL.translate(0,.15,0);
+  const thatch=textured(TEX,'thatch',{color:0xc0ae90,roughness:1}),forgeRock=textured(TEX,'rock',{color:0x9c9a92,scale:.4});
   const flame=new T.MeshStandardMaterial({color:0x3a1404,emissive:0xff8a2a,emissiveIntensity:2.2,roughness:.6}),warn=new T.MeshStandardMaterial({color:0x2a0705,emissive:0xff1a10,emissiveIntensity:1.2,roughness:.5}),rune=new T.MeshStandardMaterial({color:0x140a26,emissive:0x8a4dff,emissiveIntensity:1.05,roughness:.5});
   // No prop can be jumped onto: what blocks reaches at least 1.05 m above the highest ground
   // round it (on a slope that is above the prop's own top on its uphill side).
@@ -461,6 +462,8 @@ void main(){
     A.crate(-2.1,1.3,1.1,.4);
     // (v211's ammunition crate stood in the north-east corner; v212: the standard ammunition station stands there, built by tide.mjs.)
   }
+  // v215: the camp's fire throws a flickering light (placed with the camp, below).
+  const fireLight=new T.PointLight(0xff8a3c,3,11,1.7);scene.add(fireLight);lights.push(fireLight);
   const lamp=new T.PointLight(0xffb867,2.4,7.5,1.6);lamp.position.set(TENT.x-.4,summit+TENT.eave-.25,TENT.z-.4);scene.add(lamp);lights.push(lamp);
   // The rest of the Lookout Compound: a dish on its mount, crates, barrels and what is left of
   // the fence, all at the edge of the summit so the top stays open.
@@ -621,6 +624,7 @@ void main(){
   {const A=site(SITE.camp.x,SITE.camp.z,SITE.camp.angle,null,'camp'),R=CAMP.ring;
     for(let k=0;k<10;k++){const a=k/10*TAU;A.box(stone,Math.cos(a)*.9,0,Math.sin(a)*.9,.34,.22,.28,{ry:-a});}           // the fire ring
     A.box(plank,0,.08,0,1.1,.13,.15,{ry:.6});A.box(plank,0,.14,0,1.1,.13,.15,{ry:-.5});A.box(glow,0,.02,0,.75,.07,.75);A.block(0,0,2.1,2.1,.4);   // its logs and embers
+    {const [fx,fz]=A.at(0,0);fireLight.position.set(fx,groundHeight(fx,fz)+.7,fz);}                             // v215: and its light
     for(const a of [1.15,TAU/2,TAU-1.15]){const L=A.sub(Math.sin(a)*2.3,Math.cos(a)*2.3,a+Math.PI/2);L.post(timber,0,0,0,.2,1.4,{rz:Math.PI/2});L.block(0,0,1.4,.45,.4);}   // log seats
     for(let k=0;k<CAMP.tents;k++){const ph=Math.PI/2+k*Math.PI/(CAMP.tents-1);ridgeTent(A.sub(Math.sin(ph)*R,Math.cos(ph)*R,ph-Math.PI/2),3,2.3,1.75);}
     for(const side of [-1,1]){const [x,z]=[side*CAMP.torch[0],CAMP.torch[1]];                                        // the torches at the opening
@@ -662,14 +666,16 @@ void main(){
   // and the stores beside it.
   {const A=site(SITE.cove.x,SITE.cove.z,SITE.cove.angle,null,'cove');
     A.box(timber,0,0,-1.9,5,2.9,.14,{collide:true});for(const x of [-2.4,2.4]){A.post(timber,x,0,1.7,.08,3.5,{collide:true});A.post(timber,x,0,-1.8,.08,3);}
-    A.box(roofMat,0,3.2,-.05,5.6,.1,4.3,{rx:-.13});
+    // v215: a deep thatched roof (after the user's aerial reference), overhanging, its eave fringed.
+    A.box(thatch,0,3.12,-.05,6.1,.32,4.9,{rx:-.13});A.box(thatch,0,3.42,-.05,6.3,.14,.5,{rx:-.13});
+    for(let k=0;k<9;k++)A.box(thatch,-2.8+k*.7,2.98+((k*7)%3)*.03,2.32,.72,.32,.08,{rx:-.13});
     // (v212: its bench is gone: the Glock 21's rack and Deadeye stand side by side against the back wall, facing the water.)
     A.crate(3.9,-.6,1.3,.2);A.crate(4.4,.9,1.1,-.6);A.barrel(-3.6,-1);A.barrel(-4.2,-.2);
   }
   // The Soul Forge's clearing: a stone dais in a ring of four standing stones, their marks alight.
   {const A=site(SITE.forge.x,SITE.forge.z,SITE.forge.angle,null,'forge');
     A.box(stone,0,0,0,3,.12,3,{platform:true});
-    for(let k=0;k<4;k++){const a=k*Math.PI/2+1.25,x=Math.cos(a)*6.3,z=Math.sin(a)*6.3;A.box(stone,x,0,z,.95,2.7+(k%2)*.4,.7,{ry:-a+Math.PI/2,rz:(k%2?-.06:.05),collide:true});
+    for(let k=0;k<4;k++){const a=k*Math.PI/2+1.25,x=Math.cos(a)*6.3,z=Math.sin(a)*6.3;A.box(forgeRock,x,0,z,.95,2.7+(k%2)*.4,.7,{ry:-a+Math.PI/2,rz:(k%2?-.06:.05),collide:true});
       A.box(rune,x-Math.cos(a)*.37,1.1,z-Math.sin(a)*.37,.12,.9,.04,{ry:-a+Math.PI/2});}
   }
   // North Beach: driftwood above the tide line (too low to block).
@@ -780,7 +786,8 @@ void main(){
   const tufts=new T.InstancedMesh(tuftGeometry(),foliage(TEX,'tuft',{color:0xbccab2,sway:.09}),tuftSpots.length);tufts.name='Grass';
   const duneTuft=new T.Color(1.18,1.1,.8),plainTuft=new T.Color(.92,1,.9);
   tuftSpots.forEach((t,i)=>{e4.set(0,t.turn,0);q4.setFromEuler(e4);m4.compose(v4.set(t.x,t.y-.03,t.z),q4,s4.set(t.w,t.h,t.w));tufts.setMatrixAt(i,m4);tufts.setColorAt(i,t.dune?duneTuft:plainTuft);});
-  for(const m of [ferns,tufts]){m.castShadow=m.receiveShadow=true;m.computeBoundingSphere();world.add(m);}
+  // (They take the moon's shadow but cast none: thousands of small cards would double their draws for little.)
+  for(const m of [ferns,tufts]){m.castShadow=false;m.receiveShadow=true;m.computeBoundingSphere();world.add(m);}
 
   // ---- Where you are ------------------------------------------------------------------------
   function zoneAt(x,z,y=groundHeight(x,z)){
@@ -793,7 +800,7 @@ void main(){
     return x<-10?(z<0?'THE JUNGLE':'PALM GROVE'):'THE LOWLANDS';
   }
   // The beacon blinks and the sea moves.
-  function update(elapsed){boathouseDoor.update(elapsed);seaMat.uniforms.time.value=elapsed;ART_UNIFORMS.time.value=elapsed;const on=(elapsed%ISLAND.beacon.period)<ISLAND.beacon.on;beaconMat.emissiveIntensity=on?3.2:.25;beaconLight.intensity=on?26:0;}
+  function update(elapsed){boathouseDoor.update(elapsed);seaMat.uniforms.time.value=elapsed;ART_UNIFORMS.time.value=elapsed;fireLight.intensity=3+.7*Math.sin(elapsed*13.1)+.45*Math.sin(elapsed*7.3+1.2)+.3*Math.sin(elapsed*23.7);const on=(elapsed%ISLAND.beacon.period)<ISLAND.beacon.on;beaconMat.emissiveIntensity=on?3.2:.25;beaconLight.intensity=on?26:0;}
 
   // ---- Routes (v206) ---------------------------------------------------------------------------
   // A flow field toward the player over the land and the wadeable shallows, in 0.5 m cells (fine

@@ -27,11 +27,13 @@ function setup(t,name,anisotropy){t.name='island-'+name;t.colorSpace=T.SRGBColor
 function standIn(name){const c=new T.Color(AVERAGE[name]),t=new T.DataTexture(new Uint8Array([c.r*255,c.g*255,c.b*255,255]),1,1);t.needsUpdate=true;setup(t,name,1);t.generateMipmaps=false;t.minFilter=T.LinearFilter;return t;}
 // A flat colour for every texture: what the island wears where no picture can be loaded.
 export function standInTextures(){return Object.fromEntries(ISLAND_TEXTURES.map(name=>[name,standIn(name)]));}
-export async function loadIslandTextures({anisotropy=8,base='./assets/island/'}={}){
+// Where each texture is, spelled out so the release tooling's map of what each page loads can see them.
+const TEXTURE_URLS=Object.freeze({sand:'./assets/island/sand.webp?v=215',grass:'./assets/island/grass.webp?v=215',dirt:'./assets/island/dirt.webp?v=215',rock:'./assets/island/rock.webp?v=215',concrete:'./assets/island/concrete.webp?v=215',camo:'./assets/island/camo.webp?v=215',stone:'./assets/island/stone.webp?v=215',paving:'./assets/island/paving.webp?v=215',rust:'./assets/island/rust.webp?v=215',wood:'./assets/island/wood.webp?v=215',thatch:'./assets/island/thatch.webp?v=215',cloth:'./assets/island/cloth.webp?v=215',bark:'./assets/island/bark.webp?v=215',frond:'./assets/island/frond.webp?v=215',fern:'./assets/island/fern.webp?v=215',tuft:'./assets/island/tuft.webp?v=215',vines:'./assets/island/vines.webp?v=215',leaves:'./assets/island/leaves.webp?v=215',stencil:'./assets/island/stencil.webp?v=215'});
+export async function loadIslandTextures({anisotropy=8}={}){
   if(typeof Image!=='function'||typeof document==='undefined'||typeof createImageBitmap!=='function')return standInTextures();
   const loader=new T.TextureLoader(),out={};
   await Promise.all(ISLAND_TEXTURES.map(async name=>{
-    try{out[name]=setup(await loader.loadAsync(`${base}${name}.webp?v=215`),name,anisotropy);}catch{out[name]=standIn(name);}
+    try{out[name]=setup(await loader.loadAsync(TEXTURE_URLS[name]),name,anisotropy);}catch{out[name]=standIn(name);}
   }));
   return out;
 }

@@ -29,6 +29,56 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide's art pass (version 215)
+
+The island's first art pass, after reference photos from the user. The direction agreed before work began is in the design spec, section 10.4:
+- a moonlit night;
+- textures everywhere;
+- a desktop-first budget;
+- the ruin at the spec's modest size.
+
+- **The night.**
+  - **The moon:** brighter and bluer, and it now casts shadows round wherever you are. Its shadow map is 1024, 2048 or 4096 texels wide, by graphics quality.
+  - **The fog:** clearer and bluer.
+  - **The camp's fire:** throws a flickering light.
+- **The sea.**
+  - **The shallows:** turquoise, with the sandy seabed showing through, bent by the ripples and lit by moving caustics.
+  - **Deeper water:** darkens to navy.
+  - **The moon's glint:** fades with distance, so far water no longer breaks into flashing squares.
+- **Textured, all of it.**
+  - **Where the textures come from:** 19 textures (about 1 MB of WebP in `assets/island/`), painted by the new `scripts/island-textures.mjs`. They are seeded and tileable, and nothing is copied from elsewhere.
+  - **The ground:** blends sand, grass, earth and rock by weights in its vertices, by the same rules as before (wet sand, dune grass, jungle floor, mud, trails, rocky hills).
+  - **Structures:** wear their texture laid on in world space from three sides (`island-art.mjs`), so nothing needs UVs or stretches. Each material lends its surface a little relief.
+  - **Shader programs:** three new ones, one each for terrain, structures and plants, however many materials use them.
+- **Plants.**
+  - Palms with ringed bark and real fronds.
+  - Leafy shrubs where the green stones were.
+  - 170 fern clumps round the ruin and under the palms.
+  - About 2,200 grass tufts on the grassy ground and behind the beaches.
+  - They sway a little. None of them blocks or hides anyone.
+- **The landmarks.**
+  - **The wreck:** a rust-streaked steel coastal freighter, with a lofted plated hull and her deck rusted through. The bridge and funnel are aft, in old white paint, with cargo hatches amidships and an ochre derrick mast forward with its booms and stays.
+  - **Bunker B-01:** olive and faded-peach camouflage over the concrete.
+    - The lintel is stencilled **B-01 · 1942**.
+    - A recess runs back to the sealed door, which is welded shut.
+    - One timber gate is folded back; the other is shut, with a chained bar beside it.
+    - Stepped wing walls (one with a dark bay), a steel railing along the roof, and scrub and vines over it.
+  - **The Jungle Ruin:**
+    - mossy ashlar walls on plinths with broken copings;
+    - a round arch of nine voussoirs on capped piers;
+    - fluted columns, one whole with its capital, the others broken;
+    - a fallen drum, a carved pedestal, a broken paved path through the arch, and vines.
+  - **East Cove's shelter:** a deep thatched roof with a fringed eave.
+  - **The Soul Forge:** its standing stones are rough rock.
+  - **Everywhere else:** weathered timber, canvas, rusted steel and mossy stone.
+- **Wording.** Dead Tide's title screen no longer calls the island grey-box: it is an "early preview". The mode picker's line under Dead Tide says the first art pass is in.
+- **Gameplay is as it was.** Every collider, pad, station, trail and spawn point stands where it did. The one exception is the ruin's new pedestal, a 1 m block beside its path. The new plants and props block nothing.
+- **Proof:**
+  - `tests/dead-tide.mjs` passes, with the island's budget raised for the art (see Release tiers).
+  - Screenshots of every landmark were taken in headless Chromium (`scripts/tide-shots.mjs`, software rendering), before and after.
+- **Release tiers:** TIERS
+- **Not verified:** frame rates on real GPUs or phones, and the textures' exact colours on a real GPU (the screenshots are software-rendered).
+
 ## Dead Tide's run summary and its own leaderboard (version 214)
 
 Dead Tide step 6, from the design spec's sections 8.5 and 12 (the spec is now kept in the repo, `docs/dead-tide-spec.md`).

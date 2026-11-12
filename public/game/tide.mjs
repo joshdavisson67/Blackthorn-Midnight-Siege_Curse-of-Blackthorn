@@ -34,7 +34,7 @@ import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
 import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=215';
 import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=210';
-import {createTideLeaderboard} from './tide-leaderboard.mjs?v=214';
+import {createTideLeaderboard} from './tide-leaderboard.mjs?v=215';
 import {armorRank} from './armor.mjs?v=94';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
@@ -386,7 +386,10 @@ function startFromMenu(){finishTheDead();resetRun();}
 // One step of the dead's build (a body); true once they are built.
 // v209: then, one more step, the brutes' wider routes (about 0.1 s), so the first brute to come
 // ashore no longer stalls a frame building them.
-function growTheDead(){if(enemyReal){if(!bruteRoutes)void routes.brutes;return true;}const step=enemyBuild.next();if(!step.done)return false;enemyReal=step.value;warmTheDead();return false;}
+function growTheDead(){if(enemyReal){if(!bruteRoutes)void routes.brutes;return true;}const step=enemyBuild.next();if(!step.done)return false;enemyReal=step.value;quietTheDead(enemyReal);warmTheDead();return false;}
+// v215: the dead cast no moon shadow (45 bodies drawn twice more than quadrupled a fight's draws); they still
+// take the island's shadows. Their templates, so every body cloned from them.
+function quietTheDead(real){for(const g of [...real.templates.map(r=>r.group),real.injuries?.group,real.faces?.group])g?.traverse(o=>{if(o.isMesh)o.castShadow=false;});}
 function finishTheDead(){while(!growTheDead());return deadWarm;}
 function warmTheDead(){
   const warmScene=new T.Scene(),rage=enemyReal.templates.map(r=>{const group=r.group.clone(true);enemyReal.enrage({group});return group;});

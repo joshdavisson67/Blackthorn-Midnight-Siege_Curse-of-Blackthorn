@@ -89,7 +89,7 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
   for(const n of ['Island ground','The sea','Landmarks','Radio tower','Tower beacon','Wreck','Palm trunks','Palm crowns','Rocks','Brush'])assert(names.has(n),`The island has ${n.toLowerCase()}`);
   let meshes=0,triangles=0;world.traverse(o=>{if(o.isMesh){meshes++;const g=o.geometry;triangles+=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
   // v215 (the art pass, spec 10.4): textured, with ferns and grass, on a desktop-first budget.
-  assert(meshes<90&&triangles<160000,`The island stays within its art budget: ${meshes} meshes, ${Math.round(triangles/1000)}k triangles`);
+  assert(meshes<85&&triangles<95000,`The island stays within its art budget: ${meshes} meshes, ${Math.round(triangles/1000)}k triangles`);
   // The beacon blinks: on for 0.55 s of every 1.6 s.
   I.update(.1);assert(I.beaconLight.intensity>0);I.update(.9);assert.equal(I.beaconLight.intensity,0);I.update(1.7);assert(I.beaconLight.intensity>0,'The tower’s red beacon blinks');
   console.log(`PASS: the island: a coast 50–75 m out, Radio Hill highest and flat-topped with the radio tent and tower on it, a sloping beach on every bearing, walkable everywhere you can stand, the wreck at the water’s edge, ${I.palms.length} palms and ${I.rocks.length} rocks on land, the south-beach landing spot clear, ${meshes} meshes and ${Math.round(triangles/1000)}k triangles, and a blinking beacon.`);
