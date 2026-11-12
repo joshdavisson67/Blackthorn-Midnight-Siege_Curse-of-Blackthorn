@@ -119,9 +119,9 @@ function stone(n){
     const b=fbm(u,v,6,5,75),grain=hash(Math.floor(u*n),Math.floor(v*n),13)-.5,pit=hash(Math.floor(u*n*.5),Math.floor(v*n*.5),14),weather=fbm(u,v,16,4,15);
     let col=mix([98,98,90],[154,150,138],b*.6+weather*.4);col=shade(col,.8+.32*hash(id,1,76));if(pit>.97)col=shade(col,.62);
     col=mix(col,[92,84,70],smooth(.6,.8,fbm(u,v,10,3,16))*.35);                  // iron-brown weathering
-    const chip=fbm(u,v,30,3,77)*.05;const joint=smooth(.035+chip,.012,edge);
-    col=shade(col,1-smooth(.14,.04,edge)*.25);                                   // worn arrises
-    col=mix(col,[34,36,30],joint);                                               // the joints
+    const chip=fbm(u,v,30,3,77)*.04;const joint=smooth(.022+chip,.006,edge);
+    col=shade(col,1-smooth(.12,.02,edge)*.16);                                   // worn arrises
+    col=mix(col,[58,60,52],joint*.85);                                           // the joints
     const moss=smooth(.6,.76,fbm(u,v,5,4,78)+smooth(.3,0,fv)*.14+joint*.18);col=mix(col,mix([44,64,32],[70,92,44],fbm(u,v,14,3,82)),moss*.7);   // moss: in patches, on top of each course and in its joints
     const cc=cells(u,v,9,79,1),crack=smooth(.018,0,cc.f2-cc.f1)*(hash(cc.id,4,80)>.82?1:0);col=shade(col,1-crack*.45);
     return shade(col,1+grain*.1);});}
@@ -134,14 +134,16 @@ function paving(n){
     col=mix(col,[56,82,38],smooth(.62,.78,fbm(u,v,6,4,87))*.6);                // moss creeping over the flags
     col=mix(col,mix([46,64,30],[70,58,40],fbm(u,v,20,3,88)),smooth(.07,.035,gap));   // grass and soil between them
     return shade(col,1+grain*.1);});}
-// Rusted steel plate: rust and old paint, streaks running down, seams and rivets.
+// Rusted steel plate: deep rust, brighter where it is flaking, streaks running down from every
+// seam, a little old dark paint left; the plates' seams and rivets.
 function rust(n){
   seed=91;
-  const c=pixels(n,(u,v)=>{const b=fbm(u,v,5,6,91),streak=afbm(u,v,30,2,4,93),blot=fbm(u,v,7,4,95),grain=hash(Math.floor(u*n),Math.floor(v*n),17)-.5;
-    let col=mix([70,36,22],[120,62,32],b);col=mix(col,[166,90,42],smooth(.6,.8,blot)*.7);
-    col=shade(col,1-smooth(.45,.75,streak)*.35);col=mix(col,[176,104,52],smooth(.72,.86,streak)*.5);
-    const paint=smooth(.56,.6,fbm(u,v,3,4,97));col=mix(col,mix([46,56,58],[64,74,72],b),paint*.85*(1-smooth(.62,.8,blot)));   // what's left of the dark paint
-    const plateV=(v*2)%1,plateU=(u*2+Math.floor(v*2)*.5)%1,seam=smooth(.006,0,Math.min(plateV,1-plateV))+smooth(.006,0,Math.min(plateU,1-plateU));col=shade(col,1-clamp(seam)*.5);
+  const c=pixels(n,(u,v)=>{const b=fbm(u,v,5,6,91),streak=afbm(u,v,36,2,4,93),fine=afbm(u,v,90,6,3,94),blot=fbm(u,v,9,4,95),grain=hash(Math.floor(u*n),Math.floor(v*n),17)-.5;
+    let col=mix([64,34,22],[112,58,32],b);col=mix(col,[150,82,40],smooth(.62,.82,blot)*.6);
+    col=shade(col,1-smooth(.4,.75,streak)*.42);col=mix(col,[168,96,48],smooth(.74,.88,streak)*.45);col=shade(col,.92+.16*fine);
+    const paint=smooth(.68,.72,fbm(u,v,4,4,97));col=mix(col,mix([38,38,36],[56,54,50],b),paint*.75*(1-smooth(.6,.8,blot)));   // what's left of the dark paint
+    const plateV=(v*2)%1,plateU=(u*2+Math.floor(v*2)*.5)%1,seam=smooth(.005,0,Math.min(plateV,1-plateV))+smooth(.005,0,Math.min(plateU,1-plateU));col=shade(col,1-clamp(seam)*.45);
+    col=shade(col,1-smooth(.06,0,plateV)*.18);                                     // rust weeping below each seam
     return shade(col,1+grain*.14);});
   wrapped(c,(x,n)=>{// rivets along the seams
     for(let row=0;row<2;row++)for(let k=0;k<32;k++){const px=k/32*n,py=row*n/2+n*.012;x.fillStyle='rgba(40,20,12,.7)';x.beginPath();x.arc(px,py,1.6,0,7);x.fill();x.fillStyle='rgba(190,120,70,.5)';x.beginPath();x.arc(px-.4,py-.4,.8,0,7);x.fill();}});
@@ -221,8 +223,20 @@ function leaves(n){
     leaf(x,cx,cy,a+(rand()-.5)*.8,len,len*.32,`rgb(${30+rand()*20|0},${g|0},${28+rand()*16|0})`,'rgba(120,160,90,.55)');}
   return c;}
 
+// Stencilled lettering for Bunker B-01's lintel: its number on the left, its year on the right,
+// in black paint, flaked (design spec 10.4, after the reference's "USED 1942").
+function stencil(n){
+  seed=191;const c=document.createElement('canvas');c.width=n;c.height=n/4;const x=c.getContext('2d'),h=n/4;
+  x.fillStyle='rgb(22,22,20)';x.font=`bold ${Math.round(h*.62)}px "DejaVu Sans Mono","Liberation Mono",monospace`;x.textBaseline='middle';
+  x.textAlign='left';x.fillText('B-01',h*.25,h*.54);x.textAlign='right';x.fillText('1942',n-h*.25,h*.54);
+  // Stencil bridges: thin gaps cut through each letter, then flaking.
+  x.globalCompositeOperation='destination-out';
+  for(const cx of [h*.25,n-h*.25-h*1.55])for(let k=0;k<4;k++){x.fillRect(cx+h*(.18+k*.37),h*.2,h*.035,h*.7);}
+  for(let i=0;i<260;i++){x.beginPath();x.arc(rand()*n,rand()*h,.6+rand()*2.4,0,7);x.fill();}
+  x.globalCompositeOperation='source-over';
+  return c;}
 const OPAQUE={sand:[sand,1024],grass:[grass,1024],dirt:[dirt,1024],rock:[rock,1024],concrete:[concrete,512],camo:[camo,512],stone:[stone,512],paving:[paving,512],rust:[rust,512],wood:[wood,512],thatch:[thatch,512],cloth:[cloth,512],bark:[bark,512]};
-const CARDS={frond:[frond,512],fern:[fern,512],tuft:[tuft,256],vines:[vines,512],leaves:[leaves,512]};
+const CARDS={frond:[frond,512],fern:[fern,512],tuft:[tuft,256],vines:[vines,512],leaves:[leaves,512],stencil:[stencil,512]};
 window.paintIslandTextures=(quality=.86)=>{
   const out={};
   for(const [name,[f,n]] of Object.entries(OPAQUE))out[name]=f(n).toDataURL('image/webp',quality);

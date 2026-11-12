@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {combineMeshes} from './batching.mjs?v=204';
-import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry} from './island-art.mjs?v=215';
+import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry,hullGeometry,columnGeometry} from './island-art.mjs?v=215';
 
 // Dead Tide's island (v204, Dead Tide step 2): the grey-box map. A central hill with the
 // radio tent and a lattice tower on its flat top, a lowland ring, beaches all round,
@@ -401,7 +401,14 @@ void main(){
   const props=new T.Group();props.name='Landmarks';world.add(props);
   // v215 (the art pass): every surface wears a texture (island-art.mjs), laid on in world space.
   const timber=textured(TEX,'wood',{color:0xc4b6a2}),plank=textured(TEX,'wood',{color:0x9a8a76}),roofMat=textured(TEX,'rust',{color:0x8c8480,roughness:.75,metalness:.3}),glow=new T.MeshStandardMaterial({color:0x1a1108,emissive:0xe8913c,emissiveIntensity:.85,roughness:.6}),steel=textured(TEX,'rust',{color:0x8a9698,roughness:.6,metalness:.45,scale:.6});
-  const canvas=textured(TEX,'cloth',{color:0xd0ccb0,roughness:1}),concrete=textured(TEX,'concrete',{roughness:.95}),stone=textured(TEX,'stone',{roughness:1}),rustMat=textured(TEX,'rust',{roughness:.85,metalness:.2}),crate=textured(TEX,'wood',{color:0xc0a27e,scale:.55}),padMat=textured(TEX,'paving',{color:0xd8d2c4,roughness:.85});
+  const canvas=textured(TEX,'cloth',{color:0xd0ccb0,roughness:1}),concrete=textured(TEX,'concrete',{roughness:.95}),stone=textured(TEX,'stone',{roughness:1,scale:1.25}),rustMat=textured(TEX,'rust',{roughness:.85,metalness:.2}),crate=textured(TEX,'wood',{color:0xc0a27e,scale:.55}),padMat=textured(TEX,'paving',{color:0xd8d2c4,roughness:.85});
+  // v215: camouflaged concrete, painted railings, deep shadow for openings; lettering, vines and scrub
+  // as alpha cards (still: merged, they do not sway).
+  const camo=textured(TEX,'camo',{color:0xb4aca2,roughness:.95}),railPaint=textured(TEX,'rust',{color:0x8aa6b4,roughness:.6,metalness:.4,scale:.5}),paving=textured(TEX,'paving',{color:0xa09c90,roughness:.95}),dark=new T.MeshStandardMaterial({color:0x040506,roughness:1});
+  const stencilMat=foliage(TEX,'stencil',{sway:0}),vineMat=foliage(TEX,'vines',{sway:0,color:0xd0dcc4}),leafMat=foliage(TEX,'leaves',{sway:0,color:0xc8d8bc});
+  const PLANE=new T.PlaneGeometry(1,1),VINE=vineGeometry(1,1),SHRUB=shrubGeometry(9);
+  // The ruin's column capital (a flared echinus) and a fallen drum (centred on its middle); a carved panel's darker stone.
+  const CAPITAL=new T.CylinderGeometry(.6,.4,.3,32),DRUM=columnGeometry({radius:.42,height:1.5}).translate(0,-.75,0),carved=textured(TEX,'stone',{color:0x8c8a80,scale:.35});CAPITAL.translate(0,.15,0);
   const flame=new T.MeshStandardMaterial({color:0x3a1404,emissive:0xff8a2a,emissiveIntensity:2.2,roughness:.6}),warn=new T.MeshStandardMaterial({color:0x2a0705,emissive:0xff1a10,emissiveIntensity:1.2,roughness:.5}),rune=new T.MeshStandardMaterial({color:0x140a26,emissive:0x8a4dff,emissiveIntensity:1.05,roughness:.5});
   // No prop can be jumped onto: what blocks reaches at least 1.05 m above the highest ground
   // round it (on a slope that is above the prop's own top on its uphill side).
@@ -411,21 +418,23 @@ void main(){
     const add=(geo,mat,wx,y,wz,sx,sy,sz,rx,ry,rz)=>{const m=new T.Mesh(geo,mat);m.position.set(wx,y,wz);m.scale.set(sx,sy,sz);m.rotation.set(rx,angle+ry,rz,'YXZ');m.castShadow=m.receiveShadow=true;props.add(m);return m;};
     return {x,z,angle,at,
       // A box sx wide, sy high and sz deep, its foot ly above the ground.
-      box(mat,lx,ly,lz,sx,sy,sz,{rx=0,ry=0,rz=0,collide=false,platform=false,tall=0}={}){
-        const [wx,wz]=at(lx,lz),g=ground(wx,wz);add(BOX,mat,wx,g+ly+sy/2,wz,sx,sy,sz,rx,ry,rz);
+      box(mat,lx,ly,lz,sx,sy,sz,{rx=0,ry=0,rz=0,collide=false,platform=false,tall=0,visible=true}={}){
+        const [wx,wz]=at(lx,lz),g=ground(wx,wz);if(visible)add(BOX,mat,wx,g+ly+sy/2,wz,sx,sy,sz,rx,ry,rz);
         if(collide)boxCollider(wx,wz,sx,sz,g-2,lifted(wx,wz,Math.hypot(sx,sz)/2,g+ly+sy+tall),angle+ry,kind);
         if(platform)platforms.push({x:wx,z:wz,w:sx,d:sz,top:g+ly+sy,cos:Math.cos(angle+ry),sin:Math.sin(angle+ry)});
         return [wx,g,wz];},
       // A post of radius r and height h.
-      post(mat,lx,ly,lz,r,h,{rx=0,rz=0,collide=false,reach=0}={}){
-        const [wx,wz]=at(lx,lz),g=ground(wx,wz);add(CYL,mat,wx,g+ly+h/2,wz,r,h,r,rx,0,rz);
+      post(mat,lx,ly,lz,r,h,{rx=0,rz=0,collide=false,reach=0,visible=true}={}){
+        const [wx,wz]=at(lx,lz),g=ground(wx,wz);if(visible)add(CYL,mat,wx,g+ly+h/2,wz,r,h,r,rx,0,rz);
         if(collide)circleCollider(wx,wz,Math.max(.12,r+reach),g-2,lifted(wx,wz,Math.max(.12,r+reach),g+ly+h),kind);return [wx,g,wz];},
       // A crate, or a barrel, standing on the ground: both block.
       crate(lx,lz,size=1.25,ry=0){return this.box(crate,lx,0,lz,size,size,size,{ry,collide:true});},
       barrel(lx,lz){return this.post(rustMat,lx,0,lz,.33,1.15,{collide:true,reach:.04});},
       // Something that only blocks (no shape of its own), `height` tall.
       block(lx,lz,sx,sz,height,ry=0){const [wx,wz]=at(lx,lz),g=ground(wx,wz);boxCollider(wx,wz,sx,sz,g-2,lifted(wx,wz,Math.hypot(sx,sz)/2,g+height),angle+ry,kind);},
-      sub(lx,lz,ry=0){const [wx,wz]=at(lx,lz);return site(wx,wz,angle+ry,base,kind);}
+      sub(lx,lz,ry=0){const [wx,wz]=at(lx,lz);return site(wx,wz,angle+ry,base,kind);},
+      // v215: any shape, its origin ly above the ground (or the base) at (lx, lz).
+      shape(geo,mat,lx,ly,lz,{sx=1,sy=1,sz=1,rx=0,ry=0,rz=0}={}){const [wx,wz]=at(lx,lz),g=ground(wx,wz);return add(geo,mat,wx,g+ly,wz,sx,sy,sz,rx,ry,rz);}
     };
   }
   // A canvas ridge tent on the ground: two sloped sheets `length` long over a `width` floor.
@@ -478,22 +487,44 @@ void main(){
   const beaconLight=new T.PointLight(0xff3b2c,0,46,1.4);beaconLight.position.copy(beacon.position);scene.add(beaconLight);lights.push(beaconLight);
   for(let i=0;i<4;i++){const p=corner(0,i);circleCollider(W.x+p.x,W.z+p.z,.2,summit-1,summit+6);}
 
-  // The wreck: a trawler run aground and rolled onto her side, half sunk in the sand. (v212: twice
+  // The wreck: a freighter run aground and rolled onto her side, half sunk in the sand. (v212: twice
   // the size, lying along the shore in the shallows, her bow turned a little up the beach.)
   const R=ISLAND.wreck,wx=SITE.wreck.x,wz=SITE.wreck.z,K=R.scale;
   const heading=SITE.wreck.heading,wreck=new T.Group();wreck.name='Wreck';world.add(wreck);
   wreck.position.set(wx,groundHeight(wx,wz)-R.sink*K,wz);wreck.rotation.set(R.roll,-heading,0,'YXZ');wreck.scale.setScalar(K);
-  const hullMat=textured(TEX,'rust',{color:0xa0aaa8,roughness:.8,metalness:.2}),rust=rustMat,cabin=textured(TEX,'concrete',{color:0xe0dcd0,roughness:.85});
-  const L=R.length,B=R.beam;
-  part(wreck,BOX,rust,0,.25,0,{sx:L*.86,sy:.5,sz:B*.55});
-  for(const side of [-1,1])part(wreck,BOX,hullMat,-.4,1.25,side*B*.42,{sx:L*.9,sy:2.1,sz:.18,rx:side*.2});
-  part(wreck,BOX,hullMat,-L*.47,1.3,0,{sx:.18,sy:2.2,sz:B*.86});                                   // the transom
-  part(wreck,PRISM,hullMat,L*.47,1.25,0,{sx:B*.5,sy:2.3,sz:B*.6,ry:Math.PI/2});                     // the bow
-  part(wreck,BOX,plank,-.8,2.25,0,{sx:L*.66,sy:.12,sz:B*.8});                                        // what's left of the deck
-  part(wreck,BOX,cabin,-L*.2,3.35,0,{sx:3,sy:2.1,sz:2.6});                                           // the wheelhouse
-  part(wreck,BOX,glow,-L*.2+1.51,3.6,0,{sx:.02,sy:.5,sz:1.6});                    // a dead glow in its window
-  part(wreck,CYL,steel,L*.15,5.6,0,{sx:.12,sy:6.8,sz:.12,rz:-.08});                                 // the mast
-  part(wreck,CYL,steel,L*.05,6.2,0,{sx:.07,sy:4,sz:.07,rz:1.2});                                     // a broken boom
+  // v215 (the art pass, after the user's reference): a steel coastal freighter, rust-streaked, plated
+  // hull lofted from bow to transom (island-art.mjs), her deck rusted through in places; the bridge and
+  // its funnel aft, in old white paint; cargo hatches amidships; an ochre derrick mast forward with its
+  // booms, cross-trees and stays. The same size and lie as v212's, and the same collider.
+  const L=R.length,B=R.beam,hull=hullGeometry({length:L*.95,beam:B*.95,depth:2.3,holes:[[.34,.41],[.52,.56]]}),deckAt=t=>hull.userData.deck(t);
+  const hullMat=textured(TEX,'rust',{roughness:.82,metalness:.2,vertexColors:true,side:T.DoubleSide,scale:1.6}),rust=rustMat,cabin=textured(TEX,'concrete',{color:0xe6e0d2,roughness:.85});
+  const ochre=textured(TEX,'rust',{color:0xf2c27a,roughness:.7,metalness:.3,scale:.5}),glass=new T.MeshStandardMaterial({color:0x091013,roughness:.25,metalness:.5});
+  {const m=new T.Mesh(hull,hullMat);m.castShadow=m.receiveShadow=true;wreck.add(m);}
+  const at=t=>-L*.95/2+t*L*.95,dk=t=>deckAt(t);
+  // The bridge: two decks of superstructure aft, a wheelhouse window band facing forward, portholes, a rail.
+  {const x=at(.17),y=dk(.17);
+    part(wreck,BOX,cabin,x,y+.75,0,{sx:2.6,sy:1.5,sz:3.1});part(wreck,BOX,cabin,x-.15,y+2.05,0,{sx:1.9,sy:1.1,sz:2.5});
+    part(wreck,BOX,cabin,x-.15,y+2.66,0,{sx:2.2,sy:.1,sz:3.3});                                             // the bridge deck's roof, overhanging
+    part(wreck,BOX,glass,x+.81,y+2.15,0,{sx:.03,sy:.38,sz:2.1});part(wreck,BOX,glass,x+1.31,y+1.05,0,{sx:.03,sy:.3,sz:2.4});
+    for(const side of [-1,1])for(let k=0;k<3;k++)part(wreck,CYL,glass,x-.8+k*.75,y+.95,side*1.56,{sx:.13,sy:.04,sz:.13,rx:Math.PI/2});
+    part(wreck,BOX,glow,x-.05,y+.95,1.57,{sx:.18,sy:.18,sz:.02});                                         // a dead glow in one porthole
+    for(const side of [-1,1])part(wreck,BOX,steel,x,y+1.85,side*1.6,{sx:2.6,sy:.05,sz:.05});part(wreck,BOX,steel,x+1.3,y+1.85,0,{sx:.05,sy:.05,sz:3.2});
+    for(let k=0;k<5;k++)for(const side of [-1,1])part(wreck,BOX,steel,x-1.25+k*.62,y+1.67,side*1.6,{sx:.05,sy:.35,sz:.05});
+    // The funnel, raked aft, with a faded band.
+    part(wreck,CYL,cabin,x-.95,y+3.3,0,{sx:.42,sy:1.6,sz:.42,rz:.1});part(wreck,CYL,rust,x-1.0,y+3.82,0,{sx:.44,sy:.32,sz:.44,rz:.1});}
+  // Amidships: two cargo hatches, their covers half gone.
+  for(const [t,missing] of [[.47,1],[.62,0]]){const x=at(t),y=dk(t);part(wreck,BOX,rust,x,y+.22,0,{sx:1.9,sy:.45,sz:2.3});
+    for(let k=0;k<4;k++)if(!(missing&&k%2))part(wreck,BOX,plank,x-.7+k*.47,y+.47,0,{sx:.42,sy:.06,sz:2.2,rz:(k%3)*.04});}
+  // Forward: the derrick mast, its cross-trees and lookout, two booms resting aft, and its stays.
+  {const t=.76,x=at(t),y=dk(t),top=y+6.2;
+    part(wreck,CYL,ochre,x,y+3.1,0,{sx:.13,sy:6.2,sz:.13});part(wreck,BOX,ochre,x,top-1.4,0,{sx:.14,sy:.14,sz:2.3});
+    part(wreck,BOX,ochre,x,top-.75,0,{sx:.9,sy:.07,sz:.9});for(const side of [-1,1]){part(wreck,BOX,steel,x,top-.5,side*.44,{sx:.9,sy:.04,sz:.04});part(wreck,BOX,steel,x+side*.44,top-.5,0,{sx:.04,sy:.04,sz:.9});}
+    for(const side of [-1,1]){const foot=new T.Vector3(x-.15,y+.8,side*.32),tip=new T.Vector3(x-4.4,y+3.2,side*1.1);strut(wreck,ochre,foot,tip,.13);
+      strut(wreck,steel,new T.Vector3(x,top-1.4,side*1.1),tip,.025);}
+    strut(wreck,steel,new T.Vector3(x,top,0),new T.Vector3(at(.99),dk(.99)+.6,0),.03);                   // the forestay
+    for(const side of [-1,1])strut(wreck,steel,new T.Vector3(x,top-1.4,side*1.1),new T.Vector3(x+.6,y+.1,side*B*.44),.025);}   // the shrouds
+  // Bollards along her rails, and her fallen rail stanchions near the bow.
+  for(const t of [.3,.56,.9])for(const side of [-1,1])part(wreck,CYL,steel,at(t),dk(t)+.18,side*B*.36,{sx:.13,sy:.36,sz:.13});
   merge(wreck);
   boxCollider(wx,wz,L*.95*K,B*1.05*K,groundHeight(wx,wz)-2,groundHeight(wx,wz)+3.6*K,-heading,'wreck');
 
@@ -503,29 +534,76 @@ void main(){
   // ridge, so its roof sinks into the slope behind; it blocks only as far back as it shows.
   // Reserved for later: nothing opens, nothing spawns in or near it, the ground round it is open.
   {const B=SITE.bunker,front=turned(B.x,B.z,B.angle,0,1.6),A=site(B.x,B.z,B.angle,groundHeight(front[0],front[1])-.05,'bunker');
-    A.box(concrete,0,0,-1.6,5.4,3.6,6);A.block(0,-.9,5.4,4.6,3.6);                       // the portal, and as much of it as stands out
-    A.box(concrete,0,3.6,-1.4,6,.35,6.4);                                                 // its roof slab
-    A.box(steel,0,.05,1.33,2.3,2.5,.12);A.box(rustMat,0,.05,1.4,.12,2.5,.04);             // the sealed door, and its seam
-    A.box(concrete,0,2.65,1.36,3,.5,.2);                                                  // the lintel (B-01's lettering comes with the art)
+    // v215 (the art pass, after the user's reference): olive and faded-peach camouflage over the
+    // concrete; a headwall of pilasters and a lintel standing proud, B-01's number and year stencilled
+    // on it; a recess to the sealed door, welded shut; its timber gates, one folded back against the
+    // face, one shut across the mouth with a chained bar beside it (B-01 stays shut: the collider is
+    // v212's, across the mouth); the wing walls stepping down, one with a dark bay; a steel railing
+    // along the roof's edge; scrub and vines over it all. Colliders as before.
+    const ow=1.45,oh=2.75;                                                                   // the opening's half-width and height
+    A.box(camo,-(2.7+ow)/2,0,-1.6,2.7-ow,3.6,6);A.box(camo,(2.7+ow)/2,0,-1.6,2.7-ow,3.6,6);A.box(camo,0,oh,-1.6,2*ow,3.6-oh,6);   // the portal: its cheeks and the mass over the opening
+    A.block(0,-.9,5.4,4.6,3.6);                                                              // all it blocks, as before
+    A.box(concrete,0,3.6,-1.4,6,.35,6.4);                                                    // its roof slab
+    for(const side of [-1,1]){A.box(camo,side*(ow+.42),0,1.47,.84,oh+.1,.16);A.box(warn,side*(ow+.42),2.25,1.57,.2,.2,.08);}   // pilasters, and their warning lamps
+    A.box(camo,0,oh,1.47,2*ow+1.7,.6,.17);A.shape(PLANE,stencilMat,0,oh+.31,1.565,{sx:2.5,sy:.62});                         // the lintel and its lettering
+    A.box(steel,0,0,.55,2*ow,oh,.12);A.box(concrete,0,-.03,1.0,2*ow,.05,.9);                                                    // the sealed door, the recess's floor
+    for(const side of [-1,1])A.box(rustMat,0,1.35+side*.45,.63,2*ow-.15,.13,.03,{rz:side*.52});                               // welded straps across it
+    A.post(rustMat,.75,1.3,.66,.24,.05,{rx:Math.PI/2});A.box(warn,0,oh-.25,.62,2*ow,.08,.02);                                   // its wheel, and a red band
+    // The gates: planks, rails and a brace. Left: folded back flat against the face; right: shut.
+    const gate=G=>{for(let k=0;k<4;k++)G.box(timber,-.52+k*.35,.05,0,.32,2.35,.05);for(const y of [.35,1.95])G.box(plank,0,y,.05,1.42,.14,.04);G.box(plank,0,1.15,.05,1.6,.12,.04,{rz:-1});};
+    gate(A.sub(-ow-.78,1.6));gate(A.sub(ow/2,1.43));
+    A.box(steel,-ow/2,1,1.45,ow,.07,.07);for(let k=0;k<6;k++)A.box(rustMat,-ow+.12+k*.24,.82,1.47,.12,.05,.03,{rz:(k%2?.4:-.4)});   // the bar, and its chain
     for(const side of [-1,1]){
-      A.box(warn,side*1.75,2.95,1.36,.22,.22,.1);                                          // warning lamps
-      A.box(concrete,side*3.9,0,1.1,3.4,2.6,.45,{ry:side*-.55,collide:true});              // wing walls, holding back the cut
+      const W=A.sub(side*3.9,1.1,side*-.55);W.block(0,0,3.4,.45,2.6);                                   // the wing walls: v212's colliders
+      W.box(camo,-side*.85,0,0,1.7,2.6,.45);W.box(camo,side*.85,0,0,1.7,1.7,.45);                         // stepping down from the portal
+      W.box(concrete,-side*.85,2.6,0,1.76,.12,.55);W.box(concrete,side*.85,1.7,0,1.76,.12,.55);         // their copings
+      if(side<0){W.box(dark,side*.9,.18,.235,.9,.95,.02);W.box(concrete,side*.9,1.13,.26,1.1,.13,.07);}   // a dark bay in the left one
     }
-    A.post(steel,1.7,3.95,-2.4,.16,1.1);A.post(steel,-1.5,3.95,-2.9,.12,.7);              // vents, where the roof meets the hill
+    // The railing along the roof's edge, painted steel; vents where the roof meets the hill.
+    for(let k=0;k<6;k++)A.post(railPaint,-2.9+k*1.16,3.95,1.68,.035,1.05);for(const y of [4.45,4.98])A.box(railPaint,0,y,1.68,5.9,.05,.05);
+    A.post(steel,1.7,3.95,-2.4,.16,1.1);A.post(steel,-1.5,3.95,-2.9,.12,.7);
+    // Scrub and vines on and over it.
+    for(const [x,z,k] of [[-2.4,-.3,1.3],[2.5,-1.6,1.1],[.4,-3.4,1.4],[-1.2,-4.2,1.2]])A.shape(SHRUB,leafMat,x,3.92,z,{sx:k*1.2,sy:k,sz:k*1.2});
+    for(const [x,w,d] of [[-1.85,1.1,1.7],[2.2,.9,1.3]])A.shape(VINE,vineMat,x,3.75,1.83,{sx:w,sy:d});
     const G=site(B.x,B.z,B.angle,null,'bunker');G.crate(-4.6,5.4,1.3,.3);G.crate(-5.9,4.9,1.15,-.4);G.barrel(-3.3,6.9);   // (v212: the barrel moved over by the crates, off the trail round the armour)
   }
   // The Jungle Ruin, on its knoll: lengths of broken wall (RUIN: v212 adds a west wall, a fallen
   // length on the north side and a corner tower), an arch you can walk through, columns and a floor
   // slab. Open on every side; the Raven SMG stands against the north wall, Quickhands inside the east one.
-  {const A=site(SITE.ruin.x,SITE.ruin.z,SITE.ruin.angle,null,'ruin');
-    A.box(stone,0,0,0,3.6,.14,2.8,{platform:true});                                       // the floor slab (a step up)
-    for(const [x,z,length,height,thick,ry] of RUIN)A.box(stone,x,0,z,length,height,thick,{ry,collide:true});
+  {const A=site(SITE.ruin.x,SITE.ruin.z,SITE.ruin.angle,null,'ruin'),rr=seeded(3215);
+    // v215 (the art pass, after the user's two references, at the spec's modest size): mossy ashlar
+    // walls on plinth courses with broken copings; a round arch of voussoirs on piers with capitals;
+    // fluted columns, one whole with its capital, the others broken; a pedestal by the arch; a broken
+    // paved path through it; vines hanging from the arch and the walls. Colliders as before, but
+    // for the pedestal's (new).
+    A.box(paving,0,0,0,3.6,.14,2.8,{platform:true});                                     // the floor slab (a step up)
+    RUIN.forEach(([x,z,length,height,thick,ry],k)=>{A.box(stone,x,0,z,length,height,thick,{ry,collide:true});
+      const W=A.sub(x,z,ry);W.box(stone,0,-.12,0,length+.18,.44,thick+.16);                // its plinth course
+      for(let j=0;j<Math.max(1,Math.round(length/1.6));j++){const w=.45+rr()*.5;if(rr()<.3)continue;W.box(stone,(rr()-.5)*(length-w),height,(rr()-.5)*.06,w,.16+rr()*.22,thick+.04,{rz:(rr()-.5)*.08});}   // broken coping stones
+      if(k===0)for(const along of [-1.7,-.4])W.shape(VINE,vineMat,along,height+.05,thick/2+.02,{sx:1.1,sy:1.4+rr()*.6});
+      if(k===1)W.shape(VINE,vineMat,-1,height+.05,thick/2+.02,{sx:1,sy:1.3});
+      if(k===2)W.shape(VINE,vineMat,.6,height+.05,-thick/2-.02,{sx:1.2,sy:1.5,ry:Math.PI});});
     A.box(stone,-6.1,2.5,-5.55,2.4,.9,.7,{ry:.12});A.box(stone,6.1,1.9,-.3,1.6,.7,.7,{ry:1.42});   // the north and east walls' higher ends
     A.box(stone,-8.75,2.2,.6,1.5,.6,.65,{ry:1.62});A.box(stone,8.2,3.4,-6.6,1.2,.5,1.2,{ry:.3});    // the west wall's, and the tower's broken top
-    for(const x of [-2.3,2.3])A.box(stone,x,0,5.6,.9,3.3,.9,{collide:true});A.box(stone,0,3.3,5.6,6,.7,.8);           // the arch
-    A.post(stone,-6.2,0,2.6,.5,1.4,{collide:true});A.box(stone,-5,0,3.6,1.5,.2,.8,{ry:.7,platform:true});       // a column stub, and its fallen drum
-    A.post(stone,2.2,0,-3.9,.42,2.6,{collide:true});A.post(stone,4.6,0,-3.5,.42,1.7,{collide:true});           // two more columns, one broken
+    // The arch: piers (v212's colliders) on plinths under capitals, and nine voussoirs turning a round
+    // arch over them, the keystone proud; vines over its face.
+    const SPRING=3.62,RI=1.85,RT=.62,RM=RI+RT/2,NV=9;
+    for(const x of [-2.3,2.3]){A.box(stone,x,0,5.6,.9,3.3,.9,{collide:true});A.box(stone,x,-.08,5.6,1.18,.48,1.18);A.box(stone,x,3.3,5.6,1.16,.32,1.16);}
+    for(let k=0;k<NV;k++){const a=Math.PI-(k+.5)*Math.PI/NV,key=k===(NV-1)/2,h=key?.8:RT,w=RM*Math.PI/NV*.965;
+      A.box(stone,RM*Math.cos(a),SPRING+RM*Math.sin(a)-h/2+(key?.06:0),5.6,w,h,key?.92:.86,{rz:a-Math.PI/2});}
+    for(const [x,z,d] of [[-1.1,6.06,1.9],[.9,6.06,1.5],[.3,5.14,1.6]])A.shape(VINE,vineMat,x,SPRING+Math.sqrt(Math.max(0,(RI+RT)**2-x*x))-.15,z,{sx:.95,sy:d,ry:z<5.6?Math.PI:0});
+    // Fluted columns: one standing whole with its base and capital, one broken, one a stump on its plinth;
+    // and a drum fallen from them (v212's low platform, now its shape).
+    {const tall=columnGeometry({radius:.42,height:3,seed:1});A.post(stone,2.2,0,-3.9,.42,2.6,{collide:true,visible:false});
+      A.box(stone,2.2,-.06,-3.9,1.08,.36,1.08);A.shape(tall,stone,2.2,.3,-3.9);A.shape(CAPITAL,stone,2.2,3.3,-3.9);A.box(stone,2.2,3.6,-3.9,1.22,.2,1.22);}
+    A.post(stone,4.6,0,-3.5,.42,1.7,{collide:true,visible:false});A.box(stone,4.6,-.06,-3.5,1.08,.36,1.08);A.shape(columnGeometry({radius:.42,height:1.45,broken:.45,seed:5}),stone,4.6,.3,-3.5);
+    A.post(stone,-6.2,0,2.6,.5,1.4,{collide:true,visible:false});A.box(stone,-6.2,-.06,2.6,1.25,.32,1.25);A.shape(columnGeometry({radius:.5,height:1.15,broken:.5,seed:2}),stone,-6.2,.26,2.6);
+    A.box(stone,-5,0,3.6,1.5,.2,.8,{ry:.7,platform:true,visible:false});A.shape(DRUM,stone,-5,-.22,3.6,{rz:Math.PI/2,ry:.7});
     for(const [x,z,ry] of [[1.2,-7.1,.4],[5.6,-8.6,-.3],[-9.6,-3.4,.9]])A.box(stone,x,-.25,z,.9,.5,.7,{ry,rz:.1});              // fallen blocks, half buried
+    // A pedestal beside the path, a carved panel on its face (new: it blocks).
+    A.box(stone,3.3,-.06,8,1.02,.32,1.02);A.box(stone,3.3,.26,8,.74,.86,.74);A.box(carved,3.3,.4,8.37,.48,.54,.02);A.box(stone,3.3,1.12,8,.98,.17,.98);A.block(3.3,8,1.02,1.02,1.3);
+    // The paved path, from the floor slab through the arch and out, its flags broken and missing.
+    for(let z=1.7;z<12.2;z+=.62)for(const x of [-.62,0,.62]){if(rr()<.24)continue;const w=.5+rr()*.3,d=.48+rr()*.22;A.box(paving,x+(rr()-.5)*.25+Math.sin(z*.35)*.4,-.04,z,w,.08,d,{ry:(rr()-.5)*.35});}
   }
   // Shipwreck Cove: what washed out of her, stacked up the beach (v212: three stacks of crates, the
   // shotgun against the middle one), with a barrel and planks.

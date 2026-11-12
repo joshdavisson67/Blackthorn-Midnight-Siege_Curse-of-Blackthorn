@@ -13,12 +13,12 @@ import * as T from './three.module.js';
 //                   the ground's vertices, the rock laid on from three sides for the cliffs.
 //   foliage(name)   fronds, ferns, grass, vines and leaves: alpha-cut cards, both sides lit,
 //                   swaying a little in the wind.
-export const ISLAND_TEXTURES=Object.freeze(['sand','grass','dirt','rock','concrete','camo','stone','paving','rust','wood','thatch','cloth','bark','frond','fern','tuft','vines','leaves']);
-const CARDS=new Set(['frond','fern','tuft','vines','leaves']);
+export const ISLAND_TEXTURES=Object.freeze(['sand','grass','dirt','rock','concrete','camo','stone','paving','rust','wood','thatch','cloth','bark','frond','fern','tuft','vines','leaves','stencil']);
+const CARDS=new Set(['frond','fern','tuft','vines','leaves','stencil']);
 // How many metres each texture spans.
 export const TILE=Object.freeze({sand:5,grass:4.5,dirt:4,rock:6,concrete:2.6,camo:3.4,stone:2.4,paving:3,rust:2.4,wood:2,thatch:1.6,cloth:1.4,bark:1});
 // Average colours, for the stand-ins when no image can be decoded (the tests).
-const AVERAGE={sand:0xc8b998,grass:0x46602f,dirt:0x6c5a44,rock:0x75746e,concrete:0x8f8e86,camo:0x8a7a58,stone:0x8a887c,paving:0x87847a,rust:0x6a3a22,wood:0x7d7262,thatch:0x7d6a44,cloth:0x77735a,bark:0x6a5c4a,frond:0x3c5c30,fern:0x3e6230,tuft:0x56743a,vines:0x3a5a2c,leaves:0x3a5e2e};
+const AVERAGE={sand:0xc8b998,grass:0x46602f,dirt:0x6c5a44,rock:0x75746e,concrete:0x8f8e86,camo:0x8a7a58,stone:0x8a887c,paving:0x87847a,rust:0x6a3a22,wood:0x7d7262,thatch:0x7d6a44,cloth:0x77735a,bark:0x6a5c4a,frond:0x3c5c30,fern:0x3e6230,tuft:0x56743a,vines:0x3a5a2c,leaves:0x3a5e2e,stencil:0x161614};
 
 // The textures, loaded once. Without an image decoder (tests, workers) each is a 1×1 stand-in.
 function setup(t,name,anisotropy){t.name='island-'+name;t.colorSpace=T.SRGBColorSpace;t.anisotropy=anisotropy;
@@ -179,5 +179,45 @@ export function boulderGeometry(seed=5){
   const g=new T.IcosahedronGeometry(1,1),p=g.attributes.position,v=new T.Vector3();
   const lump=(x,y,z)=>{const h=Math.sin(x*3.1+seed)*Math.sin(y*2.7-seed*.5)*Math.sin(z*3.3+seed*1.7);return 1+.22*h+.1*Math.sin(x*7.3+y*5.1+z*6.7+seed);};
   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const k=lump(v.x,v.y,v.z);p.setXYZ(i,v.x*k,v.y*k*(v.y<0?.6:1),v.z*k);}
+  g.computeVertexNormals();g.computeBoundingSphere();return g;
+}
+
+// A freighter's hull (v215, the wreck), keel at y 0, bow toward +x, from `length` × `beam`,
+// `depth` to the deck amidships: lofted through stations along her, each a section from one
+// bulwark's top down round the bilge to the keel and up to the other's. The bow rises into a
+// forecastle and is cut away below; the stern ends in a transom. The deck lies between the
+// bulwarks with holes rusted through it. Vertex colours darken her lower hull (the boot top).
+// Open shapes: draw it double-sided.
+export function hullGeometry({length=13,beam=4.2,depth=2.4,holes=[]}={}){
+  const N=30,pos=[],col=[],index=[],half=beam/2,L=length;
+  const width=t=>{let w=half;if(t>.66)w*=Math.max(.02,1-Math.pow((t-.66)/.34,1.7));if(t<.05)w*=.9+t*2;return w;};
+  const deck=t=>depth+.22*Math.pow(2*t-1,2)+(t>.8?1.1*(t-.8)/.2:0);
+  const keel=t=>t>.8?Math.pow((t-.8)/.2,1.4)*depth*.8:t<.04?(.04-t)*6:0;
+  const rows=[];
+  for(let i=0;i<=N;i++){const t=i/N,x=-L/2+t*L,w=width(t),d=deck(t),k=keel(t);
+    const side=[[w,d+.75],[w,d],[w*.985,k+(d-k)*.55],[w*.86,k+.38],[w*.52,k+.05]],row=[];
+    const ring=[...side.map(([z,y])=>[-z,y]),[0,k],...side.slice().reverse()];
+    for(const [z,y] of ring){row.push(pos.length/3);pos.push(x,y,z);const boot=y<1.1?.62:1;col.push(boot,boot*.92,boot*.9);}
+    rows.push(row);}
+  const M=rows[0].length;
+  for(let i=0;i<N;i++)for(let j=0;j<M-1;j++){const a=rows[i][j],b=rows[i+1][j],c=rows[i][j+1],d=rows[i+1][j+1];index.push(a,b,c,c,b,d);}
+  // The transom: a fan across the stern's section.
+  {const c0=pos.length/3;pos.push(-L/2,deck(0)*.5,0);col.push(1,1,1);for(let j=0;j<M-1;j++)index.push(c0,rows[0][j+1],rows[0][j]);}
+  // The deck, plate by plate, but for the holes ([from, to] along her, as fractions).
+  for(let i=0;i<N;i++){const t0=i/N,t1=(i+1)/N;if(holes.some(([a,b])=>t1>a&&t0<b))continue;
+    const a=pos.length/3;for(const t of [t0,t1])for(const s of [-1,1]){pos.push(-L/2+t*L,deck(t)-.02,s*width(t)*.97);col.push(1,1,1);}
+    index.push(a,a+2,a+1,a+1,a+2,a+3);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.setIndex(index);g.computeVertexNormals();g.computeBoundingSphere();
+  g.userData.deck=deck;g.userData.width=width;return g;
+}
+// A column shaft (v215, the ruin): fluted, standing on y 0, `height` tall; `broken` metres of
+// jagged loss off its top (0: whole). Tapers a little upward, as an ancient shaft does.
+export function columnGeometry({radius=.42,height=3,flutes=20,broken=0,seed=1}={}){
+  const g=new T.CylinderGeometry(radius*.88,radius,height,flutes*4,8),p=g.attributes.position,v=new T.Vector3();
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const r=Math.hypot(v.x,v.z),a=Math.atan2(v.z,v.x);
+    let k=1;if(r>1e-4)k=1-.06*Math.pow(.5+.5*Math.cos(a*flutes),2);
+    let y=v.y+height/2;if(broken>0&&y>height-1e-3)y=height-broken*(.35+.35*Math.sin(a*3+seed)+.3*Math.sin(a*7-seed*2));
+    else if(broken>0&&y>height-broken*.4)y-=broken*.15*(.5+.5*Math.sin(a*5+seed));
+    p.setXYZ(i,v.x*k,y,v.z*k);}
   g.computeVertexNormals();g.computeBoundingSphere();return g;
 }
