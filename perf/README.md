@@ -483,6 +483,39 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v219 (the camp's cliff meets its sand) against main (v218)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. The fine band round the cliff was then narrowed (a 0.8 m margin, from 2 m), so the final build was measured again: its views once each (their counts don't vary from run to run) and 16 load-phase pairs.
+
+### Mansion and mode picker: quick
+
+Nothing either loads changed. Five of the mansion's files differ only in their version number.
+
+### Dead Tide: full protocol
+
+Only `island.mjs` changed. Seven more files differ only in their version keys.
+
+| | main (v218) | v219 as first measured (2 m margin) | v219 final (0.8 m margin) |
+|---|---:|---:|---:|
+| KB before playable | 3,188 | 3,191 | 3,191 |
+| Triangles in the fixed views | 200K–320K | +2K to +9K | +0 to +6K |
+| Draw calls in the fixed views | 86–236 | unchanged | unchanged |
+| The 45-enemy fight: draw calls / triangles | 384–386 / 488K–491K | 384 / 494K–496K | 384 / 491K |
+| World building (load phases) | 1,704 ms / 1,642 ms | +47 ms (SE 23, 20 pairs) | +35 ms (SE 22, 16 pairs) |
+| Time to playable | 12,780 ms / 12,429 ms | +107 ms (SE 83: within noise) | +71 ms (SE 58: within noise) |
+| Frame logic (24 pairs, full series) | 0.430 ms | 0.440 ms (+0.010, SE 0.009: within noise) | (unchanged code) |
+
+- **The cost is the fix itself.**
+  - The ground round the cliff is drawn finer: 121 cells of 1.5 m, each as 50 triangles in place of 2. That's about 5,800 more triangles, and about 4,300 more ground vertices to place and shade while the world is built.
+  - The rock face also measures the ground along each of its columns.
+  - Building the world takes about 40 ms longer (2%). The two runs are +47 ms (SE 23) and +35 ms (SE 22).
+  - Narrowing the margin to 0.8 m cut the fine cells from 175 to 121. Nine points 0.75 m apart test each cell, so 0.8 m still catches every cell the step crosses.
+- **Frame logic is within noise.** Nothing per frame changed.
+- **The golden trace:** two gameplay channels differ, by design. In the walk up the hill, the player stands 0.7 mm lower for one frame, where the trail crosses ground the ramp fix blended (the ledges either side of the camp's front). No scenario failed.
+- **Not measured:** real GPUs, phones, or frame rates in a real browser.
+
+Files: `v219-tide.jsonl`, `v219-tide-load-phases.jsonl`, `v219-tide-frame-logic.jsonl`, `v219-tier-summary.json`; the final build's views and load phases in `v219-tide-final.jsonl`.
+
 ## v218 (Dead Tide's health compounds) against main (v217)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering, plus three checks of the load phases with `scripts/load-phases.mjs`.

@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {combineMeshes} from './batching.mjs?v=204';
-import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry,hullGeometry,columnGeometry} from './island-art.mjs?v=218';
+import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry,hullGeometry,columnGeometry} from './island-art.mjs?v=219';
 
 // Dead Tide's island (v204, Dead Tide step 2): the grey-box map. A central hill with the
 // radio tent and a lattice tower on its flat top, a lowland ring, beaches all round,
@@ -148,22 +148,31 @@ function campGround(x,z,h){
   // (Its length is set once for each direction, by the land 10 m out, so the ramp never warps where the land
   // dips or rises under it.)
   const out=(edge+10)/d,ref=landHeight(CAMP.x+(x-CAMP.x)*out,CAMP.z+(z-CAMP.z)*out);
-  const L=Math.min(P.flat+P.longest-edge-1,ref>C.top?Math.max(7,(ref-C.top)*3.4):Math.max(P.ramp,(C.top-ref)*2.7)),ramp=C.top+(h-C.top)*smooth(edge,edge+L,d),k=(d-edge)/P.face;
+  // (v219: its shortest, 7 m where the land round it is higher and 10 m where it is lower, now blends between the two
+  // over a metre either side of the plateau's height: it jumped there, leaving a 0.4 m ledge in the ground.)
+  const least=P.ramp-3*smooth(C.top-1,C.top+1,ref),L=Math.min(P.flat+P.longest-edge-1,ref>C.top?Math.max(least,(ref-C.top)*3.4):Math.max(least,(C.top-ref)*2.7)),ramp=C.top+(h-C.top)*smooth(edge,edge+L,d),k=(d-edge)/P.face;
   // (Below the cliff the sand falls toward the sea, never above the land that was there, and is the land again 10 m out.)
   // (To the sea its foot is the sand; to the ravine, the ravine's own side.)
   const footAt=h+(Math.min(h,P.foot)-h)*sea,cliff=k<1?C.top+(footAt-C.top)*k:h+Math.min(0,P.foot-P.beach*(d-edge-P.face)-h)*smooth(edge+P.face+10,edge+P.face+4,d)*sea;
   return ramp+(cliff-ramp)*cw;
 }
-// The ground as its mesh draws it. Its vertices are 1.5 m apart, too far to draw the cliff's step: lines
-// from the plateau's edge to the sand would stand out past the face. So under the rock (the face, and the
-// rim of rock 1.7 m deep along the top: CAMP_RIM) the mesh lies at the foot's height, all of it behind
-// the rock that covers it; where you stand is still the plateau (groundHeight), on the rim's rock.
+// v216 laid a rim of rock 1.7 m deep along the cliff's top (CAMP_RIM), over the plateau's edge.
+// v219: the ground's mesh is drawn finer round the cliff (see the ground below), so it follows the ground
+// exactly there; where it is coarse, its 1.5 m triangles could only draw the step as a saw edge, and lowering
+// them under the rim (v216) opened a trench between the plateau's sand and the rim.
 export const CAMP_RIM=1.7;
-export function campMeshHeight(x,z){const P=CAMP_PLATEAU,{lx,lz,d}=campFrame(x,z),edge=campEdge(d>1e-6?lz/d:0);
-  if(d<=edge-CAMP_RIM+.05||d>=edge+P.face+.05||campCliffWeight(lx,lz,d)<=.02)return groundHeight(x,z);
-  const C=CAMPLAND,dir=(r)=>[CAMP.x+(lx*C.c+lz*C.s)*r/d,CAMP.z+(-lx*C.s+lz*C.c)*r/d],foot=groundHeight(...dir(edge+P.face+.15));
-  if(C.top-foot<.6)return groundHeight(x,z);   // (where the face stands less than 0.6 m, there is no rock: the ground as it is)
-  return Math.min(groundHeight(x,z),foot);}
+// Whether a point lies near the cliff's step: within `margin` m of the plateau's edge, or of the cliff's foot,
+// where the edge is a cliff. The ground's mesh is drawn finer in every cell with such a point (nine points 0.75 m
+// apart test each cell, so no point of it is more than 0.53 m from one: 0.8 m catches every cell the step crosses).
+// The ground as its mesh draws it round the cliff (v219). Under the rock, the last 0.45 m of the step is drawn
+// at the sand's height: the mesh's triangles across the corner where the step meets the sand would otherwise
+// stand above the sand there, out past the rock's foot. Everywhere else, and wherever anyone stands, the ground.
+export function campMeshHeight(x,z){const h=groundHeight(x,z),P=CAMP_PLATEAU,{lx,lz,d}=campFrame(x,z);if(d>P.flat+P.face+1||d<1e-6)return h;
+  const edge=campEdge(lz/d);if(d<edge+P.face-.45||d>=edge+P.face)return h;const cw=campCliffWeight(lx,lz,d);if(cw<=.02)return h;
+  const f=(edge+P.face+.05)/d,foot=groundHeight(CAMP.x+(x-CAMP.x)*f,CAMP.z+(z-CAMP.z)*f);if(CAMPLAND.top-foot<.6)return h;
+  return h-Math.max(0,h-foot)*smooth(.3,.8,cw);}
+export function campStepNear(x,z,margin=.8){const P=CAMP_PLATEAU,{lx,lz,d}=campFrame(x,z);if(d>P.flat+P.face+margin+1)return false;
+  const edge=campEdge(d>1e-6?lz/d:0);return d>edge-margin&&d<edge+P.face+margin&&campCliffWeight(lx,lz,d)>.02;}
 // Where the camp's cliff face is, and its shoulders, where it curves round the plateau's back half and
 // meets the side ramps: ground no one stands on, by design.
 export function campCliff(x,z){const P=CAMP_PLATEAU,{lx,lz,d}=campFrame(x,z),edge=campEdge(d>1e-6?lz/d:0);return campCliffWeight(lx,lz,d)>.02&&d>edge-.3&&d<edge+P.longest;}
@@ -308,19 +317,35 @@ export function buildIsland({scene,world,textures=standInTextures(),audit=false}
     to(ROCK,stoneTint,smooth(.62,.9,slope));                                                        // bare rock on the steep parts (v215: only the steepest; the hills' flanks stay grassy)
     return weights;
   }
-  const chunks=Math.ceil(EXTENT*2/(SPACING*CHUNK));
+  // v219: the cells round the camp's cliff are drawn FINE times finer (0.3 m), at the ground's height (campMeshHeight), so
+  // the step from the plateau to the sand is drawn as it is and stays behind the cliff's rock. Where a fine
+  // cell meets a coarse one, its edge follows the coarse cell's straight edge, so no crack opens between them.
+  const chunks=Math.ceil(EXTENT*2/(SPACING*CHUNK)),FINE=5,cells=Math.round(EXTENT*2/SPACING),fineCells=new Map();
+  const fineCell=(gi,gj)=>{if(gi<0||gj<0||gi>=cells||gj>=cells)return false;const key=gi*4096+gj;let f=fineCells.get(key);
+    if(f===undefined){const x=-EXTENT+gi*SPACING,z=-EXTENT+gj*SPACING;f=false;for(const [u,v] of [[0,0],[1,0],[0,1],[1,1],[.5,.5],[.5,0],[0,.5],[1,.5],[.5,1]])if(campStepNear(x+u*SPACING,z+v*SPACING)){f=true;break;}fineCells.set(key,f);}
+    return f;};
   for(let cz=0;cz<chunks;cz++)for(let cx=0;cx<chunks;cx++){
-    const x0=-EXTENT+cx*CHUNK*SPACING,z0=-EXTENT+cz*CHUNK*SPACING,n=CHUNK+1;
-    const pos=new Float32Array(n*n*3),nor=new Float32Array(n*n*3),col=new Float32Array(n*n*3),uv=new Float32Array(n*n*2),spl=new Float32Array(n*n*4);let dry=false;
-    for(let j=0;j<n;j++)for(let i=0;i<n;i++){
-      const x=x0+i*SPACING,z=z0+j*SPACING,h=campMeshHeight(x,z),k=j*n+i;
-      const gx=(groundHeight(x+.5,z)-groundHeight(x-.5,z)),gz=(groundHeight(x,z+.5)-groundHeight(x,z-.5)),len=Math.hypot(gx,1,gz);
-      pos.set([x,h,z],k*3);nor.set([-gx/len,1/len,-gz/len],k*3);uv.set([x/8,z/8],k*2);
-      spl.set(groundKind(x,z,h,Math.hypot(gx,gz)),k*4);c.copy(tint);c.toArray(col,k*3);if(h>-.25)dry=true;
+    const n=CHUNK+1,pos=[],nor=[],col=[],uv=[],spl=[];let dry=false;
+    const put=(x,z,h)=>{const gx=(groundHeight(x+.5,z)-groundHeight(x-.5,z)),gz=(groundHeight(x,z+.5)-groundHeight(x,z-.5)),len=Math.hypot(gx,1,gz);
+      pos.push(x,h,z);nor.push(-gx/len,1/len,-gz/len);uv.push(x/8,z/8);spl.push(...groundKind(x,z,h,Math.hypot(gx,gz)));c.copy(tint);col.push(c.r,c.g,c.b);if(h>-.25)dry=true;return pos.length/3-1;};
+    for(let j=0;j<n;j++)for(let i=0;i<n;i++){const x=-EXTENT+(cx*CHUNK+i)*SPACING,z=-EXTENT+(cz*CHUNK+j)*SPACING;put(x,z,campMeshHeight(x,z));}
+    const index=[];
+    for(let j=0;j<CHUNK;j++)for(let i=0;i<CHUNK;i++){const gi=cx*CHUNK+i,gj=cz*CHUNK+j;
+      if(!fineCell(gi,gj)){const a=j*n+i,b=a+1,d=a+n,e=d+1;index.push(a,d,b,b,d,e);continue;}
+      const corner=(u,v)=>pos[((j+v)*n+i+u)*3+1],coarse=[fineCell(gi-1,gj),fineCell(gi+1,gj),fineCell(gi,gj-1),fineCell(gi,gj+1)].map(f=>!f),grid=[];
+      for(let b=0;b<=FINE;b++)for(let a=0;a<=FINE;a++){
+        if((a===0||a===FINE)&&(b===0||b===FINE)){grid.push(((j+b/FINE)*n+i+a/FINE));continue;}   // the cell's corners are the coarse vertices
+        const x=-EXTENT+(gi+a/FINE)*SPACING,z=-EXTENT+(gj+b/FINE)*SPACING;let h;
+        if(a===0&&coarse[0])h=corner(0,0)+(corner(0,1)-corner(0,0))*b/FINE;
+        else if(a===FINE&&coarse[1])h=corner(1,0)+(corner(1,1)-corner(1,0))*b/FINE;
+        else if(b===0&&coarse[2])h=corner(0,0)+(corner(1,0)-corner(0,0))*a/FINE;
+        else if(b===FINE&&coarse[3])h=corner(0,1)+(corner(1,1)-corner(0,1))*a/FINE;
+        else h=campMeshHeight(x,z);
+        grid.push(put(x,z,h));}
+      for(let b=0;b<FINE;b++)for(let a=0;a<FINE;a++){const A=b*(FINE+1)+a,B=A+1,D=A+FINE+1,E=D+1;index.push(grid[A],grid[D],grid[B],grid[B],grid[D],grid[E]);}
     }
     if(!dry)continue;
-    const index=[];for(let j=0;j<CHUNK;j++)for(let i=0;i<CHUNK;i++){const a=j*n+i,b=a+1,d=a+n,e=d+1;index.push(a,d,b,b,d,e);}
-    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3));geo.setAttribute('normal',new T.BufferAttribute(nor,3));geo.setAttribute('color',new T.BufferAttribute(col,3));geo.setAttribute('uv',new T.BufferAttribute(uv,2));geo.setAttribute('splat',new T.BufferAttribute(spl,4));geo.setIndex(index);geo.computeBoundingSphere();geo.computeBoundingBox();
+    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pos,3));geo.setAttribute('normal',new T.Float32BufferAttribute(nor,3));geo.setAttribute('color',new T.Float32BufferAttribute(col,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geo.setAttribute('splat',new T.Float32BufferAttribute(spl,4));geo.setIndex(index);geo.computeBoundingSphere();geo.computeBoundingBox();
     const mesh=new T.Mesh(geo,groundMat);mesh.name='Island ground';mesh.receiveShadow=true;world.add(mesh);solidMeshes.push(mesh);
   }
 
@@ -714,9 +739,13 @@ void main(){
     {const P=CAMP_PLATEAU,pos=[],index=[],ROWS=7,columns=[],lump=(u,v)=>.2*Math.sin(u*2.3+v*1.7)+.14*Math.sin(u*5.1-v*2.9+1.3)+.08*Math.sin(u*11.7+v*4.1);
       for(let phi=Math.PI-1.2;phi<=TAU+.5+1e-6;phi+=.045){const lx=Math.cos(phi),lz=Math.sin(phi),E=campEdge(lz),top=supportBelow(...A.at(lx*(E-.05),lz*(E-.05)),Infinity),[fx,fz]=A.at(lx*(E+P.face+.15),lz*(E+P.face+.15)),foot=groundHeight(fx,fz);
         if(top-foot<.6){columns.push(null);continue;}const col=[];
-        for(let j=0;j<=ROWS;j++){const v=j/ROWS,y=foot-.7+(top+.1-(foot-.7))*v,r=E+.1+(P.face+.05)*Math.pow(1-v,.8)-Math.max(0,lump(phi*14,v*3))*(1-v*.5)*(v<.95?1:0)*.6;
+        // v219: the ground along this column, so the face stands at least 0.2 m out from it at every height (the
+        // ground is drawn finely here now, and the step would otherwise show through the face's hollows).
+        const prof=[];for(let q=0;q<=45;q++){const r=E-.2+q*.05;prof.push([r,groundHeight(...A.at(lx*r,lz*r))]);}
+        const reach=y=>{let out=E-.2;for(const [r,g] of prof)if(g>=y-1e-3)out=r;return out;};
+        for(let j=0;j<=ROWS;j++){const v=j/ROWS,y=foot-.7+(top+.1-(foot-.7))*v,r=Math.max(reach(y)+.2,E+.1+(P.face+.05)*Math.pow(1-v,.8)-Math.max(0,lump(phi*14,v*3))*(1-v*.5)*(v<.95?1:0)*.6);
           const [x,z]=A.at(lx*r,lz*r);col.push(pos.length/3);pos.push(x,y,z);}
-        // ...and on over the plateau's edge, a low rim of rock 1.7 m deep (over where the mesh slopes down to the face).
+        // ...and on over the plateau's edge, a low rim of rock 1.7 m deep, its lip where the ground starts down to the face.
         for(const [inward,lift] of [[.5,.14],[1.1,.1],[CAMP_RIM,-.06]]){const r=E+.1-inward,[x,z]=A.at(lx*r,lz*r);col.push(pos.length/3);pos.push(x,top+lift+.05*Math.abs(lump(phi*17,inward)),z);}
         columns.push(col);}
       for(let i=0;i<columns.length-1;i++){const a=columns[i],b=columns[i+1];if(!a||!b)continue;for(let j=0;j<a.length-1;j++)index.push(a[j],b[j],a[j+1],a[j+1],b[j],b[j+1]);}

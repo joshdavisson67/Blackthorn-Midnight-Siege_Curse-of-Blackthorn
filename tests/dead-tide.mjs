@@ -53,7 +53,7 @@ console.log(`PASS: Dead Tide loads only its page, tide.css, tide-boot.js and ${t
 }
 
 // ---- 3. The island ----------------------------------------------------------------------
-const {ISLAND,coastRadius,shoreFraction,groundHeight,buildIsland,campCliff,CAMP_PLATEAU,islandSites}=await import('../public/game/island.mjs');
+const {ISLAND,coastRadius,shoreFraction,groundHeight,buildIsland,campCliff,CAMP_PLATEAU,islandSites,campMeshHeight,campStepNear}=await import('../public/game/island.mjs');
 const T=await import('../public/game/three.module.js');
 {
   let low=Infinity,high=-Infinity,steepest=0;for(let a=0;a<Math.PI*2;a+=.005){const r=coastRadius(a);low=Math.min(low,r);high=Math.max(high,r);}
@@ -79,10 +79,36 @@ const T=await import('../public/game/three.module.js');
    let face=Infinity;for(let a=-Math.PI/2-.45;a<=-Math.PI/2+.45;a+=.05){const [x0,z0]=at(Math.cos(a)*(P.flat+.1),Math.sin(a)*(P.flat+.1)),[x1,z1]=at(Math.cos(a)*(P.flat+.2),Math.sin(a)*(P.flat+.2));face=Math.min(face,(groundHeight(x0,z0)-groundHeight(x1,z1))/.1);}
    assert(face>3.1,`Behind the camp a cliff falls too steeply to climb (${face.toFixed(1)} m per m)`);
    const [bx,bz]=at(0,-P.flat-P.face-.2);assert(top-groundHeight(bx,bz)>4,'from the plateau to the sand below');}
+  // v219 (the user: a big gap between the camp's sand and the cliff): the ground's mesh is drawn finely round the
+  // cliff, so no coarse 1.5 m cell has to draw the step. Every cell of the ground's grid (1.5 m, from -90) with
+  // ground as steep as the step in it (2 m per m or more; the step is about 3.5, the cliff's shoulders 1.4) is a fine one; and the mesh is the ground itself everywhere
+  // but under the rock, where the last 0.45 m of the step is drawn at the sand's height, never higher than the ground.
+  {const S=islandSites().sites.camp,SP=1.5,X0=-90;let fine=0,lowered=0;
+   const fineCell=(gi,gj)=>{const x=X0+gi*SP,z=X0+gj*SP;for(const [u,v] of [[0,0],[1,0],[0,1],[1,1],[.5,.5],[.5,0],[0,.5],[1,.5],[.5,1]])if(campStepNear(x+u*SP,z+v*SP))return true;return false;};
+   for(let gi=Math.floor((S.x-40-X0)/SP);gi<=Math.ceil((S.x+40-X0)/SP);gi++)for(let gj=Math.floor((S.z-40-X0)/SP);gj<=Math.ceil((S.z+40-X0)/SP);gj++){
+     if(fineCell(gi,gj)){fine++;continue;}let steep=0;const st=SP/8,h=(u,v)=>groundHeight(X0+gi*SP+u*st,X0+gj*SP+v*st);
+     for(let u=0;u<=8;u++)for(let v=0;v<=8;v++){if(u<8)steep=Math.max(steep,Math.abs(h(u+1,v)-h(u,v))/st);if(v<8)steep=Math.max(steep,Math.abs(h(u,v+1)-h(u,v))/st);}
+     assert(steep<2,`A coarse cell of the ground's mesh near the camp spans no step (${steep.toFixed(2)} m per m at cell ${gi},${gj})`);}
+   for(let x=S.x-25;x<=S.x+25;x+=.3)for(let z=S.z-25;z<=S.z+25;z+=.3){const g=groundHeight(x,z),m=campMeshHeight(x,z);
+     assert(m<=g+1e-9,'The mesh never stands above the ground');if(m<g-1e-9){lowered++;assert(campCliff(x,z),'and lies below it only under the cliff');}}
+   assert(fine>40&&lowered>0,`(${fine} fine cells, ${lowered} points lowered)`);}
+  // v219: the ground round the camp has no ledges: its ramps' lengths no longer jump from one direction to the next
+  // (on main there were two, up to 0.4 m, either side of its front). Points 0.1° apart, 12–34 m out, differ by under 0.1 m.
+  {const S=islandSites().sites.camp;let worst=0;for(let a=0;a<2*Math.PI;a+=.002)for(let r=12;r<=34;r+=.5){const x=S.x+Math.cos(a)*r,z=S.z+Math.sin(a)*r;if(campCliff(x,z))continue;
+     worst=Math.max(worst,Math.abs(groundHeight(x,z)-groundHeight(S.x+Math.cos(a+.002)*r,S.z+Math.sin(a+.002)*r)));}
+   assert(worst<.1,`No ledges in the ground round the camp (${worst.toFixed(2)} m)`);}
 }
 const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsland({scene,world,audit:true});
 // v216: nothing that stands on the ground hangs off it: every part placed on the ground meets it under every edge.
 assert.deepEqual(I.floating,[],`Nothing floats: ${JSON.stringify(I.floating.slice(0,5))}`);
+// v219: the cliff's rock face stands out from the ground at every height: 0.15 m in from any of its vertices
+// standing 0.1 m or more above the ground, the ground is lower than the vertex (so the step behind it never shows through).
+{const S=islandSites().sites.camp;let face=null;world.traverse(o=>{if(o.name==='Camp cliff')face=o;});assert(face,'The camp\u2019s cliff face is built');
+ const p=face.geometry.attributes.position;let checked=0;
+ for(let k=0;k<p.count;k++){const x=p.getX(k),y=p.getY(k),z=p.getZ(k);if(y<groundHeight(x,z)+.1)continue;   // (at or under the sand line: where rock meets sand)
+   const dx=x-S.x,dz=z-S.z,d=Math.hypot(dx,dz),f=(d-.15)/d,g=groundHeight(S.x+dx*f,S.z+dz*f);checked++;
+   assert(g<y+.02,`The cliff face stands clear of the ground behind it (vertex ${k} at ${y.toFixed(2)} m, ground ${g.toFixed(2)} m)`);}
+ assert(checked>500,`(${checked} vertices checked)`);}
 {
   const S=ISLAND.tent,W=ISLAND.tower,H=ISLAND.hill,flat=(x,z)=>Math.hypot(x-H.x,z-H.z)<H.flat;
   for(const [dx,dz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){assert(flat(S.x+dx*(S.w/2+.15),S.z+dz*(S.d/2+.15)),'The radio tent stands on the flat summit');assert(flat(W.x+dx*W.base/2,W.z+dz*W.base/2),'and so does the tower');}
