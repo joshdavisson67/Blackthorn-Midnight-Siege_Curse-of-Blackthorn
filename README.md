@@ -67,7 +67,15 @@ From the user's first look at the art pass.
   - the camp's ground (plateau, cliffs, ramps);
   - the rocks' and the new palms' colliders;
   - landing on solid tops.
-- **Release tiers:** TIERS
+- **Release tiers:**
+  - **The mansion and the mode picker:** quick; nothing they load changed.
+  - **Dead Tide:** full.
+    - About twice the plants: +60K to +80K triangles per view, with 2 to 5 more draw calls.
+    - 2 more shader programs; its loading screen took 0.74 s longer in software rendering.
+    - +15 KB.
+    - The 45-enemy fight: 386 draw calls (main 382), 490K triangles (main 430K).
+    - Frame logic within noise.
+  - The golden trace differs in 33 gameplay channels, by design (the walk from the spawn slides round a new palm; the dead follow the new ground and colliders). Details: `perf/README.md`.
 - **Not verified:** frame rates on real GPUs or phones; colours on a real GPU (the screenshots are software-rendered).
 
 ## Dead Tide's art pass (version 215)
