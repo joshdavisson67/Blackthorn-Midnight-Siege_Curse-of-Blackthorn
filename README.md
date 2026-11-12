@@ -49,7 +49,14 @@ From the user: the sand and the cliff behind the Coastal Camp didn't connect; th
   - the rock face stands clear of the ground behind it;
   - the ground round the camp has no ledges.
 - **Gameplay changes, by design:** only the ground where the ledges were, within a metre of the plateau's height.
-- TIERS
+- **Release tiers:**
+  - **The mansion and the mode picker:** quick; nothing they load changed.
+  - **Dead Tide:** full.
+    - The finer ground round the cliff adds up to 6K triangles per view (about 2%), with the same draw calls and +3 KB.
+    - It adds about 40 ms to building the world (+35 ms, SE 22, for the final build).
+    - Frame logic is within noise.
+    - The golden trace differs by 0.7 mm in one frame of the walk up the hill, where the ledge fix changed the ground.
+    - Details: `perf/README.md`.
 
 ## Dead Tide: the dead's health compounds (version 218)
 
