@@ -55,7 +55,7 @@ appendFileSync(join(stage,'tide.mjs'),`
      window.__shot={x,y:eye,z,tx,ty:typeof y==='string'?ty:Math.max(tg,0)+ty,tz,far:typeof y==='string'};}
  };}
 `);
-const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.woff2':'font/woff2'};
+const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.woff2':'font/woff2'};
 const server=http.createServer((q,r)=>{const f=join(stage,decodeURIComponent(q.url.split('?')[0]));if(!existsSync(f)||statSync(f).isDirectory()){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':types[extname(f)]||'application/octet-stream','cache-control':'no-store'});r.end(readFileSync(f));}).listen(0);
 await new Promise(r=>server.once('listening',r));
 const {chromium}=await loadPlaywright(),browser=await chromium.launch({args:['--use-angle=gl-egl','--ignore-gpu-blocklist']});
