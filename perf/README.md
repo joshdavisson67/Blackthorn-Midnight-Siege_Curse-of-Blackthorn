@@ -483,6 +483,49 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v215 (Dead Tide's art pass) against main (v214)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. The art pass is new content on a desktop-first budget agreed with the user (design spec 10.4), so its costs are reported here.
+
+The first build of this release cast moon shadows from everything. That more than quadrupled the 45-enemy fight's draw calls (302 → 1,213) and its triangles (306K → 1.4M): every body, and every grass and fern card, was drawn again into the moon's shadow map. The dead, the grass and the ferns now cast no moon shadow, though they still take the island's. The figures below are for the fixed build.
+
+### Mansion: quick
+
+Nothing it loads changed; five files differ only in their version number.
+
+### Dead Tide: full protocol
+
+| | main (v214) | v215 |
+|---|---:|---:|
+| Files / KB before playable | 68 / 2,131 | 88 / 3,173 (the 19 textures, 1 MB, and `island-art.mjs`) |
+| Time to playable (load phases, 20 pairs) | 10,792 ms | 15,678 ms (+4,887, SE 141) |
+| ↳ modules / world / shaders | 343 / 1,804 / 8,645 ms | 355 / 2,007 / 13,317 ms (+12 within noise / +203 / +4,672) |
+| Shader programs, at load and after play | 48 | 68 |
+| Geometries / textures | 277 / 29 | 292 / 49 |
+| Heap after load / after play, after a collection | 64.7 / 154.5 MB | 73.1 / 156.6 MB |
+| Draw calls in the fixed views | 30–158 (title 149) | 81–234 (title 207) |
+| Triangles in the fixed views | 23K–133K | 121K–255K |
+| The 45-enemy fight: draw calls / triangles | 302 / 306K | 381–384 / 428K–432K |
+| Frame logic, walking the empty island (24 pairs, standard / full series) | 0.343 / 0.361 ms | 0.417 / 0.412 ms (+0.074, SE 0.022 / +0.051, SE 0.022) |
+
+- **Load: +4.9 s here, almost all of it shader preparation (+4.7 s).**
+  - Twenty more programs: the terrain, structure and plant materials, their variants (instanced, vertex-coloured, double-sided), and the shadow-depth programs the moon's shadow needs.
+  - Software rendering compiles shaders slowly. A real GPU will take less, but this was not measured.
+  - World building +0.2 s: the textures' decoding and the ground's blend weights.
+- **Draw calls: +58 to +73 in every view.** That is the island's new materials (each textured material draws apart), plus the moon's shadow pass drawing the island's structures, trees, rocks and stations again.
+- **Triangles: +120K to +150K in every view**, from the shadow pass, the plants (about 2,200 grass tufts, 170 fern clumps, the palms' new crowns) and the landmarks' new shapes.
+- **The fight: +80 draw calls and +125K triangles**, the island's share. The dead cast no moon shadow.
+- **Memory: +8.4 MB after load**, the plants' instance data and the ground's blend weights. After play it is +2.1 MB.
+- **Frame logic: +0.05 to +0.07 ms** a frame: the moon's shadow box following you, the wind's and the fire's clocks, and three more objects in the scene's update.
+- **The golden trace:** every gameplay channel matches main's. Only the screen, view and page hashes differ, as they must for new art.
+- **Not measured:** real GPUs, phones, or frame rates in a real browser.
+
+### Mode picker: standard
+
+One line of text changed (the art pass is in); no differences from the base.
+
+Files: `v215-tide.jsonl`, `v215-tide-load-phases.jsonl`, `v215-tide-frame-logic.jsonl`, `v215-tier-summary.json`.
+
 ## v214 (Dead Tide's run summary and its own leaderboard) against main (v213)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for both modes) on one machine, headless Chromium with software rendering. The mansion's board code moved into a module both modes share (`scoreboard.mjs`), so the mansion was measured in full.

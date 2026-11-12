@@ -76,7 +76,17 @@ The island's first art pass, after reference photos from the user. The direction
 - **Proof:**
   - `tests/dead-tide.mjs` passes, with the island's budget raised for the art (see Release tiers).
   - Screenshots of every landmark were taken in headless Chromium (`scripts/tide-shots.mjs`, software rendering), before and after.
-- **Release tiers:** TIERS
+- **Release tiers:**
+  - **The mansion:** quick; nothing it loads changed.
+  - **The mode picker:** standard; one line of text, no differences.
+  - **Dead Tide:** full, with the art's costs reported, on the agreed desktop-first budget:
+    - 1 MB more before playable;
+    - 20 more shader programs, so its loading screen took 4.9 s longer in software rendering;
+    - 58–73 more draw calls in each view;
+    - the 45-enemy fight at 381 draw calls (main 302) and 430K triangles (main 306K);
+    - frame logic +0.05 ms.
+  - The first build cast moon shadows from the dead and the grass too, more than quadrupling the fight's draw calls; that was fixed before release.
+  - Gameplay matches main in every channel of the golden trace. Details: `perf/README.md`.
 - **Not verified:** frame rates on real GPUs or phones, and the textures' exact colours on a real GPU (the screenshots are software-rendered).
 
 ## Dead Tide's run summary and its own leaderboard (version 214)
