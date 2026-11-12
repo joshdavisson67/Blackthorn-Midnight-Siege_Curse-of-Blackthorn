@@ -47,6 +47,8 @@ Object.assign(globalThis,{devicePixelRatio:1,innerWidth:1280,innerHeight:720,req
 $('sound').checked=true;
 // v206: seeded rather than a constant, as the mansion's harness is. A constant gave every
 // three.js object the same uuid, which the batcher keys on (the dead's bodies merged wrongly).
+// v214: run ids (the leaderboard's) are numbered, not random, so two traces match.
+{let n=0;Object.defineProperty(globalThis.crypto,'randomUUID',{configurable:true,writable:true,value:()=>`00000000-0000-4000-8000-${String(++n).padStart(12,'0')}`});}
 export const random=Math.random;{let s=0x71de5;Math.random=()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 export const {qa}=await import(pathToFileURL(resolve(qaDir,'tide.mjs')).href);
 let clock=performance.now();

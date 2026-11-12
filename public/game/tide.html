@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Blackthorn — Dead Tide</title><meta name="description" content="Dead Tide, Blackthorn's island survival mode. Grey-box preview: the dead come ashore, and the threat rises every 20 kills."><link rel="stylesheet" href="style.css?v=213"><link rel="stylesheet" href="tide.css?v=213"></head><body class="deadTide">
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Blackthorn — Dead Tide</title><meta name="description" content="Dead Tide, Blackthorn's island survival mode. Grey-box preview: the dead come ashore, and the threat rises every 20 kills."><link rel="stylesheet" href="style.css?v=214"><link rel="stylesheet" href="tide.css?v=214"></head><body class="deadTide">
 <!-- v204 (Dead Tide step 2): Dead Tide's own page. It loads tide-boot.js and tide.mjs,
      never boot.js, game.js or anything that builds the mansion. -->
 <canvas id="game" tabindex="0" aria-label="Dead Tide 3D island survival game"></canvas><div id="film"></div><div id="damage"></div><div id="nukeFlash" aria-hidden="true"></div>
@@ -66,21 +66,24 @@
     <h1 class="tideTitle" aria-label="Dead Tide">DEAD <em>TIDE</em></h1>
     <div class="menuTagline">
       <p class="subtitle">G R E Y - B O X &nbsp; P R E V I E W</p>
-      <p class="estateTagline">The island is still being built: its landmarks are grey shapes for now. The dead come out of the surf, every twenty kills the threat rises, and the stations round the island sell guns, perks, armour and ammunition.</p>
+      <p class="estateTagline">The island is still being built: its landmarks are grey shapes for now. The dead come out of the surf, every twenty kills the threat rises, and the stations round the island sell guns, perks, armour and ammunition. The most kills top the island’s own leaderboard.</p>
     </div>
     </div>
     <div class="menuActions">
     <button id="start" data-pad-default>WADE ASHORE <span>→</span></button>
     <div class="menuMeta"><span>ONE ISLAND</span><span>NO WAVES</span><span>IN DEVELOPMENT</span></div>
-    <nav class="menuLinks" aria-label="Dead Tide menu"><button id="modesLink" class="textBtn" type="button">◂ ALL MODES</button><button id="settingsMenu" class="textBtn" type="button">SETTINGS</button><button id="controlsMenu" class="textBtn" type="button">CONTROLS</button></nav>
+    <nav class="menuLinks" aria-label="Dead Tide menu"><button id="modesLink" class="textBtn" type="button">◂ ALL MODES</button><button id="leaderboardMenu" class="textBtn" type="button">LEADERBOARD</button><button id="settingsMenu" class="textBtn" type="button">SETTINGS</button><button id="controlsMenu" class="textBtn" type="button">CONTROLS</button></nav>
     </div>
   </div>
   <div class="menuBottom"><span>HEADPHONES RECOMMENDED</span></div>
 </section>
 <section id="pause" class="modal hidden">
-  <div class="card pauseCard" id="pauseMain"><small>DEAD TIDE</small><h2 id="pauseTitle">Catch your breath.</h2><p id="pauseText">The island can wait a moment.</p><div id="captureHelp" class="hidden"><p>Click Retry and allow mouse control if asked. Check that mouse control is allowed in your browser’s site permissions.</p></div>
+  <div class="card pauseCard" id="pauseMain"><small>DEAD TIDE</small><h2 id="pauseTitle">Catch your breath.</h2><p id="pauseText">The island can wait a moment.</p>
+  <!-- v214: the run summary, on the death card (spec 8.5). -->
+  <dl id="tideSummary" class="tideSummary hidden" aria-label="Run summary"></dl><div id="captureHelp" class="hidden"><p>Click Retry and allow mouse control if asked. Check that mouse control is allowed in your browser’s site permissions.</p></div>
   <nav class="pauseMenu" aria-label="Pause menu">
     <button id="resume" type="button" data-pad-default>LOCK MOUSE &amp; RESUME →</button>
+    <button id="leaderboardDead" type="button" class="hidden">SAVE SCORE · LEADERBOARD →</button>
     <button id="settingsPause" type="button">SETTINGS</button>
     <button id="controlsPause" type="button">CONTROLS</button>
     <button id="restart" type="button" class="pauseRunAction">NEW RUN</button>
@@ -139,7 +142,7 @@
           <div><dt><kbd>MOUSE</kbd></dt><dd>Look around</dd></div><div><dt><kbd>SPACE</kbd></dt><dd>Jump</dd></div>
           <div><dt><kbd>LEFT CLICK</kbd></dt><dd>Fire</dd></div><div><dt><kbd>RIGHT CLICK</kbd></dt><dd>Aim</dd></div>
           <div><dt><kbd>R</kbd></dt><dd>Reload</dd></div><div><dt><kbd>G</kbd></dt><dd>Throw a grenade</dd></div>
-          <div><dt><kbd>1 2 3 4 5 6 7</kbd></dt><dd>Switch weapons · 1 Glock · 2 shotgun · 3 SMG · 4 LMG · 5 Bushmaster · 6 M4 · 7 katana</dd></div><div><dt><kbd>E</kbd></dt><dd>Use (no stations yet)</dd></div>
+          <div><dt><kbd>1 2 3 4 5 6 7</kbd></dt><dd>Switch weapons · 1 Glock · 2 shotgun · 3 SMG · 4 LMG · 5 Bushmaster · 6 M4 · 7 katana</dd></div><div><dt><kbd>E</kbd></dt><dd>Use or buy at a station</dd></div>
           <div><dt><kbd>F</kbd></dt><dd>Flashlight</dd></div>
           <div><dt><kbd>ESC</kbd></dt><dd>Release mouse / pause</dd></div>
         </dl>
@@ -147,7 +150,7 @@
         <dl class="guideControls">
           <div><dt><kbd>LEFT STICK</kbd></dt><dd>Move · click to sprint</dd></div><div><dt><kbd>RIGHT STICK</kbd></dt><dd>Look around</dd></div>
           <div><dt><kbd>RT / R2</kbd></dt><dd>Fire</dd></div><div><dt><kbd>LT / L2</kbd></dt><dd>Aim</dd></div>
-          <div><dt><kbd>A / ✕</kbd></dt><dd>Jump</dd></div><div><dt><kbd>B / ○</kbd></dt><dd>Use (no stations yet)</dd></div>
+          <div><dt><kbd>A / ✕</kbd></dt><dd>Jump</dd></div><div><dt><kbd>B / ○</kbd></dt><dd>Use or buy at a station</dd></div>
           <div><dt><kbd>X / □</kbd></dt><dd>Reload</dd></div><div><dt><kbd>Y / △</kbd></dt><dd>Next weapon</dd></div>
           <div><dt><kbd>RB / R1</kbd></dt><dd>Throw a grenade</dd></div><div><dt><kbd>LB / L1</kbd></dt><dd>Flashlight</dd></div>
           <div><dt><kbd>D-PAD</kbd></dt><dd>← → switch weapons · ↑ flashlight</dd></div>
@@ -166,4 +169,6 @@
     <footer class="guideFooter"><p>Scroll to read · ↑ ↓ / Page Up / Page Down</p><button id="controlsDone" class="secondary" type="button">GOT IT →</button></footer>
   </div>
 </section>
-<div id="loading">PREPARING THE ISLAND <span>...</span></div><div id="error" class="hidden"><h2>The island could not open.</h2><p id="errorDetails"></p><button id="retry" class="secondary">RELOAD</button></div><script src="tide-boot.js?v=213" defer></script></body></html>
+<!-- v214: Dead Tide's own leaderboard (spec 12), the mansion's board's layout and element ids. -->
+<section id="leaderboard" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle"><div class="card leaderboardCard tideBoard"><div class="leaderboardHeading"><div><small>DEAD TIDE / SHARED SCORES</small><h2 id="leaderboardTitle">The tide keeps count.</h2></div><button id="leaderboardClose" class="textBtn" aria-label="Close leaderboard">BACK · ESC</button></div><p class="leaderboardIntro">Dead Tide's own board, apart from the mansion's. One shared board for everyone with the game link.</p><p id="runSummary" class="runSummary hidden"></p><form id="scoreForm" class="hidden"><label id="pendingRunPickerLabel" for="pendingRunPicker" class="hidden">UNSAVED RUN<select id="pendingRunPicker" aria-label="Choose an unsaved run"></select></label><label for="leaderboardName">YOUR NAME</label><div class="scoreFormRow"><input id="leaderboardName" name="name" type="text" maxlength="48" autocomplete="nickname" placeholder="Enter your name" required><button id="leaderboardSubmit" type="submit">ADD MY SCORE</button></div></form><p id="scoreSaveStatus" role="status" aria-live="polite"></p><div class="leaderboardTools"><p id="leaderboardStatus" role="status" aria-live="polite">Top 50 runs · Most kills first · Updates every 15s</p><button id="leaderboardRefresh" class="textBtn">REFRESH</button></div><div class="leaderboardTableWrap"><table><thead><tr><th scope="col">RANK</th><th scope="col">SURVIVOR</th><th scope="col">KILLS</th><th scope="col">THREAT</th><th scope="col">TIME</th><th scope="col">ESSENCE</th></tr></thead><tbody id="leaderboardRows"></tbody></table></div><p class="leaderboardNote">Runs rank by enemies killed. Ties favor the higher threat level, then the longer survival.</p><button id="leaderboardNewRun" class="secondary hidden">NEW RUN →</button></div></section>
+<div id="loading">PREPARING THE ISLAND <span>...</span></div><div id="error" class="hidden"><h2>The island could not open.</h2><p id="errorDetails"></p><button id="retry" class="secondary">RELOAD</button></div><script src="tide-boot.js?v=214" defer></script></body></html>

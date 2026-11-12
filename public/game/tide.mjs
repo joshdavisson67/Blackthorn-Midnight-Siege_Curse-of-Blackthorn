@@ -33,6 +33,8 @@ import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
 import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=213';
 import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=210';
+import {createTideLeaderboard} from './tide-leaderboard.mjs?v=214';
+import {armorRank} from './armor.mjs?v=94';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
 // through tide-boot.js. It builds the island and nothing of the mansion, and plays with
@@ -43,7 +45,7 @@ import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRan
 // tide-threat.mjs): kills raise the threat level, which sets the population, the next
 // arrivals' strength and the mix of kinds. v209 (step 3b): the spawn network (tide-dead.mjs)
 // and the threat tracker with its cue (below). v210–v211: the island's map. v212 (step 5): the
-// stations on its pads (below). The leaderboard and the run summary come next.
+// stations on its pads (below). v214: the run summary on death, and Dead Tide's own leaderboard.
 performance.mark?.('tide:modules');
 const domCache=new Map(),$=id=>{if(!domCache.has(id))domCache.set(id,document.getElementById(id));return domCache.get(id);};
 const shownMarkup=new Map(),shownOpacity=new Map();
@@ -264,7 +266,7 @@ combat=createCombat({
   run:{player,zombies,scene:world,rand,rng,tone,noise,notify,rumble:padRumble,sphere,effects,bloodPool,explosionFx,blastLight:{release(){}},powerupAssets,pickups,enemyAssets,
     get elapsed(){return elapsed;},get playing(){return session.mode==='playing';},
     addPoints,addKill:()=>{runState.kills++;},hurtPlayer,kick:()=>{firstPerson.recoil=.1;},killHeal(){},
-    hitFeedback(headshot,impact){markHit(headshot);if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}},
+    hitFeedback(headshot,impact){runStats.hits++;if(headshot)runStats.headshots++;markHit(headshot);if(combatHud.hit(headshot,impact.shotId)){tone(1250,.055,.035,'triangle',1850);tone(1850,.07,.022,'sine',1200);}},
     collect(p){grantPowerup(p.type);},releasePickup(){}},
   rules:{killReward:base=>base,onKill(){},bonusDrop(){},hitAmount:(e,amount)=>amount}
 });
@@ -284,6 +286,8 @@ function clearTheDead(){
   shore.reset();navTimer=0;followPlayer(hunter,player,island);rebuildRoutes();
 }
 runState.inventory=freshInventory();
+// v214: hits and headshots this run, for the summary and the leaderboard (each hit, as the HUD marks it).
+const runStats={hits:0,headshots:0};
 selectWeapon('glock');
 
 // ---- The play session ------------------------------------------------------------------------
@@ -296,7 +300,7 @@ const {hasMouseLock,clearPlayInput,releaseMouse,requestPointer,resumeLabel,pause
   act:{shoot,reload,grenade,selectWeapon,zoomOf,interact(){stationKit.interact();},toggleFlashlight,openEstateMap(){},initAudio,fitTouchStick},
   ui:{get touchControls(){return touchControls;},get controlScheme(){return controlScheme;}},
   hooks:{
-    onPause(){},onPauseMenu(){},
+    onPause(){},onPauseMenu(){showSummary(session.mode==='dead');},
     pauseSummary:()=>`${zone[0]+zone.slice(1).toLowerCase()} · ${runState.kills} kills · ${runState.points.toLocaleString()} essence.`,
     settingsEyebrow:from=>from==='menu'?'DEAD TIDE':'DEAD TIDE / PAUSED',settingsFromMenu(){},
     confirm:{
@@ -352,8 +356,8 @@ let controlsReturn=null;
 function openControls(trigger){pauseGame();controlsReturn=trigger;$('controlsCard').classList.remove('hidden');$('controlsBody').scrollTop=0;$('controlsBody').focus({preventScroll:true});}
 function closeControls(){$('controlsCard').classList.add('hidden');controlsReturn?.focus({preventScroll:true});controlsReturn=null;}
 // Which menu the controller is driving, topmost first.
-function padLayer(){if(controlsOpen())return $('controlsCard');if(!$('pause').classList.contains('hidden'))return $('pause');if(session.mode==='menu'&&!$('menu').classList.contains('hidden'))return $('menu');return null;}
-function padBack(){if(controlsOpen()){closeControls();return;}if(confirmOpen()){cancelConfirm();return;}if(settingsOpen()){closeSettings();return;}if(session.mode==='paused')resumeGame();}
+function padLayer(){if(leaderboard.visible)return $('leaderboard');if(controlsOpen())return $('controlsCard');if(!$('pause').classList.contains('hidden'))return $('pause');if(session.mode==='menu'&&!$('menu').classList.contains('hidden'))return $('menu');return null;}
+function padBack(){if(leaderboard.visible){leaderboard.close();return;}if(controlsOpen()){closeControls();return;}if(confirmOpen()){cancelConfirm();return;}if(settingsOpen()){closeSettings();return;}if(session.mode==='paused')resumeGame();}
 function padStart(){
   if(session.mode==='playing'){pauseGame();return;}
   if(controlsOpen()){closeControls();return;}if(session.mode==='paused'){resumeGame();return;}
@@ -392,7 +396,7 @@ function resetRun({capture=true}={}){
   Object.assign(runState,{health:100,maxHealth:100,armor:0,armorMax:0,armorTier:0,points:500,totalScore:0,kills:0,runTime:0,lastHurt:-20,grenades:3,doubleTime:0,grenadeTime:0,grenadeCooldown:0});
   runState.perkOwned.clear();runState.inventory=freshInventory();applyWeaponRanks();
   Object.assign(runState,{reloadLeft:0,shotTimer:0,feetY:0,jumpV:0,grounded:true,shotId:0});clearFlashes();
-  weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();resetThreat();stationBuilder.reset();setBoathouse(false);firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');
+  weaponRecoil.reset();combatHud.reset();clearToast();clearPlayInput();resetThreat();stationBuilder.reset();setBoathouse(false);runStats.hits=runStats.headshots=0;leaderboard.startRun();firstPerson.resetSlide(runState.inventory.glock.ammo);selectWeapon('glock');
   session.mode='paused';$('menu').classList.add('hidden');$('pause').classList.add('hidden');$('hud').classList.remove('hidden');
   if(capture)requestPointer();
   else{$('pauseTitle').textContent='The island is ready.';$('pauseText').textContent=padPlay()?'Press A to begin. Menu pauses the game.':touchControls?.enabled?'Tap Play to begin. The II button pauses the game.':'Click Play to lock your mouse and begin. Esc releases it and pauses the game.';$('captureHelp').classList.add('hidden');$('resume').classList.remove('hidden');$('resume').textContent=padPlay()?'PRESS A TO PLAY →':touchControls?.enabled?'TAP TO PLAY →':'CLICK TO PLAY →';showPauseMenu();}
@@ -406,15 +410,28 @@ function returnToMenu(){
   const start=$('start');start.disabled=false;start.innerHTML='WADE ASHORE <span>→</span>';start.focus({preventScroll:true});
 }
 const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+// The run summary (v214, spec 8.5): what the run came to, on the death card, with the existing New
+// Run and Title Screen, and the run kept for the leaderboard (named and saved from there, if wanted).
+function runSummary(){
+  const level=threatLevel(runState.kills),owned=WEAPON_CYCLE.filter(k=>k!=='glock'&&runState.inventory[k]?.owned).length,armour=runState.armorTier===0?'None':runState.armorTier===1?'Aegis body armour':armorRank(runState.armorTier).name.replace('NANO SHIELD','Nano Shield').replace('RANK','rank');
+  return [['Enemies killed',runState.kills.toLocaleString()],['Time survived',clock(runState.runTime)],['Threat level',String(level)],['Threat rank',threatRank(level).name],
+    ['Essence earned',runState.totalScore.toLocaleString()],['Headshots',runStats.hits?`${runStats.headshots.toLocaleString()} (${Math.round(runStats.headshots/runStats.hits*100)}% of hits)`:'0'],
+    ['Weapons bought',String(owned)],['Perks',`${runState.perkOwned.size} of 4`],['Armour',armour]];
+}
+function showSummary(dead){$('tideSummary').classList.toggle('hidden',!dead);$('leaderboardDead').classList.toggle('hidden',!dead);}
 function gameOver(){
   if(session.mode==='dead')return;grenadeThrow.cancel();runState.grenadeCooldown=0;session.mode='dead';clearPlayInput();releaseMouse();
   $('captureHelp').classList.add('hidden');$('pauseTitle').textContent='The tide takes you.';
-  $('pauseText').textContent=`${clock(runState.runTime)} on the island · ${runState.kills} kills · ${runState.totalScore.toLocaleString()} essence earned.`;
+  $('pauseText').textContent='Save this run to the Dead Tide leaderboard, or go again.';
+  const list=$('tideSummary');list.replaceChildren();for(const [term,value] of runSummary()){const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=term;dd.textContent=value;row.append(dt,dd);list.appendChild(row);}
+  leaderboard.endRun({kills:runState.kills,duration:runState.runTime,score:runState.totalScore,headshots:runStats.headshots});
   $('resume').classList.add('hidden');showPauseMenu();tone(90,2,.12,'sawtooth',25);
 }
 function updateHud(){updateReloadHud();updateVitals();}
 
 // ---- Page events ----------------------------------------------------------------------------
+// v214: Dead Tide's leaderboard, from the title screen and the run summary.
+const leaderboard=createTideLeaderboard({document,onOpen:()=>{if(session.mode==='playing')pauseGame();},onNewRun:()=>resetRun()});
 if(!window.Blackthorn)$('start').onclick=startFromMenu;
 $('resume').onclick=resumeGame;$('restart').onclick=()=>askConfirm('restart',$('restart'));$('mainMenuPause').onclick=()=>askConfirm('menu',$('mainMenuPause'));
 $('settingsPause').onclick=()=>openSettings('pause');$('settingsMenu').onclick=()=>openSettings('menu');$('settingsBack').onclick=closeSettings;
@@ -426,6 +443,7 @@ document.addEventListener('visibilitychange',onVisibilityChange);
 document.addEventListener('mousemove',onMouseMove);
 canvas.addEventListener('mousedown',onMouseDown);document.addEventListener('mouseup',onMouseUp);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('keydown',e=>{
+  if(leaderboard.visible){if(e.code==='Escape'){e.preventDefault?.();leaderboard.close();}return;}
   if(controlsOpen()){if(e.code==='Escape'){e.preventDefault?.();closeControls();}return;}
   if(e.code==='Escape'&&confirmOpen()){e.preventDefault?.();cancelConfirm();return;}
   if(e.code==='Escape'&&settingsOpen()){e.preventDefault?.();closeSettings();return;}
