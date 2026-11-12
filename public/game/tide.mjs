@@ -24,16 +24,17 @@ import {createSignage} from './signage.mjs?v=94';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
-import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=213';
+import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=215';
+import {loadIslandTextures} from './island-art.mjs?v=215';
 import {buildEnemyAssets} from './enemy-assets.mjs?v=207';
 import {createCrowd,enemyBody} from './crowd.mjs?v=123';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=213';
+import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=215';
 import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=210';
-import {createTideLeaderboard} from './tide-leaderboard.mjs?v=214';
+import {createTideLeaderboard} from './tide-leaderboard.mjs?v=215';
 import {armorRank} from './armor.mjs?v=94';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
@@ -57,9 +58,11 @@ let seed=204;const rng=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/42949
 const canvas=$('game');
 const display=createDisplay({canvas,far:420,onFailure(message){$('loading').classList.add('hidden');$('error').classList.remove('hidden');$('errorDetails').textContent=message;}});
 const {renderer,scene,camera}=display;
-const FOG=0x0b2224;scene.background=new T.Color(FOG);scene.fog=new T.FogExp2(FOG,.0105);
+// v215 (the art pass, design spec 10.4): a moonlit night, bluer and clearer, the island textured.
+const FOG=0x10293a;scene.background=new T.Color(FOG);scene.fog=new T.FogExp2(FOG,.0088);
 const world=new T.Group();world.name='Dead Tide island';scene.add(world);
-const island=buildIsland({scene,world}),{supportBelow,isBlocked}=island,{colliders,solidMeshes}=island;
+const islandTextures=await loadIslandTextures({anisotropy:Math.min(16,renderer.capabilities?.getMaxAnisotropy?.()??8)});
+const island=buildIsland({scene,world,textures:islandTextures}),{supportBelow,isBlocked}=island,{colliders,solidMeshes}=island;
 // ---- The stations (v212, Dead Tide step 5) ------------------------------------------------------
 // The mansion's own station models and what they sell (stations.mjs, station-models.mjs), each on
 // its pad (island.mjs: islandSites().stations): every weapon at its landmark, the Soul Forge in
@@ -138,10 +141,20 @@ for(const c of stationColliders){let ground=-Infinity;const reach=Math.hypot(c.w
   colliders.push({x:c.x,z:c.z,w:c.w,d:c.d,bottom:c.minY-2,top:Math.max(c.maxY,ground+1.05),cos:1,sin:0,kind:'station'});}
 // The guns' metal reflects the same soft surroundings as in the mansion.
 scene.environment=ambientEnvironment();scene.environmentIntensity=.48;
-const hemisphere=new T.HemisphereLight(0x6f8f96,0x121c1a,1.05);scene.add(hemisphere);
-const moonlight=new T.DirectionalLight(0xb5d8d4,1.8);moonlight.position.copy(island.moonDir).multiplyScalar(120);scene.add(moonlight);
+const hemisphere=new T.HemisphereLight(0x86a8bc,0x1a2420,1.2);scene.add(hemisphere);
+// v215: a brighter moon, casting shadows round wherever you are (its shadow box follows you,
+// stepping a whole shadow texel at a time so the edges never crawl). The box is 90 m across;
+// its texture's size follows the graphics quality.
+const moonlight=new T.DirectionalLight(0xc6dcea,2.7);moonlight.castShadow=true;scene.add(moonlight,moonlight.target);
+{const cam=moonlight.shadow.camera;cam.left=cam.bottom=-45;cam.right=cam.top=45;cam.near=1;cam.far=260;cam.updateProjectionMatrix();
+ moonlight.shadow.bias=-.0006;moonlight.shadow.normalBias=.045;moonlight.shadow.mapSize.set(2048,2048);}
+const MOON_SHADOW={low:1024,high:2048,ultra:4096};
+function moonShadowQuality(q){const n=MOON_SHADOW[q]??2048;if(moonlight.shadow.mapSize.x===n)return;moonlight.shadow.mapSize.set(n,n);moonlight.shadow.map?.dispose();moonlight.shadow.map=null;}
+const moonAt=new T.Vector3();
+function followMoon(x,z){const step=90/moonlight.shadow.mapSize.x*2,sx=Math.round(x/step)*step,sz=Math.round(z/step)*step;moonAt.set(sx,0,sz);moonlight.target.position.copy(moonAt);moonlight.position.copy(island.moonDir).multiplyScalar(130).add(moonAt);}
+followMoon(0,0);
 // The sky: deep teal overhead, the fog's colour at the horizon, stars and the moon.
-const skyMat=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,fog:false,uniforms:{time:{value:0},moonDir:{value:island.moonDir.clone()},top:{value:new T.Color(0x03100f)},horizon:{value:new T.Color(FOG)}},
+const skyMat=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,fog:false,uniforms:{time:{value:0},moonDir:{value:island.moonDir.clone()},top:{value:new T.Color(0x040f1c)},horizon:{value:new T.Color(FOG)}},
   vertexShader:'varying vec3 vDir;void main(){vDir=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
   fragmentShader:`uniform float time;uniform vec3 moonDir;uniform vec3 top;uniform vec3 horizon;varying vec3 vDir;
 float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
@@ -366,14 +379,17 @@ function padStart(){
 }
 gamepad=createGamepadControls({win:window,document,actions:{...padActions,start:padStart,back:padBack}});
 schemeChanged(controlScheme.scheme);
-display.useScreen({select:$('quality'),fps:$('fps'),layout(){applyFormFactor();fitTouchStick();}});
+display.useScreen({select:$('quality'),fps:$('fps'),layout(){applyFormFactor();fitTouchStick();},quality:moonShadowQuality});
 
 // ---- Runs, the title screen and the end of a run ---------------------------------------------
 function startFromMenu(){finishTheDead();resetRun();}
 // One step of the dead's build (a body); true once they are built.
 // v209: then, one more step, the brutes' wider routes (about 0.1 s), so the first brute to come
 // ashore no longer stalls a frame building them.
-function growTheDead(){if(enemyReal){if(!bruteRoutes)void routes.brutes;return true;}const step=enemyBuild.next();if(!step.done)return false;enemyReal=step.value;warmTheDead();return false;}
+function growTheDead(){if(enemyReal){if(!bruteRoutes)void routes.brutes;return true;}const step=enemyBuild.next();if(!step.done)return false;enemyReal=step.value;quietTheDead(enemyReal);warmTheDead();return false;}
+// v215: the dead cast no moon shadow (45 bodies drawn twice more than quadrupled a fight's draws); they still
+// take the island's shadows. Their templates, so every body cloned from them.
+function quietTheDead(real){for(const g of [...real.templates.map(r=>r.group),real.injuries?.group,real.faces?.group])g?.traverse(o=>{if(o.isMesh)o.castShadow=false;});}
 function finishTheDead(){while(!growTheDead());return deadWarm;}
 function warmTheDead(){
   const warmScene=new T.Scene(),rage=enemyReal.templates.map(r=>{const group=r.group.clone(true);enemyReal.enrage({group});return group;});
@@ -492,7 +508,7 @@ function tick(now){
     const a=elapsed*.045+2.2,H=ISLAND.hill;camera.position.set(H.x+Math.cos(a)*MENU_ORBIT,22,H.z+Math.sin(a)*MENU_ORBIT);camera.lookAt(H.x,11,H.z);gunRoot.visible=false;
   }
   updateReloadHud();combatHud.update(dt,player,session.lookYaw+weaponRecoil.yaw);firstPerson.updateFlash(dt);fadeHud(dt,session.mode==='playing');
-  bloodPool.sync();markPool.sync();island.update(elapsed);stationBuilder.update(elapsed);sky.position.copy(camera.position);skyMat.uniforms.time.value=elapsed;
+  bloodPool.sync();markPool.sync();island.update(elapsed);stationBuilder.update(elapsed);sky.position.copy(camera.position);followMoon(camera.position.x,camera.position.z);skyMat.uniforms.time.value=elapsed;
   display.render(gunRoot.visible||grenadeThrow.root.visible,world,firstPerson.viewFov);
 }
 window.addEventListener('resize',display.resize);display.resize();

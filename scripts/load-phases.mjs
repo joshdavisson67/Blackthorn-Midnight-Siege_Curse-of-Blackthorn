@@ -37,7 +37,7 @@ if(!tide){
   game='window.__tTop=performance.now();\n'+game.replace(anchor,'window.__tWorld=performance.now();await prepareRendering();window.__tPrep=performance.now();');
   writeFileSync(join(stage,'game.js'),game);
 }else if(!/tide:shaders/.test(readFileSync(join(stage,'tide.mjs'),'utf8')))throw new Error('tide.mjs no longer marks its load phases');
-const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.woff2':'font/woff2','.json':'application/json'};
+const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.woff2':'font/woff2','.json':'application/json'};
 const server=http.createServer((q,r)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p==='/')p='/index.html';const f=join(stage,p);
   if(!existsSync(f)||statSync(f).isDirectory()){r.writeHead(404);r.end();return;}
   r.writeHead(200,{'content-type':types[extname(f)]||'application/octet-stream','cache-control':'no-store'});r.end(readFileSync(f));}).listen(0);

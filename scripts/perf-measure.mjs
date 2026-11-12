@@ -100,7 +100,7 @@ if(tide)appendFileSync(join(stage,'tide.mjs'),`
 `);
 
 // ---- Static server that counts every byte it sends ----------------------------------
-const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.woff2':'font/woff2','.json':'application/json','.txt':'text/plain'};
+const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.woff2':'font/woff2','.json':'application/json','.txt':'text/plain'};
 const served=[];let t0=0;
 const server=http.createServer((q,r)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p==='/')p='/index.html';const f=join(stage,p);
   if(!existsSync(f)||statSync(f).isDirectory()){r.writeHead(404);r.end();served.push({path:p,bytes:0,at:Date.now()-t0,status:404});return;}

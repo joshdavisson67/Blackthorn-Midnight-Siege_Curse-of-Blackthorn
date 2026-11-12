@@ -88,7 +88,8 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
   const names=new Set(world.children.map(o=>o.name));
   for(const n of ['Island ground','The sea','Landmarks','Radio tower','Tower beacon','Wreck','Palm trunks','Palm crowns','Rocks','Brush'])assert(names.has(n),`The island has ${n.toLowerCase()}`);
   let meshes=0,triangles=0;world.traverse(o=>{if(o.isMesh){meshes++;const g=o.geometry;triangles+=(g.index?g.index.count:g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
-  assert(meshes<80&&triangles<60000,`The grey-box island is light: ${meshes} meshes, ${Math.round(triangles/1000)}k triangles`);
+  // v215 (the art pass, spec 10.4): textured, with ferns and grass, on a desktop-first budget.
+  assert(meshes<85&&triangles<95000,`The island stays within its art budget: ${meshes} meshes, ${Math.round(triangles/1000)}k triangles`);
   // The beacon blinks: on for 0.55 s of every 1.6 s.
   I.update(.1);assert(I.beaconLight.intensity>0);I.update(.9);assert.equal(I.beaconLight.intensity,0);I.update(1.7);assert(I.beaconLight.intensity>0,'The tower’s red beacon blinks');
   console.log(`PASS: the island: a coast 50–75 m out, Radio Hill highest and flat-topped with the radio tent and tower on it, a sloping beach on every bearing, walkable everywhere you can stand, the wreck at the water’s edge, ${I.palms.length} palms and ${I.rocks.length} rocks on land, the south-beach landing spot clear, ${meshes} meshes and ${Math.round(triangles/1000)}k triangles, and a blinking beacon.`);
@@ -248,7 +249,7 @@ try{
   // (v212: and the stations, in a group of their own: one group each, named for what it sells.)
   const stationNames=new Set(G().stations.filter(s=>s.padId!=='ammo-tent').map(s=>s.name)),top=new Set(G().world.children.map(o=>o.name));
   {const root=G().world.getObjectByName('Stations');assert.equal(root.children.filter(o=>o.isGroup&&stationNames.has(o.name)).length,G().island.stations.length,'one group for each station on a pad');}
-  assert.deepEqual([...top].sort(),['Blood particles','Boathouse door','Brush','Bullet impact marks','Explosion effects','Island ground','Landmarks','Palm crowns','Palm trunks','Radio tower','Rocks','Stations','The sea','Tower beacon','Wreck'].sort(),'The world holds the island and the shared effects, nothing else');
+  assert.deepEqual([...top].sort(),['Blood particles','Boathouse door','Brush','Ferns','Grass','Bullet impact marks','Explosion effects','Island ground','Landmarks','Palm crowns','Palm trunks','Radio tower','Rocks','Stations','The sea','Tower beacon','Wreck'].sort(),'The world holds the island and the shared effects, nothing else');
   // v207: the dead are not built while loading. Behind the title screen they build a body a
   // frame, then their shaders compile in a scene of their own, lit by the island's, never drawn.
   assert(G().deadBuilt===false&&G().deadReady===false,'The dead are not built while loading');

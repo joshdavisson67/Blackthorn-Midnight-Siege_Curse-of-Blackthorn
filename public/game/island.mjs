@@ -1,5 +1,6 @@
 import * as T from './three.module.js';
 import {combineMeshes} from './batching.mjs?v=204';
+import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry,hullGeometry,columnGeometry} from './island-art.mjs?v=215';
 
 // Dead Tide's island (v204, Dead Tide step 2): the grey-box map. A central hill with the
 // radio tent and a lattice tower on its flat top, a lowland ring, beaches all round,
@@ -224,49 +225,52 @@ export function trailDistance(x,z){
 // Small seeded random numbers, so the island is the same on every load.
 function seeded(seed){return ()=>{seed=(seed+0x6D2B79F5)>>>0;let t=seed;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
 
-export function buildIsland({scene,world}){
-  const colliders=[],platforms=[],solidMeshes=[],lights=[];
+export function buildIsland({scene,world,textures=standInTextures()}){
+  const colliders=[],platforms=[],solidMeshes=[],lights=[],TEX=textures;
   const material=(color,extra={})=>new T.MeshStandardMaterial({color,roughness:.92,metalness:0,...extra});
   const TENT=ISLAND.tent,W=ISLAND.tower,summit=groundHeight(HILL.x,HILL.z),{sites:SITE,landmarks:LANDMARKS,stations,trails,boathouse:{floor:BOATHOUSE_FLOOR}}=islandSites();
 
   // ---- The ground ---------------------------------------------------------------------
   // 1.5 m squares in 30 m chunks out to 90 m; chunks wholly under the sea are left out.
   // Normals come from the height function, so chunk edges join without a seam.
-  const SPACING=1.5,CHUNK=20,EXTENT=90,groundMat=material(0xffffff,{vertexColors:true,roughness:.97});
-  const sand=new T.Color(0xbcae8e),wetSand=new T.Color(0x756a55),scrub=new T.Color(0x34492f),dryScrub=new T.Color(0x5b6143),dirt=new T.Color(0x6b5c47),rock=new T.Color(0x666962),c=new T.Color();
-  // v211: the ground's kinds: dark jungle floor round the ruin, dry grass on the south and east
-  // lowland, mud in the hollows and gullies, and bare stone on the rocky hills.
-  const jungle=new T.Color(0x22341d),dryGrass=new T.Color(0x6e6a3e),mud=new T.Color(0x3a3527),stoneGround=new T.Color(0x5d605a),KNOLL=moundAt('RUIN KNOLL');
-  function groundColor(x,z,h,slope){
+  // v215 (the art pass): the ground wears four textures, sand, grass, earth and rock (island-art.mjs),
+  // blended by weights each vertex carries; its colour is now a tint over them (wet sand darker,
+  // dry grass yellower, the jungle floor deeper, mud darker). The kinds of ground are as before.
+  const SPACING=1.5,CHUNK=20,EXTENT=90,groundMat=terrain(TEX);
+  const SAND=[1,0,0,0],GRASS=[0,1,0,0],EARTH=[0,0,1,0],ROCK=[0,0,0,1],weights=[0,0,0,0],c=new T.Color(),tint=new T.Color();
+  const dry=new T.Color(.96,.93,.88),wet=new T.Color(.58,.57,.56),duneTint=new T.Color(1.12,1.08,.86),scrubTint=new T.Color(.92,.98,.9),jungleTint=new T.Color(.7,.84,.72),dryGrassTint=new T.Color(1.3,1.18,.82),mudTint=new T.Color(.62,.58,.54),trailTint=new T.Color(1.05,1,.95),stoneTint=new T.Color(.96,.97,.95);
+  const KNOLL=moundAt('RUIN KNOLL');
+  // The weights (sand, grass, earth, rock) and the tint at a point, by the same rules as v211's colours.
+  function groundKind(x,z,h,slope){
     const t=shoreFraction(x,z),patch=.5+.5*Math.sin(x*.31+z*.17)*Math.sin(z*.27-x*.11);
-    c.copy(wetSand).lerp(sand,smooth(-.1,.55,h));                                        // wet near the water, dry up the beach
-    c.lerp(dryScrub,Math.min(1,smooth(.9,.76,t)*(.45+patch*.8)));                        // dune grass in patches behind the beach
-    c.lerp(scrub,smooth(.8,.62,t)*smooth(1.4,2,h)*(.55+.45*patch));                      // scrub inland
-    if(Math.hypot(x-HILL.x,z-HILL.z)<HILL.flat+1.5)c.lerp(dirt,.85);                    // the beaten summit
-    else if(h>.25){const d=trailDistance(x,z);if(d<2.6)c.lerp(dirt,.8*smooth(2.6,1.1,d));}   // v210: the trails, worn to dirt
-    // v211: the kinds of ground (h > .4: never on the beach).
+    weights.splice(0,4,...SAND);tint.copy(wet).lerp(dry,smooth(-.1,.55,h));
+    const to=(target,k,amount)=>{if(amount<=0)return;for(let i=0;i<4;i++)weights[i]+=(target[i]-weights[i])*Math.min(1,amount);if(k)tint.lerp(k,Math.min(1,amount));};
+    to(GRASS,duneTint,Math.min(1,smooth(.9,.76,t)*(.45+patch*.8))*.85);                    // dune grass in patches behind the beach
+    to(GRASS,scrubTint,smooth(.8,.62,t)*smooth(1.4,2,h)*(.55+.45*patch));                    // scrub inland
+    if(Math.hypot(x-HILL.x,z-HILL.z)<HILL.flat+1.5)to(EARTH,trailTint,.85);                   // the beaten summit
+    else if(h>.25){const d=trailDistance(x,z);if(d<2.6)to(EARTH,trailTint,.8*smooth(2.6,1.1,d));}   // the trails, worn to earth
     if(h>.4){relief(x,z);const inland=smooth(.8,.66,t);
-      c.lerp(jungle,inland*smooth(30,12,Math.hypot(x-KNOLL.x,z-KNOLL.z))*(.55+.35*patch));      // the jungle floor round the ruin
-      c.lerp(dryGrass,inland*smooth(-6,14,z+x*.35)*(.25+.45*(1-patch))*(1-smooth(0,1.2,dip))); // dry grass to the south and east
-      c.lerp(mud,smooth(.25,1.1,dip)*.8);                                                    // mud down in the hollows and gullies
-      c.lerp(stoneGround,smooth(.25,.75,crag)*(.35+.5*patch));                               // stone showing on the rocky hills
+      to(GRASS,jungleTint,inland*smooth(30,12,Math.hypot(x-KNOLL.x,z-KNOLL.z))*(.55+.35*patch));      // the jungle floor round the ruin
+      {const k=inland*smooth(-6,14,z+x*.35)*(.25+.45*(1-patch))*(1-smooth(0,1.2,dip));if(k>0)tint.lerp(dryGrassTint,Math.min(1,k)*weights[1]);}   // dry grass to the south and east
+      to(EARTH,mudTint,smooth(.25,1.1,dip)*.8);                                                      // mud down in the hollows and gullies
+      to(ROCK,stoneTint,smooth(.25,.75,crag)*(.35+.5*patch));                                        // stone showing on the rocky hills
     }
-    c.lerp(rock,smooth(.35,.6,slope));                                                   // bare rock on the steep parts
-    return c;
+    to(ROCK,stoneTint,smooth(.62,.9,slope));                                                        // bare rock on the steep parts (v215: only the steepest; the hills' flanks stay grassy)
+    return weights;
   }
   const chunks=Math.ceil(EXTENT*2/(SPACING*CHUNK));
   for(let cz=0;cz<chunks;cz++)for(let cx=0;cx<chunks;cx++){
     const x0=-EXTENT+cx*CHUNK*SPACING,z0=-EXTENT+cz*CHUNK*SPACING,n=CHUNK+1;
-    const pos=new Float32Array(n*n*3),nor=new Float32Array(n*n*3),col=new Float32Array(n*n*3),uv=new Float32Array(n*n*2);let dry=false;
+    const pos=new Float32Array(n*n*3),nor=new Float32Array(n*n*3),col=new Float32Array(n*n*3),uv=new Float32Array(n*n*2),spl=new Float32Array(n*n*4);let dry=false;
     for(let j=0;j<n;j++)for(let i=0;i<n;i++){
       const x=x0+i*SPACING,z=z0+j*SPACING,h=groundHeight(x,z),k=j*n+i;
       const gx=(groundHeight(x+.5,z)-groundHeight(x-.5,z)),gz=(groundHeight(x,z+.5)-groundHeight(x,z-.5)),len=Math.hypot(gx,1,gz);
       pos.set([x,h,z],k*3);nor.set([-gx/len,1/len,-gz/len],k*3);uv.set([x/8,z/8],k*2);
-      groundColor(x,z,h,Math.hypot(gx,gz)).toArray(col,k*3);if(h>-.25)dry=true;
+      spl.set(groundKind(x,z,h,Math.hypot(gx,gz)),k*4);c.copy(tint);c.toArray(col,k*3);if(h>-.25)dry=true;
     }
     if(!dry)continue;
     const index=[];for(let j=0;j<CHUNK;j++)for(let i=0;i<CHUNK;i++){const a=j*n+i,b=a+1,d=a+n,e=d+1;index.push(a,d,b,b,d,e);}
-    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3));geo.setAttribute('normal',new T.BufferAttribute(nor,3));geo.setAttribute('color',new T.BufferAttribute(col,3));geo.setAttribute('uv',new T.BufferAttribute(uv,2));geo.setIndex(index);geo.computeBoundingSphere();geo.computeBoundingBox();
+    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3));geo.setAttribute('normal',new T.BufferAttribute(nor,3));geo.setAttribute('color',new T.BufferAttribute(col,3));geo.setAttribute('uv',new T.BufferAttribute(uv,2));geo.setAttribute('splat',new T.BufferAttribute(spl,4));geo.setIndex(index);geo.computeBoundingSphere();geo.computeBoundingBox();
     const mesh=new T.Mesh(geo,groundMat);mesh.name='Island ground';mesh.receiveShadow=true;world.add(mesh);solidMeshes.push(mesh);
   }
 
@@ -277,22 +281,33 @@ export function buildIsland({scene,world}){
   for(let j=0;j<MAP;j++)for(let i=0;i<MAP;i++){const x=(i+.5)/MAP*MAP_SIZE-MAP_SIZE/2,z=(j+.5)/MAP*MAP_SIZE-MAP_SIZE/2;depthData[j*MAP+i]=Math.round(Math.min(1,Math.max(0,-groundHeight(x,z)/DEEP))*255);}
   const depthMap=new T.DataTexture(depthData,MAP,MAP,T.RedFormat,T.UnsignedByteType);depthMap.magFilter=depthMap.minFilter=T.LinearFilter;depthMap.wrapS=depthMap.wrapT=T.ClampToEdgeWrapping;depthMap.needsUpdate=true;
   const moonDir=new T.Vector3(.6,.55,-.58).normalize();
+  // v215 (the art pass): turquoise over the sand in the shallows, the seabed showing through, bent
+  // by the ripples and lit by moving caustics, darkening to deep water; the moon's glint on the
+  // ripples fades with distance, so far water shimmers instead of breaking into squares.
   const seaMat=new T.ShaderMaterial({fog:true,
-    uniforms:T.UniformsUtils.merge([T.UniformsLib.fog,{time:{value:0},depthMap:{value:null},moonDir:{value:new T.Vector3()},deep:{value:new T.Color(0x061a1c)},shallow:{value:new T.Color(0x1c4b47)},foam:{value:new T.Color(0x9cc6be)},mapSize:{value:MAP_SIZE},seabed:{value:DEEP}}]),
+    uniforms:T.UniformsUtils.merge([T.UniformsLib.fog,{time:{value:0},depthMap:{value:null},sandMap:{value:null},moonDir:{value:new T.Vector3()},deep:{value:new T.Color(0x031820)},shallow:{value:new T.Color(0x14706c)},bedTint:{value:new T.Color(0x9fe0d6)},foam:{value:new T.Color(0xa8d4cc)},mapSize:{value:MAP_SIZE},seabed:{value:DEEP}}]),
     vertexShader:`varying vec3 vWorld;
 #include <fog_pars_vertex>
 void main(){vec4 world=modelMatrix*vec4(position,1.);vWorld=world.xyz;vec4 mvPosition=viewMatrix*world;gl_Position=projectionMatrix*mvPosition;
 #include <fog_vertex>
 }`,
-    fragmentShader:`uniform float time;uniform sampler2D depthMap;uniform vec3 moonDir;uniform vec3 deep;uniform vec3 shallow;uniform vec3 foam;uniform float mapSize;uniform float seabed;varying vec3 vWorld;
+    fragmentShader:`uniform float time;uniform sampler2D depthMap;uniform sampler2D sandMap;uniform vec3 moonDir;uniform vec3 deep;uniform vec3 shallow;uniform vec3 bedTint;uniform vec3 foam;uniform float mapSize;uniform float seabed;varying vec3 vWorld;
 #include <fog_pars_fragment>
 void main(){
-  vec2 p=vWorld.xz;float depth=texture2D(depthMap,p/mapSize+.5).r*seabed;
-  vec3 col=mix(deep,shallow,(1.-smoothstep(0.,1.7,depth))*.7);
-  // Ripples tilt a fake normal; the moon glints along them.
-  vec3 n=normalize(vec3(cos(p.x*.35+time*.9)*.028+cos((p.x+p.y)*.9+time*1.6)*.02,1.,cos(p.y*.41-time*.7)*.033+sin(p.x*.7-p.y*.5+time*1.1)*.015));
-  vec3 view=normalize(cameraPosition-vWorld);float glint=pow(max(dot(n,normalize(view+moonDir)),0.),260.);
-  col+=vec3(.7,.95,.9)*glint*1.1+deep*.35*(1.-view.y);
+  vec2 p=vWorld.xz;float depth=texture2D(depthMap,p/mapSize+.5).r*seabed;float far=length(cameraPosition-vWorld),near=1.-smoothstep(25.,140.,far);
+  // Ripples tilt a fake normal (calmer with distance); the moon glints along them.
+  vec2 rip=vec2(cos(p.x*.35+time*.9)*.028+cos((p.x+p.y)*.9+time*1.6)*.02,cos(p.y*.41-time*.7)*.033+sin(p.x*.7-p.y*.5+time*1.1)*.015);
+  vec3 n=normalize(vec3(rip.x*near,1.,rip.y*near));
+  vec3 view=normalize(cameraPosition-vWorld);
+  // The seabed through the water: sand, bent by the ripples, under moving caustics.
+  vec3 bed=texture2D(sandMap,(p+rip*18.)/5.).rgb;
+  float caustic=abs(sin(p.x*1.6+time*.7+sin(p.y*1.2+time*.5)*1.6)*sin(p.y*1.8-time*.6+sin(p.x*1.05-time*.4)*1.6));caustic=pow(caustic,2.5);
+  // The deeper it lies, the less of the bed shows and the bluer and dimmer it is.
+  float under=smoothstep(.0,1.7,depth),clear=(1.-under)*mix(.35,.9,view.y);
+  vec3 water=mix(deep,shallow,(1.-smoothstep(.2,2.2,depth))*.85);
+  vec3 col=mix(water,bed*bedTint*(.45+.6*caustic*near)*mix(1.,.4,under),clear*.72);
+  float glint=pow(max(dot(n,normalize(view+moonDir)),0.),mix(140.,260.,near))*mix(.06,1.1,near);
+  col+=vec3(.7,.95,.9)*glint+deep*.35*(1.-view.y);
   // Surf: bands rolling in over the shallows, and a ribbon of foam on the sand's edge.
   float surf=1.-smoothstep(.05,.55,depth),band=.5+.5*sin(depth*20.-time*2.3+sin(p.x*.13+p.y*.11)*2.);
   float froth=surf*smoothstep(.6,1.,band)*.7+(1.-smoothstep(.0,.09,depth))*.85;
@@ -302,7 +317,7 @@ void main(){
 #include <colorspace_fragment>
 #include <fog_fragment>
 }`});
-  seaMat.uniforms.depthMap.value=depthMap;seaMat.uniforms.moonDir.value.copy(moonDir);
+  seaMat.uniforms.depthMap.value=depthMap;seaMat.uniforms.sandMap.value=TEX.sand;seaMat.uniforms.moonDir.value.copy(moonDir);
   const sea=new T.Mesh(new T.PlaneGeometry(900,900,1,1),seaMat);sea.rotation.x=-Math.PI/2;sea.name='The sea';sea.userData.dynamic=true;sea.renderOrder=-1;world.add(sea);
 
   // ---- Collision ------------------------------------------------------------------------
@@ -384,8 +399,17 @@ void main(){
   // part, or above `base` for a rigid structure. A part that blocks gets a collider as tall as
   // itself; nothing here can be stood on above head height (the dead could not follow).
   const props=new T.Group();props.name='Landmarks';world.add(props);
-  const timber=material(0x5a4a3a),plank=material(0x3f3429),roofMat=material(0x2c3134,{roughness:.8,metalness:.25}),glow=new T.MeshStandardMaterial({color:0x1a1108,emissive:0xe8913c,emissiveIntensity:.85,roughness:.6}),steel=material(0x6a6f6c,{roughness:.55,metalness:.6});
-  const canvas=material(0x7d7a5c,{roughness:1}),concrete=material(0x7c7e78,{roughness:.95}),stone=material(0x6c6f66,{roughness:1}),rustMat=material(0x6a3b24,{roughness:.9,metalness:.15}),crate=material(0x66573d),padMat=material(0xc9c4b2,{roughness:.8});
+  // v215 (the art pass): every surface wears a texture (island-art.mjs), laid on in world space.
+  const timber=textured(TEX,'wood',{color:0xc4b6a2}),plank=textured(TEX,'wood',{color:0x9a8a76}),roofMat=textured(TEX,'rust',{color:0x8c8480,roughness:.75,metalness:.3}),glow=new T.MeshStandardMaterial({color:0x1a1108,emissive:0xe8913c,emissiveIntensity:.85,roughness:.6}),steel=textured(TEX,'rust',{color:0x8a9698,roughness:.6,metalness:.45,scale:.6});
+  const canvas=textured(TEX,'cloth',{color:0xd0ccb0,roughness:1}),concrete=textured(TEX,'concrete',{roughness:.95}),stone=textured(TEX,'stone',{roughness:1,scale:1.25}),rustMat=textured(TEX,'rust',{roughness:.85,metalness:.2}),crate=textured(TEX,'wood',{color:0xc0a27e,scale:.55}),padMat=textured(TEX,'paving',{color:0xd8d2c4,roughness:.85});
+  // v215: camouflaged concrete, painted railings, deep shadow for openings; lettering, vines and scrub
+  // as alpha cards (still: merged, they do not sway).
+  const camo=textured(TEX,'camo',{color:0xb4aca2,roughness:.95}),railPaint=textured(TEX,'rust',{color:0x8aa6b4,roughness:.6,metalness:.4,scale:.5}),paving=textured(TEX,'paving',{color:0xa09c90,roughness:.95}),dark=new T.MeshStandardMaterial({color:0x040506,roughness:1});
+  const stencilMat=foliage(TEX,'stencil',{sway:0}),vineMat=foliage(TEX,'vines',{sway:0,color:0xd0dcc4}),leafMat=foliage(TEX,'leaves',{sway:0,color:0xc8d8bc});
+  const PLANE=new T.PlaneGeometry(1,1),VINE=vineGeometry(1,1),SHRUB=shrubGeometry(9);
+  // The ruin's column capital (a flared echinus) and a fallen drum (centred on its middle); a carved panel's darker stone.
+  const CAPITAL=new T.CylinderGeometry(.6,.4,.3,32),DRUM=columnGeometry({radius:.42,height:1.5}).translate(0,-.75,0),carved=textured(TEX,'stone',{color:0x8c8a80,scale:.35});CAPITAL.translate(0,.15,0);
+  const thatch=textured(TEX,'thatch',{color:0xc0ae90,roughness:1}),forgeRock=textured(TEX,'rock',{color:0x9c9a92,scale:.4});
   const flame=new T.MeshStandardMaterial({color:0x3a1404,emissive:0xff8a2a,emissiveIntensity:2.2,roughness:.6}),warn=new T.MeshStandardMaterial({color:0x2a0705,emissive:0xff1a10,emissiveIntensity:1.2,roughness:.5}),rune=new T.MeshStandardMaterial({color:0x140a26,emissive:0x8a4dff,emissiveIntensity:1.05,roughness:.5});
   // No prop can be jumped onto: what blocks reaches at least 1.05 m above the highest ground
   // round it (on a slope that is above the prop's own top on its uphill side).
@@ -395,21 +419,23 @@ void main(){
     const add=(geo,mat,wx,y,wz,sx,sy,sz,rx,ry,rz)=>{const m=new T.Mesh(geo,mat);m.position.set(wx,y,wz);m.scale.set(sx,sy,sz);m.rotation.set(rx,angle+ry,rz,'YXZ');m.castShadow=m.receiveShadow=true;props.add(m);return m;};
     return {x,z,angle,at,
       // A box sx wide, sy high and sz deep, its foot ly above the ground.
-      box(mat,lx,ly,lz,sx,sy,sz,{rx=0,ry=0,rz=0,collide=false,platform=false,tall=0}={}){
-        const [wx,wz]=at(lx,lz),g=ground(wx,wz);add(BOX,mat,wx,g+ly+sy/2,wz,sx,sy,sz,rx,ry,rz);
+      box(mat,lx,ly,lz,sx,sy,sz,{rx=0,ry=0,rz=0,collide=false,platform=false,tall=0,visible=true}={}){
+        const [wx,wz]=at(lx,lz),g=ground(wx,wz);if(visible)add(BOX,mat,wx,g+ly+sy/2,wz,sx,sy,sz,rx,ry,rz);
         if(collide)boxCollider(wx,wz,sx,sz,g-2,lifted(wx,wz,Math.hypot(sx,sz)/2,g+ly+sy+tall),angle+ry,kind);
         if(platform)platforms.push({x:wx,z:wz,w:sx,d:sz,top:g+ly+sy,cos:Math.cos(angle+ry),sin:Math.sin(angle+ry)});
         return [wx,g,wz];},
       // A post of radius r and height h.
-      post(mat,lx,ly,lz,r,h,{rx=0,rz=0,collide=false,reach=0}={}){
-        const [wx,wz]=at(lx,lz),g=ground(wx,wz);add(CYL,mat,wx,g+ly+h/2,wz,r,h,r,rx,0,rz);
+      post(mat,lx,ly,lz,r,h,{rx=0,rz=0,collide=false,reach=0,visible=true}={}){
+        const [wx,wz]=at(lx,lz),g=ground(wx,wz);if(visible)add(CYL,mat,wx,g+ly+h/2,wz,r,h,r,rx,0,rz);
         if(collide)circleCollider(wx,wz,Math.max(.12,r+reach),g-2,lifted(wx,wz,Math.max(.12,r+reach),g+ly+h),kind);return [wx,g,wz];},
       // A crate, or a barrel, standing on the ground: both block.
       crate(lx,lz,size=1.25,ry=0){return this.box(crate,lx,0,lz,size,size,size,{ry,collide:true});},
       barrel(lx,lz){return this.post(rustMat,lx,0,lz,.33,1.15,{collide:true,reach:.04});},
       // Something that only blocks (no shape of its own), `height` tall.
       block(lx,lz,sx,sz,height,ry=0){const [wx,wz]=at(lx,lz),g=ground(wx,wz);boxCollider(wx,wz,sx,sz,g-2,lifted(wx,wz,Math.hypot(sx,sz)/2,g+height),angle+ry,kind);},
-      sub(lx,lz,ry=0){const [wx,wz]=at(lx,lz);return site(wx,wz,angle+ry,base,kind);}
+      sub(lx,lz,ry=0){const [wx,wz]=at(lx,lz);return site(wx,wz,angle+ry,base,kind);},
+      // v215: any shape, its origin ly above the ground (or the base) at (lx, lz).
+      shape(geo,mat,lx,ly,lz,{sx=1,sy=1,sz=1,rx=0,ry=0,rz=0}={}){const [wx,wz]=at(lx,lz),g=ground(wx,wz);return add(geo,mat,wx,g+ly,wz,sx,sy,sz,rx,ry,rz);}
     };
   }
   // A canvas ridge tent on the ground: two sloped sheets `length` long over a `width` floor.
@@ -436,6 +462,8 @@ void main(){
     A.crate(-2.1,1.3,1.1,.4);
     // (v211's ammunition crate stood in the north-east corner; v212: the standard ammunition station stands there, built by tide.mjs.)
   }
+  // v215: the camp's fire throws a flickering light (placed with the camp, below).
+  const fireLight=new T.PointLight(0xff8a3c,3,11,1.7);scene.add(fireLight);lights.push(fireLight);
   const lamp=new T.PointLight(0xffb867,2.4,7.5,1.6);lamp.position.set(TENT.x-.4,summit+TENT.eave-.25,TENT.z-.4);scene.add(lamp);lights.push(lamp);
   // The rest of the Lookout Compound: a dish on its mount, crates, barrels and what is left of
   // the fence, all at the edge of the summit so the top stays open.
@@ -448,7 +476,7 @@ void main(){
   // The lattice tower: four legs leaning in from a 3.4 m base to a 0.9 m top, girts every
   // three metres and cross-bracing on every face, with the red beacon on top.
   const tower=new T.Group();tower.name='Radio tower';tower.position.set(W.x,summit,W.z);world.add(tower);
-  const towerMat=material(0x8c8f8a,{roughness:.6,metalness:.55}),redPaint=material(0x8f2a22,{roughness:.6,metalness:.4});
+  const towerMat=textured(TEX,'rust',{color:0xa8b0ae,roughness:.6,metalness:.5,scale:.4}),redPaint=textured(TEX,'rust',{color:0xe0705c,roughness:.6,metalness:.35,scale:.4});
   const corner=(y,i)=>{const half=(W.base+(W.top-W.base)*y/W.height)/2;return new T.Vector3((i&1?1:-1)*half,y,(i&2?1:-1)*half);};
   const ring=[0,1,3,2];
   for(let i=0;i<4;i++)strut(tower,towerMat,corner(0,i),corner(W.height,i),.14);
@@ -462,22 +490,44 @@ void main(){
   const beaconLight=new T.PointLight(0xff3b2c,0,46,1.4);beaconLight.position.copy(beacon.position);scene.add(beaconLight);lights.push(beaconLight);
   for(let i=0;i<4;i++){const p=corner(0,i);circleCollider(W.x+p.x,W.z+p.z,.2,summit-1,summit+6);}
 
-  // The wreck: a trawler run aground and rolled onto her side, half sunk in the sand. (v212: twice
+  // The wreck: a freighter run aground and rolled onto her side, half sunk in the sand. (v212: twice
   // the size, lying along the shore in the shallows, her bow turned a little up the beach.)
   const R=ISLAND.wreck,wx=SITE.wreck.x,wz=SITE.wreck.z,K=R.scale;
   const heading=SITE.wreck.heading,wreck=new T.Group();wreck.name='Wreck';world.add(wreck);
   wreck.position.set(wx,groundHeight(wx,wz)-R.sink*K,wz);wreck.rotation.set(R.roll,-heading,0,'YXZ');wreck.scale.setScalar(K);
-  const hullMat=material(0x2b464b,{roughness:.8,metalness:.2}),rust=rustMat,cabin=material(0xb9b5a6,{roughness:.85});
-  const L=R.length,B=R.beam;
-  part(wreck,BOX,rust,0,.25,0,{sx:L*.86,sy:.5,sz:B*.55});
-  for(const side of [-1,1])part(wreck,BOX,hullMat,-.4,1.25,side*B*.42,{sx:L*.9,sy:2.1,sz:.18,rx:side*.2});
-  part(wreck,BOX,hullMat,-L*.47,1.3,0,{sx:.18,sy:2.2,sz:B*.86});                                   // the transom
-  part(wreck,PRISM,hullMat,L*.47,1.25,0,{sx:B*.5,sy:2.3,sz:B*.6,ry:Math.PI/2});                     // the bow
-  part(wreck,BOX,plank,-.8,2.25,0,{sx:L*.66,sy:.12,sz:B*.8});                                        // what's left of the deck
-  part(wreck,BOX,cabin,-L*.2,3.35,0,{sx:3,sy:2.1,sz:2.6});                                           // the wheelhouse
-  part(wreck,BOX,glow,-L*.2+1.51,3.6,0,{sx:.02,sy:.5,sz:1.6});                    // a dead glow in its window
-  part(wreck,CYL,steel,L*.15,5.6,0,{sx:.12,sy:6.8,sz:.12,rz:-.08});                                 // the mast
-  part(wreck,CYL,steel,L*.05,6.2,0,{sx:.07,sy:4,sz:.07,rz:1.2});                                     // a broken boom
+  // v215 (the art pass, after the user's reference): a steel coastal freighter, rust-streaked, plated
+  // hull lofted from bow to transom (island-art.mjs), her deck rusted through in places; the bridge and
+  // its funnel aft, in old white paint; cargo hatches amidships; an ochre derrick mast forward with its
+  // booms, cross-trees and stays. The same size and lie as v212's, and the same collider.
+  const L=R.length,B=R.beam,hull=hullGeometry({length:L*.95,beam:B*.95,depth:2.3,holes:[[.34,.41],[.52,.56]]}),deckAt=t=>hull.userData.deck(t);
+  const hullMat=textured(TEX,'rust',{roughness:.82,metalness:.2,vertexColors:true,side:T.DoubleSide,scale:1.6}),rust=rustMat,cabin=textured(TEX,'concrete',{color:0xe6e0d2,roughness:.85});
+  const ochre=textured(TEX,'rust',{color:0xf2c27a,roughness:.7,metalness:.3,scale:.5}),glass=new T.MeshStandardMaterial({color:0x091013,roughness:.25,metalness:.5});
+  {const m=new T.Mesh(hull,hullMat);m.castShadow=m.receiveShadow=true;wreck.add(m);}
+  const at=t=>-L*.95/2+t*L*.95,dk=t=>deckAt(t);
+  // The bridge: two decks of superstructure aft, a wheelhouse window band facing forward, portholes, a rail.
+  {const x=at(.17),y=dk(.17);
+    part(wreck,BOX,cabin,x,y+.75,0,{sx:2.6,sy:1.5,sz:3.1});part(wreck,BOX,cabin,x-.15,y+2.05,0,{sx:1.9,sy:1.1,sz:2.5});
+    part(wreck,BOX,cabin,x-.15,y+2.66,0,{sx:2.2,sy:.1,sz:3.3});                                             // the bridge deck's roof, overhanging
+    part(wreck,BOX,glass,x+.81,y+2.15,0,{sx:.03,sy:.38,sz:2.1});part(wreck,BOX,glass,x+1.31,y+1.05,0,{sx:.03,sy:.3,sz:2.4});
+    for(const side of [-1,1])for(let k=0;k<3;k++)part(wreck,CYL,glass,x-.8+k*.75,y+.95,side*1.56,{sx:.13,sy:.04,sz:.13,rx:Math.PI/2});
+    part(wreck,BOX,glow,x-.05,y+.95,1.57,{sx:.18,sy:.18,sz:.02});                                         // a dead glow in one porthole
+    for(const side of [-1,1])part(wreck,BOX,steel,x,y+1.85,side*1.6,{sx:2.6,sy:.05,sz:.05});part(wreck,BOX,steel,x+1.3,y+1.85,0,{sx:.05,sy:.05,sz:3.2});
+    for(let k=0;k<5;k++)for(const side of [-1,1])part(wreck,BOX,steel,x-1.25+k*.62,y+1.67,side*1.6,{sx:.05,sy:.35,sz:.05});
+    // The funnel, raked aft, with a faded band.
+    part(wreck,CYL,cabin,x-.95,y+3.3,0,{sx:.42,sy:1.6,sz:.42,rz:.1});part(wreck,CYL,rust,x-1.0,y+3.82,0,{sx:.44,sy:.32,sz:.44,rz:.1});}
+  // Amidships: two cargo hatches, their covers half gone.
+  for(const [t,missing] of [[.47,1],[.62,0]]){const x=at(t),y=dk(t);part(wreck,BOX,rust,x,y+.22,0,{sx:1.9,sy:.45,sz:2.3});
+    for(let k=0;k<4;k++)if(!(missing&&k%2))part(wreck,BOX,plank,x-.7+k*.47,y+.47,0,{sx:.42,sy:.06,sz:2.2,rz:(k%3)*.04});}
+  // Forward: the derrick mast, its cross-trees and lookout, two booms resting aft, and its stays.
+  {const t=.76,x=at(t),y=dk(t),top=y+6.2;
+    part(wreck,CYL,ochre,x,y+3.1,0,{sx:.13,sy:6.2,sz:.13});part(wreck,BOX,ochre,x,top-1.4,0,{sx:.14,sy:.14,sz:2.3});
+    part(wreck,BOX,ochre,x,top-.75,0,{sx:.9,sy:.07,sz:.9});for(const side of [-1,1]){part(wreck,BOX,steel,x,top-.5,side*.44,{sx:.9,sy:.04,sz:.04});part(wreck,BOX,steel,x+side*.44,top-.5,0,{sx:.04,sy:.04,sz:.9});}
+    for(const side of [-1,1]){const foot=new T.Vector3(x-.15,y+.8,side*.32),tip=new T.Vector3(x-4.4,y+3.2,side*1.1);strut(wreck,ochre,foot,tip,.13);
+      strut(wreck,steel,new T.Vector3(x,top-1.4,side*1.1),tip,.025);}
+    strut(wreck,steel,new T.Vector3(x,top,0),new T.Vector3(at(.99),dk(.99)+.6,0),.03);                   // the forestay
+    for(const side of [-1,1])strut(wreck,steel,new T.Vector3(x,top-1.4,side*1.1),new T.Vector3(x+.6,y+.1,side*B*.44),.025);}   // the shrouds
+  // Bollards along her rails, and her fallen rail stanchions near the bow.
+  for(const t of [.3,.56,.9])for(const side of [-1,1])part(wreck,CYL,steel,at(t),dk(t)+.18,side*B*.36,{sx:.13,sy:.36,sz:.13});
   merge(wreck);
   boxCollider(wx,wz,L*.95*K,B*1.05*K,groundHeight(wx,wz)-2,groundHeight(wx,wz)+3.6*K,-heading,'wreck');
 
@@ -487,29 +537,76 @@ void main(){
   // ridge, so its roof sinks into the slope behind; it blocks only as far back as it shows.
   // Reserved for later: nothing opens, nothing spawns in or near it, the ground round it is open.
   {const B=SITE.bunker,front=turned(B.x,B.z,B.angle,0,1.6),A=site(B.x,B.z,B.angle,groundHeight(front[0],front[1])-.05,'bunker');
-    A.box(concrete,0,0,-1.6,5.4,3.6,6);A.block(0,-.9,5.4,4.6,3.6);                       // the portal, and as much of it as stands out
-    A.box(concrete,0,3.6,-1.4,6,.35,6.4);                                                 // its roof slab
-    A.box(steel,0,.05,1.33,2.3,2.5,.12);A.box(rustMat,0,.05,1.4,.12,2.5,.04);             // the sealed door, and its seam
-    A.box(concrete,0,2.65,1.36,3,.5,.2);                                                  // the lintel (B-01's lettering comes with the art)
+    // v215 (the art pass, after the user's reference): olive and faded-peach camouflage over the
+    // concrete; a headwall of pilasters and a lintel standing proud, B-01's number and year stencilled
+    // on it; a recess to the sealed door, welded shut; its timber gates, one folded back against the
+    // face, one shut across the mouth with a chained bar beside it (B-01 stays shut: the collider is
+    // v212's, across the mouth); the wing walls stepping down, one with a dark bay; a steel railing
+    // along the roof's edge; scrub and vines over it all. Colliders as before.
+    const ow=1.45,oh=2.75;                                                                   // the opening's half-width and height
+    A.box(camo,-(2.7+ow)/2,0,-1.6,2.7-ow,3.6,6);A.box(camo,(2.7+ow)/2,0,-1.6,2.7-ow,3.6,6);A.box(camo,0,oh,-1.6,2*ow,3.6-oh,6);   // the portal: its cheeks and the mass over the opening
+    A.block(0,-.9,5.4,4.6,3.6);                                                              // all it blocks, as before
+    A.box(concrete,0,3.6,-1.4,6,.35,6.4);                                                    // its roof slab
+    for(const side of [-1,1]){A.box(camo,side*(ow+.42),0,1.47,.84,oh+.1,.16);A.box(warn,side*(ow+.42),2.25,1.57,.2,.2,.08);}   // pilasters, and their warning lamps
+    A.box(camo,0,oh,1.47,2*ow+1.7,.6,.17);A.shape(PLANE,stencilMat,0,oh+.31,1.565,{sx:2.5,sy:.62});                         // the lintel and its lettering
+    A.box(steel,0,0,.55,2*ow,oh,.12);A.box(concrete,0,-.03,1.0,2*ow,.05,.9);                                                    // the sealed door, the recess's floor
+    for(const side of [-1,1])A.box(rustMat,0,1.35+side*.45,.63,2*ow-.15,.13,.03,{rz:side*.52});                               // welded straps across it
+    A.post(rustMat,.75,1.3,.66,.24,.05,{rx:Math.PI/2});A.box(warn,0,oh-.25,.62,2*ow,.08,.02);                                   // its wheel, and a red band
+    // The gates: planks, rails and a brace. Left: folded back flat against the face; right: shut.
+    const gate=G=>{for(let k=0;k<4;k++)G.box(timber,-.52+k*.35,.05,0,.32,2.35,.05);for(const y of [.35,1.95])G.box(plank,0,y,.05,1.42,.14,.04);G.box(plank,0,1.15,.05,1.6,.12,.04,{rz:-1});};
+    gate(A.sub(-ow-.78,1.6));gate(A.sub(ow/2,1.43));
+    A.box(steel,-ow/2,1,1.45,ow,.07,.07);for(let k=0;k<6;k++)A.box(rustMat,-ow+.12+k*.24,.82,1.47,.12,.05,.03,{rz:(k%2?.4:-.4)});   // the bar, and its chain
     for(const side of [-1,1]){
-      A.box(warn,side*1.75,2.95,1.36,.22,.22,.1);                                          // warning lamps
-      A.box(concrete,side*3.9,0,1.1,3.4,2.6,.45,{ry:side*-.55,collide:true});              // wing walls, holding back the cut
+      const W=A.sub(side*3.9,1.1,side*-.55);W.block(0,0,3.4,.45,2.6);                                   // the wing walls: v212's colliders
+      W.box(camo,-side*.85,0,0,1.7,2.6,.45);W.box(camo,side*.85,0,0,1.7,1.7,.45);                         // stepping down from the portal
+      W.box(concrete,-side*.85,2.6,0,1.76,.12,.55);W.box(concrete,side*.85,1.7,0,1.76,.12,.55);         // their copings
+      if(side<0){W.box(dark,side*.9,.18,.235,.9,.95,.02);W.box(concrete,side*.9,1.13,.26,1.1,.13,.07);}   // a dark bay in the left one
     }
-    A.post(steel,1.7,3.95,-2.4,.16,1.1);A.post(steel,-1.5,3.95,-2.9,.12,.7);              // vents, where the roof meets the hill
+    // The railing along the roof's edge, painted steel; vents where the roof meets the hill.
+    for(let k=0;k<6;k++)A.post(railPaint,-2.9+k*1.16,3.95,1.68,.035,1.05);for(const y of [4.45,4.98])A.box(railPaint,0,y,1.68,5.9,.05,.05);
+    A.post(steel,1.7,3.95,-2.4,.16,1.1);A.post(steel,-1.5,3.95,-2.9,.12,.7);
+    // Scrub and vines on and over it.
+    for(const [x,z,k] of [[-2.4,-.3,1.3],[2.5,-1.6,1.1],[.4,-3.4,1.4],[-1.2,-4.2,1.2]])A.shape(SHRUB,leafMat,x,3.92,z,{sx:k*1.2,sy:k,sz:k*1.2});
+    for(const [x,w,d] of [[-1.85,1.1,1.7],[2.2,.9,1.3]])A.shape(VINE,vineMat,x,3.75,1.83,{sx:w,sy:d});
     const G=site(B.x,B.z,B.angle,null,'bunker');G.crate(-4.6,5.4,1.3,.3);G.crate(-5.9,4.9,1.15,-.4);G.barrel(-3.3,6.9);   // (v212: the barrel moved over by the crates, off the trail round the armour)
   }
   // The Jungle Ruin, on its knoll: lengths of broken wall (RUIN: v212 adds a west wall, a fallen
   // length on the north side and a corner tower), an arch you can walk through, columns and a floor
   // slab. Open on every side; the Raven SMG stands against the north wall, Quickhands inside the east one.
-  {const A=site(SITE.ruin.x,SITE.ruin.z,SITE.ruin.angle,null,'ruin');
-    A.box(stone,0,0,0,3.6,.14,2.8,{platform:true});                                       // the floor slab (a step up)
-    for(const [x,z,length,height,thick,ry] of RUIN)A.box(stone,x,0,z,length,height,thick,{ry,collide:true});
+  {const A=site(SITE.ruin.x,SITE.ruin.z,SITE.ruin.angle,null,'ruin'),rr=seeded(3215);
+    // v215 (the art pass, after the user's two references, at the spec's modest size): mossy ashlar
+    // walls on plinth courses with broken copings; a round arch of voussoirs on piers with capitals;
+    // fluted columns, one whole with its capital, the others broken; a pedestal by the arch; a broken
+    // paved path through it; vines hanging from the arch and the walls. Colliders as before, but
+    // for the pedestal's (new).
+    A.box(paving,0,0,0,3.6,.14,2.8,{platform:true});                                     // the floor slab (a step up)
+    RUIN.forEach(([x,z,length,height,thick,ry],k)=>{A.box(stone,x,0,z,length,height,thick,{ry,collide:true});
+      const W=A.sub(x,z,ry);W.box(stone,0,-.12,0,length+.18,.44,thick+.16);                // its plinth course
+      for(let j=0;j<Math.max(1,Math.round(length/1.6));j++){const w=.45+rr()*.5;if(rr()<.3)continue;W.box(stone,(rr()-.5)*(length-w),height,(rr()-.5)*.06,w,.16+rr()*.22,thick+.04,{rz:(rr()-.5)*.08});}   // broken coping stones
+      if(k===0)for(const along of [-1.7,-.4])W.shape(VINE,vineMat,along,height+.05,thick/2+.02,{sx:1.1,sy:1.4+rr()*.6});
+      if(k===1)W.shape(VINE,vineMat,-1,height+.05,thick/2+.02,{sx:1,sy:1.3});
+      if(k===2)W.shape(VINE,vineMat,.6,height+.05,-thick/2-.02,{sx:1.2,sy:1.5,ry:Math.PI});});
     A.box(stone,-6.1,2.5,-5.55,2.4,.9,.7,{ry:.12});A.box(stone,6.1,1.9,-.3,1.6,.7,.7,{ry:1.42});   // the north and east walls' higher ends
     A.box(stone,-8.75,2.2,.6,1.5,.6,.65,{ry:1.62});A.box(stone,8.2,3.4,-6.6,1.2,.5,1.2,{ry:.3});    // the west wall's, and the tower's broken top
-    for(const x of [-2.3,2.3])A.box(stone,x,0,5.6,.9,3.3,.9,{collide:true});A.box(stone,0,3.3,5.6,6,.7,.8);           // the arch
-    A.post(stone,-6.2,0,2.6,.5,1.4,{collide:true});A.box(stone,-5,0,3.6,1.5,.2,.8,{ry:.7,platform:true});       // a column stub, and its fallen drum
-    A.post(stone,2.2,0,-3.9,.42,2.6,{collide:true});A.post(stone,4.6,0,-3.5,.42,1.7,{collide:true});           // two more columns, one broken
+    // The arch: piers (v212's colliders) on plinths under capitals, and nine voussoirs turning a round
+    // arch over them, the keystone proud; vines over its face.
+    const SPRING=3.62,RI=1.85,RT=.62,RM=RI+RT/2,NV=9;
+    for(const x of [-2.3,2.3]){A.box(stone,x,0,5.6,.9,3.3,.9,{collide:true});A.box(stone,x,-.08,5.6,1.18,.48,1.18);A.box(stone,x,3.3,5.6,1.16,.32,1.16);}
+    for(let k=0;k<NV;k++){const a=Math.PI-(k+.5)*Math.PI/NV,key=k===(NV-1)/2,h=key?.8:RT,w=RM*Math.PI/NV*.965;
+      A.box(stone,RM*Math.cos(a),SPRING+RM*Math.sin(a)-h/2+(key?.06:0),5.6,w,h,key?.92:.86,{rz:a-Math.PI/2});}
+    for(const [x,z,d] of [[-1.1,6.06,1.9],[.9,6.06,1.5],[.3,5.14,1.6]])A.shape(VINE,vineMat,x,SPRING+Math.sqrt(Math.max(0,(RI+RT)**2-x*x))-.15,z,{sx:.95,sy:d,ry:z<5.6?Math.PI:0});
+    // Fluted columns: one standing whole with its base and capital, one broken, one a stump on its plinth;
+    // and a drum fallen from them (v212's low platform, now its shape).
+    {const tall=columnGeometry({radius:.42,height:3,seed:1});A.post(stone,2.2,0,-3.9,.42,2.6,{collide:true,visible:false});
+      A.box(stone,2.2,-.06,-3.9,1.08,.36,1.08);A.shape(tall,stone,2.2,.3,-3.9);A.shape(CAPITAL,stone,2.2,3.3,-3.9);A.box(stone,2.2,3.6,-3.9,1.22,.2,1.22);}
+    A.post(stone,4.6,0,-3.5,.42,1.7,{collide:true,visible:false});A.box(stone,4.6,-.06,-3.5,1.08,.36,1.08);A.shape(columnGeometry({radius:.42,height:1.45,broken:.45,seed:5}),stone,4.6,.3,-3.5);
+    A.post(stone,-6.2,0,2.6,.5,1.4,{collide:true,visible:false});A.box(stone,-6.2,-.06,2.6,1.25,.32,1.25);A.shape(columnGeometry({radius:.5,height:1.15,broken:.5,seed:2}),stone,-6.2,.26,2.6);
+    A.box(stone,-5,0,3.6,1.5,.2,.8,{ry:.7,platform:true,visible:false});A.shape(DRUM,stone,-5,-.22,3.6,{rz:Math.PI/2,ry:.7});
     for(const [x,z,ry] of [[1.2,-7.1,.4],[5.6,-8.6,-.3],[-9.6,-3.4,.9]])A.box(stone,x,-.25,z,.9,.5,.7,{ry,rz:.1});              // fallen blocks, half buried
+    // A pedestal beside the path, a carved panel on its face (new: it blocks).
+    A.box(stone,3.3,-.06,8,1.02,.32,1.02);A.box(stone,3.3,.26,8,.74,.86,.74);A.box(carved,3.3,.4,8.37,.48,.54,.02);A.box(stone,3.3,1.12,8,.98,.17,.98);A.block(3.3,8,1.02,1.02,1.3);
+    // The paved path, from the floor slab through the arch and out, its flags broken and missing.
+    for(let z=1.7;z<12.2;z+=.62)for(const x of [-.62,0,.62]){if(rr()<.24)continue;const w=.5+rr()*.3,d=.48+rr()*.22;A.box(paving,x+(rr()-.5)*.25+Math.sin(z*.35)*.4,-.04,z,w,.08,d,{ry:(rr()-.5)*.35});}
   }
   // Shipwreck Cove: what washed out of her, stacked up the beach (v212: three stacks of crates, the
   // shotgun against the middle one), with a barrel and planks.
@@ -527,6 +624,7 @@ void main(){
   {const A=site(SITE.camp.x,SITE.camp.z,SITE.camp.angle,null,'camp'),R=CAMP.ring;
     for(let k=0;k<10;k++){const a=k/10*TAU;A.box(stone,Math.cos(a)*.9,0,Math.sin(a)*.9,.34,.22,.28,{ry:-a});}           // the fire ring
     A.box(plank,0,.08,0,1.1,.13,.15,{ry:.6});A.box(plank,0,.14,0,1.1,.13,.15,{ry:-.5});A.box(glow,0,.02,0,.75,.07,.75);A.block(0,0,2.1,2.1,.4);   // its logs and embers
+    {const [fx,fz]=A.at(0,0);fireLight.position.set(fx,groundHeight(fx,fz)+.7,fz);}                             // v215: and its light
     for(const a of [1.15,TAU/2,TAU-1.15]){const L=A.sub(Math.sin(a)*2.3,Math.cos(a)*2.3,a+Math.PI/2);L.post(timber,0,0,0,.2,1.4,{rz:Math.PI/2});L.block(0,0,1.4,.45,.4);}   // log seats
     for(let k=0;k<CAMP.tents;k++){const ph=Math.PI/2+k*Math.PI/(CAMP.tents-1);ridgeTent(A.sub(Math.sin(ph)*R,Math.cos(ph)*R,ph-Math.PI/2),3,2.3,1.75);}
     for(const side of [-1,1]){const [x,z]=[side*CAMP.torch[0],CAMP.torch[1]];                                        // the torches at the opening
@@ -568,14 +666,16 @@ void main(){
   // and the stores beside it.
   {const A=site(SITE.cove.x,SITE.cove.z,SITE.cove.angle,null,'cove');
     A.box(timber,0,0,-1.9,5,2.9,.14,{collide:true});for(const x of [-2.4,2.4]){A.post(timber,x,0,1.7,.08,3.5,{collide:true});A.post(timber,x,0,-1.8,.08,3);}
-    A.box(roofMat,0,3.2,-.05,5.6,.1,4.3,{rx:-.13});
+    // v215: a deep thatched roof (after the user's aerial reference), overhanging, its eave fringed.
+    A.box(thatch,0,3.12,-.05,6.1,.32,4.9,{rx:-.13});A.box(thatch,0,3.42,-.05,6.3,.14,.5,{rx:-.13});
+    for(let k=0;k<9;k++)A.box(thatch,-2.8+k*.7,2.98+((k*7)%3)*.03,2.32,.72,.32,.08,{rx:-.13});
     // (v212: its bench is gone: the Glock 21's rack and Deadeye stand side by side against the back wall, facing the water.)
     A.crate(3.9,-.6,1.3,.2);A.crate(4.4,.9,1.1,-.6);A.barrel(-3.6,-1);A.barrel(-4.2,-.2);
   }
   // The Soul Forge's clearing: a stone dais in a ring of four standing stones, their marks alight.
   {const A=site(SITE.forge.x,SITE.forge.z,SITE.forge.angle,null,'forge');
     A.box(stone,0,0,0,3,.12,3,{platform:true});
-    for(let k=0;k<4;k++){const a=k*Math.PI/2+1.25,x=Math.cos(a)*6.3,z=Math.sin(a)*6.3;A.box(stone,x,0,z,.95,2.7+(k%2)*.4,.7,{ry:-a+Math.PI/2,rz:(k%2?-.06:.05),collide:true});
+    for(let k=0;k<4;k++){const a=k*Math.PI/2+1.25,x=Math.cos(a)*6.3,z=Math.sin(a)*6.3;A.box(forgeRock,x,0,z,.95,2.7+(k%2)*.4,.7,{ry:-a+Math.PI/2,rz:(k%2?-.06:.05),collide:true});
       A.box(rune,x-Math.cos(a)*.37,1.1,z-Math.sin(a)*.37,.12,.9,.04,{ry:-a+Math.PI/2});}
   }
   // North Beach: driftwood above the tide line (too low to block).
@@ -616,13 +716,17 @@ void main(){
   for(let tries=0;tries<500&&palmSpots.length<34;tries++){const a=Math.PI*(.86+rand()*.4),r=coastRadius(a)*(.5+rand()*.26),x=Math.cos(a)*r,z=Math.sin(a)*r;if(clear(x,z,3.4))palmSpots.push({x,z});}
   for(let tries=0;tries<3000&&palmSpots.length<46;tries++){const a=rand()*Math.PI*2,r=coastRadius(a)*(.56+rand()*.23),x=Math.cos(a)*r,z=Math.sin(a)*r;if(clear(x,z,5.5))palmSpots.push({x,z});}
   const trunkGeo=new T.CylinderGeometry(.15,.27,1,7,4);trunkGeo.translate(0,.5,0);
+  /* v215: the crowns are island-art.mjs's palmCrownGeometry now.
   const crownGeo=(()=>{const pos=[],nor=[],uv=[];
     for(let f=0;f<8;f++){const a=f/8*Math.PI*2+(f%2)*.2,dir=new T.Vector3(Math.cos(a),0,Math.sin(a)),side=new T.Vector3(-dir.z,0,dir.x);
       for(let s=0;s<5;s++){const t0=s/5,t1=(s+1)/5,p=t=>new T.Vector3().addScaledVector(dir,t*2.6).setY(.35*Math.sin(t*2.2)-t*t*1.5),w=t=>.42*Math.sin(Math.PI*Math.min(1,t*1.15+.05));
         const a0=p(t0),a1=p(t1),q=[a0.clone().addScaledVector(side,-w(t0)),a0.clone().addScaledVector(side,w(t0)),a1.clone().addScaledVector(side,-w(t1)),a1.clone().addScaledVector(side,w(t1))];
         for(const k of [0,2,1,1,2,3]){pos.push(...q[k].toArray());nor.push(0,1,0);uv.push(k&1,k>>1);}}}
-    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('normal',new T.Float32BufferAttribute(nor,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeBoundingSphere();return g;})();
-  const trunks=new T.InstancedMesh(trunkGeo,material(0x5d5142),palmSpots.length),crowns=new T.InstancedMesh(crownGeo,material(0x2e4a2b,{side:T.DoubleSide}),palmSpots.length);
+    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('normal',new T.Float32BufferAttribute(nor,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeBoundingSphere();return g;})(); */
+  // v215: ringed bark up the trunks (its texture wrapped round them, a metre a ring band), and crowns of
+  // drooping fronds with young ones rising (island-art.mjs), swaying a little.
+  const barkMap=TEX.bark.clone();barkMap.repeat.set(1,7.5);barkMap.needsUpdate=true;
+  const trunks=new T.InstancedMesh(trunkGeo,new T.MeshStandardMaterial({map:barkMap,color:0xcfc3b2,roughness:.95}),palmSpots.length),crowns=new T.InstancedMesh(palmCrownGeometry(7),foliage(TEX,'frond',{color:0xd8e8cc,sway:.06}),palmSpots.length);
   trunks.name='Palm trunks';crowns.name='Palm crowns';
   const m4=new T.Matrix4(),q4=new T.Quaternion(),e4=new T.Euler(),v4=new T.Vector3(),s4=new T.Vector3();
   palmSpots.forEach((p,i)=>{
@@ -631,7 +735,7 @@ void main(){
     const top=new T.Vector3(0,h,0).applyQuaternion(q4).add(v4.set(p.x,y,p.z));e4.set(0,rand()*Math.PI*2,0);q4.setFromEuler(e4);m4.compose(top,q4,s4.setScalar(.85+rand()*.35));crowns.setMatrixAt(i,m4);
     circleCollider(p.x,p.z,.28,y-1,y+h,'palm');p.top=top;
   });
-  trunks.castShadow=crowns.castShadow=true;trunks.computeBoundingSphere();crowns.computeBoundingSphere();world.add(trunks,crowns);solidMeshes.push(trunks,crowns);
+  trunks.castShadow=crowns.castShadow=true;trunks.receiveShadow=crowns.receiveShadow=true;trunks.computeBoundingSphere();crowns.computeBoundingSphere();world.add(trunks,crowns);solidMeshes.push(trunks,crowns);
 
   // Rocks: half-buried boulders. v210: on Radio Hill's flanks, thick on the bunker's ridge and
   // the cove's headland, and as reefs in the deep water off the north-east and north-west shores
@@ -645,7 +749,8 @@ void main(){
   for(const [bearing,count] of [[-Math.PI/4,9],[-Math.PI*3/4,9],[.95,4],[Math.PI-.42,3]])for(let k=0,tries=0;k<count&&tries<200;tries++){
     const a=bearing+(rand()-.5)*.5,r=coastRadius(a)*(1.13+rand()*.2),x=Math.cos(a)*r,z=Math.sin(a)*r,size=.9+rand()*1.7;
     if(groundHeight(x,z)<-ISLAND.wade-.5&&rockOk(x,z,size)){rockSpots.push({x,z,size,reef:true});k++;}}
-  const rocks=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),material(0x4d524c,{flatShading:true,roughness:.95}),rockSpots.length);rocks.name='Rocks';
+  // v215: weathered boulders (island-art.mjs), in the rock texture, a little damp-dark.
+  const rocks=new T.InstancedMesh(boulderGeometry(5),textured(TEX,'rock',{color:0xb8b8b0,roughness:.92,scale:.5}),rockSpots.length);rocks.name='Rocks';
   rockSpots.forEach((s,i)=>{const y=s.reef?-.35*s.size:groundHeight(s.x,s.z)-s.size*.35;e4.set(rand()*.6,rand()*Math.PI*2,rand()*.6);q4.setFromEuler(e4);m4.compose(v4.set(s.x,y,s.z),q4,s4.set(s.size*(1+rand()*.3),s.size*(s.reef?1:.75),s.size));rocks.setMatrixAt(i,m4);
     const top=y+s.size*.62;s.top=top;if(s.reef)return;circleCollider(s.x,s.z,s.size*.82,y-1,top,'rock');if(s.size<1.25)platforms.push({x:s.x,z:s.z,r:s.size*.7,top});});
   rocks.castShadow=rocks.receiveShadow=true;rocks.computeBoundingSphere();world.add(rocks);solidMeshes.push(rocks);
@@ -655,9 +760,34 @@ void main(){
   const brushSpots=[],bush=(x,z,size)=>{if(groundHeight(x,z)>.6&&Math.hypot(x-HILL.x,z-HILL.z)>HILL.flat+2&&stations.every(p=>Math.hypot(p.x-x,p.z-z)>3)&&trailDistance(x,z)>1.6)brushSpots.push({x,z,size});};
   for(const zone of shoreSpawns().interior)for(const [px,pz] of zone.points)for(let k=0;k<4;k++){const a=rand()*Math.PI*2,r=.8+rand()*2.6;bush(px+Math.cos(a)*r,pz+Math.sin(a)*r,.7+rand()*.7);}
   for(let k=0;k<26;k++){const a=rand()*Math.PI*2,r=coastRadius(a)*(.5+rand()*.26);bush(Math.cos(a)*r,Math.sin(a)*r,.6+rand()*.6);}
-  const brush=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),material(0x2f4a2c,{flatShading:true,roughness:1}),brushSpots.length);brush.name='Brush';
-  brushSpots.forEach((b,i)=>{e4.set(rand()*.5,rand()*Math.PI*2,rand()*.5);q4.setFromEuler(e4);m4.compose(v4.set(b.x,groundHeight(b.x,b.z)+b.size*.28,b.z),q4,s4.set(b.size*(1.1+rand()*.5),b.size*.62,b.size*(1.1+rand()*.4)));brush.setMatrixAt(i,m4);});
-  brush.receiveShadow=true;brush.computeBoundingSphere();world.add(brush);
+  // v215: leafy shrubs (island-art.mjs), where the grey-box had green stones. (The same places, and the
+  // same draws from `rand`, so everything placed after them stands where it did.)
+  const brush=new T.InstancedMesh(shrubGeometry(3),foliage(TEX,'leaves',{color:0xc8d8bc,sway:.035}),brushSpots.length);brush.name='Brush';
+  brushSpots.forEach((b,i)=>{e4.set(rand()*.5,rand()*Math.PI*2,rand()*.5);q4.setFromEuler(e4);e4.set(0,e4.y,0);q4.setFromEuler(e4);m4.compose(v4.set(b.x,groundHeight(b.x,b.z)-.05,b.z),q4,s4.set(b.size*(1.25+rand()*.5),b.size*1.05,b.size*(1.25+rand()*.4)));brush.setMatrixAt(i,m4);});
+  brush.castShadow=brush.receiveShadow=true;brush.computeBoundingSphere();world.add(brush);
+
+  // v215: ferns and grass (art only: nothing here blocks or hides anyone). Ferns deep round the ruin and
+  // under the palms; grass tufts wherever the ground is grassy, dune grass behind the beaches. Their own
+  // seeded draws, after everything above, so nothing that was placed before moves.
+  const plantRand=seeded(215),onTrail=(x,z,r)=>trailDistance(x,z)<r||stations.some(p=>Math.hypot(p.x-x,p.z-z)<2.4)||Math.hypot(x-ISLAND.spawn.x,z-ISLAND.spawn.z)<3||Math.hypot(x-HILL.x,z-HILL.z)<HILL.flat+1.2;
+  const slopeAt=(x,z)=>Math.hypot(groundHeight(x+.5,z)-groundHeight(x-.5,z),groundHeight(x,z+.5)-groundHeight(x,z-.5));
+  const fernSpots=[],tuftSpots=[];
+  for(let tries=0;tries<2600&&fernSpots.length<170;tries++){
+    let x,z;if(tries%3===0&&palmSpots.length){const p=palmSpots[Math.floor(plantRand()*palmSpots.length)],a=plantRand()*6.3,r=.9+plantRand()*2.4;x=p.x+Math.cos(a)*r;z=p.z+Math.sin(a)*r;}
+    else{const a=plantRand()*6.3,r=4+plantRand()*24;x=SITE.ruin.x+Math.cos(a)*r;z=SITE.ruin.z+Math.sin(a)*r*.9;}
+    const h=groundHeight(x,z);if(h<.6||onTrail(x,z,1.3))continue;const w=groundKind(x,z,h,slopeAt(x,z));if(w[1]<.45)continue;
+    fernSpots.push({x,z,y:h,size:.7+plantRand()*.6,turn:plantRand()*6.3});}
+  for(let tries=0;tries<16000&&tuftSpots.length<2200;tries++){
+    const a=plantRand()*6.3,r=coastRadius(a)*Math.sqrt(plantRand())*.97,x=Math.cos(a)*r,z=Math.sin(a)*r,h=groundHeight(x,z);if(h<.35||onTrail(x,z,.9))continue;
+    const w=groundKind(x,z,h,slopeAt(x,z)),dune=shoreFraction(x,z)>.74;if(w[1]<(dune?.3:.5)||plantRand()>w[1]*1.1)continue;
+    tuftSpots.push({x,z,y:h,w:.5+plantRand()*.5,h:(dune?.55:.35)+plantRand()*(dune?.5:.4),turn:plantRand()*6.3,dune});}
+  const ferns=new T.InstancedMesh(fernGeometry(),foliage(TEX,'fern',{color:0xd2e2c4,sway:.05}),fernSpots.length);ferns.name='Ferns';
+  fernSpots.forEach((f,i)=>{e4.set(0,f.turn,0);q4.setFromEuler(e4);m4.compose(v4.set(f.x,f.y-.04,f.z),q4,s4.setScalar(f.size));ferns.setMatrixAt(i,m4);});
+  const tufts=new T.InstancedMesh(tuftGeometry(),foliage(TEX,'tuft',{color:0xbccab2,sway:.09}),tuftSpots.length);tufts.name='Grass';
+  const duneTuft=new T.Color(1.18,1.1,.8),plainTuft=new T.Color(.92,1,.9);
+  tuftSpots.forEach((t,i)=>{e4.set(0,t.turn,0);q4.setFromEuler(e4);m4.compose(v4.set(t.x,t.y-.03,t.z),q4,s4.set(t.w,t.h,t.w));tufts.setMatrixAt(i,m4);tufts.setColorAt(i,t.dune?duneTuft:plainTuft);});
+  // (They take the moon's shadow but cast none: thousands of small cards would double their draws for little.)
+  for(const m of [ferns,tufts]){m.castShadow=false;m.receiveShadow=true;m.computeBoundingSphere();world.add(m);}
 
   // ---- Where you are ------------------------------------------------------------------------
   function zoneAt(x,z,y=groundHeight(x,z)){
@@ -670,7 +800,7 @@ void main(){
     return x<-10?(z<0?'THE JUNGLE':'PALM GROVE'):'THE LOWLANDS';
   }
   // The beacon blinks and the sea moves.
-  function update(elapsed){boathouseDoor.update(elapsed);seaMat.uniforms.time.value=elapsed;const on=(elapsed%ISLAND.beacon.period)<ISLAND.beacon.on;beaconMat.emissiveIntensity=on?3.2:.25;beaconLight.intensity=on?26:0;}
+  function update(elapsed){boathouseDoor.update(elapsed);seaMat.uniforms.time.value=elapsed;ART_UNIFORMS.time.value=elapsed;fireLight.intensity=3+.7*Math.sin(elapsed*13.1)+.45*Math.sin(elapsed*7.3+1.2)+.3*Math.sin(elapsed*23.7);const on=(elapsed%ISLAND.beacon.period)<ISLAND.beacon.on;beaconMat.emissiveIntensity=on?3.2:.25;beaconLight.intensity=on?26:0;}
 
   // ---- Routes (v206) ---------------------------------------------------------------------------
   // A flow field toward the player over the land and the wadeable shallows, in 0.5 m cells (fine
