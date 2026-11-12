@@ -24,17 +24,17 @@ import {createSignage} from './signage.mjs?v=94';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
-import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=218';
-import {loadIslandTextures} from './island-art.mjs?v=218';
+import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=219';
+import {loadIslandTextures} from './island-art.mjs?v=219';
 import {buildEnemyAssets} from './enemy-assets.mjs?v=207';
 import {createCrowd,enemyBody} from './crowd.mjs?v=123';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=218';
-import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=218';
-import {createTideLeaderboard} from './tide-leaderboard.mjs?v=218';
+import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=219';
+import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=219';
+import {createTideLeaderboard} from './tide-leaderboard.mjs?v=219';
 import {armorRank} from './armor.mjs?v=94';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html

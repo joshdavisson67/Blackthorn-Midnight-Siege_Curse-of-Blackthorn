@@ -29,6 +29,28 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide: the camp's cliff meets its sand (version 219)
+
+From the user: the sand and the cliff behind the Coastal Camp didn't connect; there was a big gap.
+
+- **The gap:** a trench up to a few metres deep along the cliff's top, between the plateau's sand and the rock rim at its edge.
+  - **Why:** the ground's mesh has vertices 1.5 m apart, too coarse to draw a 4.6 m step. Since v216 the mesh had been lowered under the rock rim so it couldn't show through the face. But its triangles started dropping before the rim began, which opened the trench.
+  - **The fix:** the cells round the cliff are now drawn five times finer (0.3 m), at the ground's own height. The plateau's sand runs straight up to the rim.
+    - Where a fine cell meets a coarse one, its edge follows the coarse cell's, so no crack opens between them.
+    - Under the rock, the last 0.45 m of the step is drawn at the sand's height, so the fine triangles can't poke out at the cliff's foot.
+- **The rock face** now stands at least 0.2 m out from the ground at every height, measured along each of its columns. With the step drawn finely, it would otherwise have shown through the face's hollows. It meets the sand where it did before.
+- **Also fixed: two ledges in the ground round the camp.**
+  - Either side of the camp's front, the ground stepped by up to 0.4 m along a line.
+  - Each direction's ramp took a shortest length of 7 m or 10 m, depending on whether the land 10 m out was higher or lower than the plateau. Where that land crossed the plateau's height, the length jumped.
+  - It now blends between the two over a metre either side.
+- **Tests** (`tests/dead-tide.mjs`) check that:
+  - no coarse cell near the camp has to draw the step;
+  - the mesh is the ground everywhere but under the cliff, and never above it;
+  - the rock face stands clear of the ground behind it;
+  - the ground round the camp has no ledges.
+- **Gameplay changes, by design:** only the ground where the ledges were, within a metre of the plateau's height.
+- TIERS
+
 ## Dead Tide: the dead's health compounds (version 218)
 
 From the user, after a run to threat level 67: it played far too easy.

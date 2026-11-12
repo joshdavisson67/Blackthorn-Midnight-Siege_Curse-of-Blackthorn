@@ -3,9 +3,9 @@
 // survival; each records its kills, time, threat level and rank, essence earned, headshots
 // and the game version. Served by /api/dead-tide-leaderboard (server/dead-tide-leaderboard.mjs)
 // or, on GitHub Pages, by Supabase (supabase/dead-tide-leaderboard.sql).
-import {CURRENT_VERSION} from './version.mjs?v=218';
+import {CURRENT_VERSION} from './version.mjs?v=219';
 import {createScoreboard,formatTime,usesSupabase,supabaseFetcher,SUPABASE_LEADERBOARD} from './scoreboard.mjs?v=214';
-import {threatLevel,threatRank} from './tide-threat.mjs?v=218';
+import {threatLevel,threatRank} from './tide-threat.mjs?v=219';
 export const TIDE_GAME_VERSION=String(CURRENT_VERSION);
 export const TIDE_RPC=Object.freeze({list:'get_dead_tide_leaderboard',submit:'submit_dead_tide_score'});
 const rankName=level=>threatRank(level).name;
