@@ -483,6 +483,60 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v214 (Dead Tide's run summary and its own leaderboard) against main (v213)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for both modes) on one machine, headless Chromium with software rendering. The mansion's board code moved into a module both modes share (`scoreboard.mjs`), so the mansion was measured in full.
+
+**The first build had a mansion regression, which is fixed.** It loaded one more file before playable (105 → 106: `scoreboard.mjs` beside `leaderboard-supabase.mjs`). Its module phase read +22.7 ms (SE 10.9). The Supabase helper now lives in `scoreboard.mjs`, so the mansion loads two leaderboard files, as before. `leaderboard-supabase.mjs` is kept as a re-export for older pages, and no page loads it now. The numbers below are for the fixed build.
+
+### Mansion: full protocol
+
+| | main (v213) | v214 |
+|---|---:|---:|
+| Files / KB before playable | 105 / 9,005 | 105 / 9,007 |
+| Module phase (60 pairs, this phase only) | 281.9 ms (median 277.1) | 281.1 ms (median 275.7): −0.9, SE 5.1 |
+| Time to playable (load phases, 20 pairs) | 46,885 ms | 46,978 ms (+93, SE 134) |
+| ↳ modules / world / shaders | 348 / 10,572 / 35,966 ms | 366 / 10,605 / 36,007 ms (all within noise) |
+| Shader programs, at load and after the fight | 89 | 89 |
+| Geometries / textures | 1,470 / 135 | 1,470 / 135 |
+| Heap after load / after the fight, after a collection | 235.6 / 238.7 MB | 235.7 / 238.7 MB |
+| Draw calls in the fixed views | identical | identical |
+| The 32-enemy fight: draw calls / triangles | 2,955 / 2,733K | 2,955 / 2,733K |
+| Frame logic (24 pairs, standard / full series) | 2.304 / 2.413 ms | 2.353 / 2.323 ms (+0.049, SE 0.046 / −0.090, SE 0.042) |
+
+- **The 20-pair load phases read the module phase at +18.9 ms (SE 11.7).** The file count is now the same as main's, so I timed that phase alone over 60 alternating pairs: −0.9 ms (SE 5.1). It is unchanged.
+- **The hall view's draw calls read 1,953 or 2,061 across runs of *both* builds** (main's own runs show both). This depends on the snapshot's timing, not the build. Every other view is identical in every run.
+- **The golden trace is identical.**
+
+### Dead Tide: full protocol
+
+| | main (v213) | v214 |
+|---|---:|---:|
+| Files / KB before playable | 65 / 2,109 | 68 / 2,131 |
+| Time to playable (load phases, 20 pairs) | 9,067 ms | 9,151 ms (+84, SE 98) |
+| ↳ modules / world / shaders | 296 / 1,464 / 7,306 ms | 297 / 1,460 / 7,394 ms (all within noise) |
+| Shader programs, at load and after play | 48 | 48 |
+| Geometries / textures | 277 / 29 | 277 / 29 |
+| Heap after load / after play, after a collection | 64.7 / 154.5 MB | 64.7 / 154.5 MB |
+| Draw calls in the fixed views | identical | identical |
+| The 45-enemy fight: draw calls / triangles | 301–302 / 303K–306K | 300–302 / 302K–306K |
+| Frame logic (24 pairs, standard / full series) | 0.339 / 0.297 ms | 0.332 / 0.294 ms (−0.007, SE 0.019 / −0.003, SE 0.010) |
+
+- **New content, its cost:** three files (`tide-leaderboard.mjs`, `scoreboard.mjs`, and `version.mjs`, which Dead Tide now loads for its board's version), plus the summary's and the board's markup and styles: 22 KB in all. The load phases show no measurable time for them.
+- **Nothing runs per frame:** the hit and headshot counts are two increments per hit. The board does no work until it is opened.
+- **The golden trace:** every gameplay channel matches main's. The screen, view and page hashes differ, because the death card now shows the summary and the board opens from it.
+- **Not measured:** real GPUs, integrated graphics, or frame rates in a real browser.
+
+### Mode picker: standard
+
+`modes.html` changed one line of text, with no differences from the base.
+
+### Site
+
+`scripts/build-verified.sh` builds the site with the new `/api/dead-tide-leaderboard` route.
+
+Files: `v214-siege.json` (the mansion's fetch list), `v214-siege-load-phases.jsonl`, `v214-siege-frame-logic.jsonl`, `v214-tide.jsonl`, `v214-tide-load-phases.jsonl`, `v214-tide-frame-logic.jsonl`, `v214-tier-summary.json`.
+
 ## v213 (the stations set into the landmarks) against main (v212)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. The reworked landmarks are new content; their costs are reported here.

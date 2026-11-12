@@ -76,7 +76,7 @@ Dead Tide step 6, from the design spec's sections 8.5 and 12 (the spec is now ke
   - The mansion's leaderboard tests pass unchanged on the shared board code.
   - `scripts/supabase-sql-check.mjs` (new tooling) runs both Supabase scripts in an embedded Postgres (PGlite): re-runnable, saving, ranking, retries, conflicts and refusals, and the mansion's board untouched. It passes.
   - **Dead Tide's golden trace:** the death scenario now opens the board from the summary and closes it. The test harness numbers run ids so two traces match; two runs are byte-identical.
-- **Release tiers:** TIERS
+- **Release tiers:** the mansion is **full** (it loads the shared board's files) and shows no measurable change: 105 files as before, +2 KB, and its module loading time is unchanged over 60 pairs (−0.9 ms, SE 5.1). The first build of this release loaded one more file there, and that is fixed. Dead Tide is **full**: 3 files and 22 KB more before playable, the new summary and board, with no other change. The mode picker is **standard**, with no differences. Details: `perf/README.md`.
 - **Not verified:** the live Supabase database (the script has to be run there by you) and the Cloudflare deployment of the new route.
 
 ## Dead Tide's stations, set into the landmarks (version 213)
