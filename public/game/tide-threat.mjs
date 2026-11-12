@@ -8,8 +8,10 @@
 //   level        floor(kills / 20) + 1, with no maximum
 //   rank         The Unease (1–5), The Hunt (6–13), The Swarm (14–23), The Apocalypse (24+)
 //   population   min(45, 8 + 2 × (level − 1))
-//   health       +4% of base a level for the first 25 levels (2× at level 26), then +1.5%
-//                of base a level, never above 4× (reached at level 160). Added, not compounded.
+//   health       compounded (v218): ×1.04 a level for the first 25 levels (2.67× at level 26),
+//                then ×1.015 a level, never above 4× (reached at level 54). v208–v217 added the
+//                same rates to the base instead (2× at 26, 4× only at level 160), which played
+//                far too easy by level 67.
 //   speed        +2% of base a level, never more than +50% (reached at level 26)
 //   damage       unchanged (spec 6.6): each kind's own multiple of the walker's 19.5
 //   mix          shares of each kind at anchor levels, stepped linearly between them
@@ -46,7 +48,7 @@ export function threatLevel(kills){return Math.floor(Math.max(0,kills|0)/R.kills
 export function threatProgress(kills){const k=Math.max(0,kills|0);return {level:threatLevel(k),into:k%R.killsPerLevel,of:R.killsPerLevel};}
 export function threatRank(level){let index=0;for(let i=0;i<R.ranks.length;i++)if(level>=R.ranks[i].from)index=i;return {index,name:R.ranks[index].name};}
 export function targetPopulation(level){const P=R.population;return Math.min(P.cap,P.start+P.perLevel*(Math.max(1,level)-1));}
-export function healthScale(level){const H=R.health,n=Math.max(0,level-1);return Math.min(H.cap,1+H.early*Math.min(n,H.earlyLevels)+H.late*Math.max(0,n-H.earlyLevels));}
+export function healthScale(level){const H=R.health,n=Math.max(0,level-1);return Math.min(H.cap,(1+H.early)**Math.min(n,H.earlyLevels)*(1+H.late)**Math.max(0,n-H.earlyLevels));}
 export function speedScale(level){const S=R.speed;return 1+Math.min(S.cap,S.perLevel*Math.max(0,level-1));}
 // A level's enemy stats, in the shape the shared spawner reads (rules.enemyStats).
 const statsCache=new Map();

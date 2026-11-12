@@ -553,6 +553,8 @@ Apply the multiplier to existing enemy-type base health rather than replacing th
 
 This prevents indefinite exponential health scaling from eventually making enemies effectively unkillable.
 
+**Decided (v218):** the increases compound: each level multiplies the last level's health by 1.04 (by 1.015 after the first 25 increases), reaching the 4× cap at level 54. The cap still stops the growth. Adding the same rates to the base instead (v208–v217, 4× only at level 160) played far too easy by threat level 67.
+
 ## 6.5 Enemy Movement Speed
 
 **Proposed starting balance:**

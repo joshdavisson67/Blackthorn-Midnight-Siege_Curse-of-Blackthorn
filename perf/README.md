@@ -483,6 +483,42 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v218 (Dead Tide's health compounds) against main (v217)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering, plus three checks of the load phases with `scripts/load-phases.mjs`.
+
+### Mansion and mode picker: quick
+
+Nothing either loads changed. Five of the mansion's files differ only in their version number.
+
+### Dead Tide: full protocol
+
+Only `tide-threat.mjs` changed: one line, the health formula. Seven more files differ only in their version keys.
+
+| | main (v217) | v218 |
+|---|---:|---:|
+| KB before playable | 3,188 | 3,188 |
+| Time to playable (the tool's 20 pairs) | 13,210 ms | 13,471 ms (+261, SE 63; see below) |
+| ↳ modules / world / shaders | 322 / 1,792 / 11,097 ms | 326 / 1,772 / 11,373 ms |
+| Draw calls in the fixed views | 86–210 | 86–210 (identical) |
+| The 45-enemy fight: draw calls / triangles | 383–386 / 485K–490K | 383–387 / 485K–491K |
+| Frame logic (24 pairs, standard / full series) | 0.458 / 0.430 ms | 0.472 / 0.434 ms (within noise) |
+
+- **The tool's loading time: noise, checked three ways.** Its 20 pairs put Dead Tide's shader phase 276 ms slower (SE 64), though nothing in the change runs differently while the island loads. Loading only asks for level 1's stats, and both formulas give exactly 1× there. Three more series of 16 alternating pairs:
+
+  | Check | Shaders | Total |
+  |---|---:|---:|
+  | main against v218, both unpacked from git the same way | +114 ms (SE 68) | +124 ms (SE 74), slower in 9 of 16 |
+  | main against an identical copy of main | +7 ms (SE 61) | −1 ms (SE 69) |
+  | v218 against v218 with only the old formula put back | +27 ms (SE 92) | +32 ms (SE 101), slower in 9 of 16 |
+
+  The last isolates the change: the formula costs nothing measurable to load. Under software rendering the shader phase swings by more than a second from run to run (10.7–12.3 s here).
+- **The fight's numbers** fall in the same spread as main's runs.
+- **The golden trace: 25 gameplay channels differ, by design.** At threat level 5 the dead now rise with 1.04⁴ = 1.17× the base health (a walker 108.8, was 107.9 at 1.16×). Kills then land at other moments, so later arrivals come at other places and of other kinds. No scenario failed.
+- **Not measured:** real GPUs, phones, or frame rates in a real browser.
+
+Files: `v218-tide.jsonl`, `v218-tide-load-phases.jsonl`, `v218-tide-load-checks.jsonl`, `v218-tide-frame-logic.jsonl`, `v218-tier-summary.json`.
+
 ## v217 (the picker's island art; Dead Tide no longer marked as a preview) against main (v216)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide, standard for the picker) on one machine, headless Chromium with software rendering, plus alternating picker pairs from `scripts/perf-measure.mjs --page modes.html`.
