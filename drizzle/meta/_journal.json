@@ -15,6 +15,13 @@
       "when": 1791688855736,
       "tag": "0001_nice_dark_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794438321692,
+      "tag": "0002_dead_tide_scores",
+      "breakpoints": true
     }
   ]
 }

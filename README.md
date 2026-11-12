@@ -29,6 +29,56 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide's run summary and its own leaderboard (version 214)
+
+Dead Tide step 6, from the design spec's sections 8.5 and 12 (the spec is now kept in the repo, `docs/dead-tide-spec.md`).
+
+- **The run summary.** When the tide takes you, the death card shows:
+  - enemies killed;
+  - time survived;
+  - the final threat level and rank;
+  - essence earned;
+  - headshots (and their share of your hits);
+  - weapons bought, perks and armour.
+
+  Then it offers the existing New Run and Title Screen, and **Save Score · Leaderboard**. Hits and headshots are counted as the HUD marks them; the game kept no count before.
+- **Dead Tide's own leaderboard**, apart from the mansion's:
+  - It opens from the title screen (LEADERBOARD) and from the summary.
+  - Runs rank by **enemies killed**, then the higher threat level, then the longer survival (spec 12.2).
+  - Each run records:
+    - its mode (`dead-tide`) and a unique run id;
+    - the name;
+    - kills, time survived, threat level and rank;
+    - essence earned and headshots;
+    - the game version.
+  - The mansion's safeguards carry over:
+    - a run is saved once (a retry never counts twice), and a changed resubmission is refused;
+    - names are cleaned;
+    - every field is checked on the server, which also refuses a threat level that does not match the kills and sets the rank itself;
+    - unsaved runs stay on this device for retry, apart from the mansion's.
+- **Storage:** a new `dead_tide_scores` table. The mansion's `leaderboard_scores` table, its records and its functions are untouched.
+  - **Cloudflare** (the Sites build): migration `drizzle/0002_dead_tide_scores.sql` (new table only), `server/dead-tide-leaderboard.mjs` and the route `/api/dead-tide-leaderboard`.
+  - **Supabase** (the GitHub Pages build): `supabase/dead-tide-leaderboard.sql`, two new functions beside the mansion's. **It must be run once, by hand, in the Supabase SQL Editor**; until then the Pages build's Dead Tide board says it cannot load and keeps runs on the device to retry. It is safe to re-run.
+- **One board, two modes.** The mansion's board code is now shared (`scoreboard.mjs`): `leaderboard.mjs` keeps the mansion's runs, rows and wording exactly as they were, and `tide-leaderboard.mjs` gives Dead Tide its own. `leaderboard-supabase.mjs` takes the functions' names (the mansion's by default).
+- Dead Tide's controls card no longer says "no stations yet".
+- **Proof:**
+  - `tests/leaderboard-tide.mjs` (new):
+    - the server checks every field, the mode, and that the level matches the kills; the rank is its own;
+    - ranking by kills, then the longer survival; a retry counts once, a changed resubmission is refused, cross-site posts are refused;
+    - the mansion's board holds only its own runs;
+    - on Dead Tide's page, a run ends on the summary, is kept on the device, apart from the mansion's, and saves once; another visitor sees it;
+    - on GitHub Pages it calls only Dead Tide's Supabase functions.
+  - `tests/dead-tide.mjs`:
+    - the death card's summary, with every figure;
+    - the run queued for Dead Tide's board, not the mansion's;
+    - Save Score opens the board with the run ready to name, and Esc closes it;
+    - a pause shows no summary.
+  - The mansion's leaderboard tests pass unchanged on the shared board code.
+  - `scripts/supabase-sql-check.mjs` (new tooling) runs both Supabase scripts in an embedded Postgres (PGlite): re-runnable, saving, ranking, retries, conflicts and refusals, and the mansion's board untouched. It passes.
+  - **Dead Tide's golden trace:** the death scenario now opens the board from the summary and closes it. The test harness numbers run ids so two traces match; two runs are byte-identical.
+- **Release tiers:** TIERS
+- **Not verified:** the live Supabase database (the script has to be run there by you) and the Cloudflare deployment of the new route.
+
 ## Dead Tide's stations, set into the landmarks (version 213)
 
 The stations from v212, set into the landmarks round them, and the landmarks reworked to hold them. One ammunition station remains. The mansion is unchanged; no file it loads changed. (This work was first pushed to v212's branch after v212 had been merged, so it ships here, under new cache keys.)

@@ -137,8 +137,10 @@ const scenarios={
   katana:{frames:420,setup:()=>{G().run.inventory.katana.owned=true;},script:f=>f===1?()=>key('Digit7'):[20,60,100].includes(f)?()=>qa.shoot():f===220?()=>canvas.events.mousedown({button:0,preventDefault(){}}):f===330?()=>listeners.mouseup({button:0}):f===380?()=>key('Digit1'):null,
     watch:()=>{note('katana: slashing',G().swing?.active);note('katana: third slash',G().swing?.kind===2);}},
   // Grenades and death: a safe throw, a blast at your feet, the tide taking you, and New Run.
-  death:{frames:540,script:f=>f===1?()=>{qa.setAim(0,-.2);key('KeyG');}:f===2?()=>keyUp('KeyG'):f===300?()=>qa.explode(G().player.clone().add(new T.Vector3(1,.3,0))):f===340?()=>qa.hurtPlayer(500):f===420?()=>$('restart').onclick():null,
-    watch:()=>note('death: dead',G().mode==='dead')},
+  // v214: the run summary on the death card, and the leaderboard opened from it and closed again.
+  death:{frames:540,script:f=>f===1?()=>{qa.setAim(0,-.2);key('KeyG');}:f===2?()=>keyUp('KeyG'):f===300?()=>qa.explode(G().player.clone().add(new T.Vector3(1,.3,0))):f===340?()=>qa.hurtPlayer(500):
+      f===370?()=>$('leaderboardDead')?.dispatchEvent(new document.defaultView.Event('click')):f===390?()=>key('Escape'):f===420?()=>$('restart').onclick():null,
+    watch:()=>{note('death: dead',G().mode==='dead');note('death: summary',!!$('tideSummary')&&!$('tideSummary').classList.contains('hidden'));note('death: leaderboard',!!$('leaderboard')&&!$('leaderboard').classList.contains('hidden'));}},
   // v206, the dead come ashore: the shore at its usual eight. You hold the south beach, turning
   // to the nearest walker and firing (reloading when empty, a grenade once), then hold the
   // summit of Radio Hill as they climb after you; they strike, you fall or survive.

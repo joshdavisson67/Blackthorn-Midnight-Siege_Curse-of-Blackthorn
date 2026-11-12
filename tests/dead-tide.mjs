@@ -239,7 +239,7 @@ const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsla
 
 // ---- 4. Playing Dead Tide ---------------------------------------------------------------
 // The harness (tests/tide-harness.mjs, v206) loads tide.mjs on the three.js stand-in.
-const {qa,frames,$,listeners,windowEvents,canvas,document,random,entry}=await import('./tide-harness.mjs'),enter=entry();
+const {qa,frames,$,listeners,windowEvents,canvas,document,random,entry,storage}=await import('./tide-harness.mjs'),enter=entry();
 const G=()=>qa.get(),key=e=>listeners.keydown({preventDefault(){},...e});
 try{
   // Loading: the island is built, its shaders compiled, and the title screen waits.
@@ -330,10 +330,28 @@ try{
   frames(60*4);assert.equal(G().explosionFx.bursts,bursts+1,'It bursts on the island');assert(G().run.health===100,'far enough away to be safe');
   // Too close: a blast hurts, and the tide takes you.
   qa.explode(G().player.clone().add(new T.Vector3(1,.3,0)));assert.equal(G().run.health,75,'A blast within 3 m hurts');frames(10);
+  {const R=G().run;R.kills=263;R.totalScore=41250;R.runTime=1234.6;R.perkOwned.add('quick');R.armorTier=2;R.inventory.smg.owned=true;}
   qa.hurtPlayer(500);assert.equal(G().mode,'dead');assert.equal($('pauseTitle').textContent,'The tide takes you.');assert(!$('pause').classList.contains('hidden')&&$('resume').classList.contains('hidden'));
+  // v214: the run summary (spec 8.5): kills, time, final threat level and rank, essence earned,
+  // headshots and the other combat statistics the game keeps; then the existing New Run and title options.
+  {const summary=Object.fromEntries([...$('tideSummary').querySelectorAll('div')].map(d=>[d.querySelector('dt').textContent,d.querySelector('dd').textContent]));
+   assert(!$('tideSummary').classList.contains('hidden'),'The death card shows the run’s summary');
+   assert.deepEqual(summary,{'Enemies killed':'263','Time survived':'20:34','Threat level':'14','Threat rank':'THE SWARM','Essence earned':'41,250','Headshots':summary.Headshots,'Weapons bought':summary['Weapons bought'],'Perks':'1 of 4','Armour':'Nano Shield rank 1'});
+   assert(/^\d+( \(\d+% of hits\))?$/.test(summary.Headshots),`with headshots (${summary.Headshots})`);
+   assert(Number(summary['Weapons bought'])>=1,'and the weapons bought (the SMG among them)');
+   assert(!$('restart').classList.contains('hidden')&&!$('mainMenuPause').classList.contains('hidden'),'and the existing New Run and title options');
+   // The run is kept for Dead Tide's own leaderboard (not the mansion's), saved only if you name it there.
+   const queued=JSON.parse(storage.get('blackthorn-dead-tide-queue-v1'));assert.equal(queued.runs.length,1);
+   assert.deepEqual({...queued.runs[0].stats,id:undefined,version:undefined},{id:undefined,mode:'dead-tide',kills:263,threatLevel:14,duration:1234,score:41250,headshots:queued.runs[0].stats.headshots,version:undefined});
+   assert(!storage.has('blackthorn-leaderboard-queue-v1'),'apart from the mansion’s');
+   assert(!$('leaderboardDead').classList.contains('hidden'),'Save Score opens the leaderboard from the summary');
+   $('leaderboardDead').dispatchEvent(new document.defaultView.Event('click'));
+   assert(!$('leaderboard').classList.contains('hidden')&&$('runSummary').textContent.includes('263 KILLS · THREAT 14 / THE SWARM'),'with the run ready to name');
+   key({code:'Escape'});assert($('leaderboard').classList.contains('hidden')&&G().mode==='dead','Esc closes it, back on the summary');}
   $('restart').onclick();await Promise.resolve();holdShore();assert.equal(G().mode,'playing','New Run starts at once after a death');assert.equal(G().run.health,100);assert.equal(G().run.grenades,3);
   // Pausing, settings, the controls card, and back to the title.
   key({code:'Escape'});assert.equal(G().mode,'paused');assert(!$('pause').classList.contains('hidden'));assert($('pauseText').textContent.startsWith('South beach · 0 kills'));
+  assert($('tideSummary').classList.contains('hidden')&&$('leaderboardDead').classList.contains('hidden'),'A pause shows no run summary');
   $('settingsPause').onclick();assert(!$('pauseSettings').classList.contains('hidden'));assert.equal($('settingsEyebrow').textContent,'DEAD TIDE / PAUSED');
   key({code:'Escape'});assert($('pauseSettings').classList.contains('hidden'),'Esc closes Settings');
   $('controlsPause').onclick();assert(!$('controlsCard').classList.contains('hidden'));key({code:'Escape'});assert($('controlsCard').classList.contains('hidden'),'Esc closes the controls card');

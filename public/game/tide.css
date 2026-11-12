@@ -37,3 +37,12 @@ body.touch-playing .threatStats{display:none}
 body.touch-playing .threatHud .round{min-width:120px}
 /* No map yet, so touch play has no MAP button. */
 .deadTide #touchMap{display:none}
+/* v214: the run summary on the death card, and the leaderboard's Dead Tide columns. */
+.deadTide .tideSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 18px;margin:14px 0 18px;text-align:left}
+.deadTide .tideSummary.hidden{display:none}
+.deadTide .tideSummary div{border-left:2px solid #7fd3c766;padding:4px 0 4px 10px}
+.deadTide .tideSummary dt{font-size:10px;letter-spacing:2px;color:#a7cdc8;text-transform:uppercase}
+.deadTide .tideSummary dd{margin:2px 0 0;font-size:17px;color:#e6f2ee;font-weight:700}
+.deadTide .tideBoard td:nth-child(3){color:#9fe6da;font-weight:700}
+.deadTide .tideBoard td:nth-child(6){color:#d7ded5;font-weight:400;white-space:nowrap;min-width:0;font-size:14px}
+@media(max-width:600px){.deadTide .tideSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
