@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Blackthorn — Dead Tide</title><meta name="description" content="Dead Tide, Blackthorn's island survival mode. An early preview on a moonlit island: the dead come ashore, and the threat rises every 20 kills."><link rel="stylesheet" href="style.css?v=216"><link rel="stylesheet" href="tide.css?v=216"></head><body class="deadTide">
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Blackthorn — Dead Tide</title><meta name="description" content="Dead Tide, Blackthorn's island survival mode. A moonlit island, long abandoned: the dead come ashore, and the threat rises every 20 kills."><link rel="stylesheet" href="style.css?v=217"><link rel="stylesheet" href="tide.css?v=217"></head><body class="deadTide">
 <!-- v204 (Dead Tide step 2): Dead Tide's own page. It loads tide-boot.js and tide.mjs,
      never boot.js, game.js or anything that builds the mansion. -->
 <canvas id="game" tabindex="0" aria-label="Dead Tide 3D island survival game"></canvas><div id="film"></div><div id="damage"></div><div id="nukeFlash" aria-hidden="true"></div>
@@ -61,17 +61,15 @@
 <section id="menu">
   <div class="menuContent">
     <div class="menuBrand">
-    <div class="eyebrow"><span></span> BLACKTHORN · THE SECOND MODE</div>
     <p class="menuGameTitle">CALL OF ZOMBIES</p>
     <h1 class="tideTitle" aria-label="Dead Tide">DEAD <em>TIDE</em></h1>
     <div class="menuTagline">
-      <p class="subtitle">E A R L Y &nbsp; P R E V I E W</p>
-      <p class="estateTagline">A moonlit island, long abandoned: a rusting wreck, a sealed bunker, a ruin in the jungle. The dead come out of the surf, every twenty kills the threat rises, and the stations round the island sell guns, perks, armour and ammunition. The most kills top the island’s own leaderboard.</p>
+      <p class="estateTagline">A moonlit island, long abandoned.</p>
     </div>
     </div>
     <div class="menuActions">
     <button id="start" data-pad-default>WADE ASHORE <span>→</span></button>
-    <div class="menuMeta"><span>ONE ISLAND</span><span>NO WAVES</span><span>IN DEVELOPMENT</span></div>
+    <div class="menuMeta"><span>ONE ISLAND</span><span>NO WAVES</span></div>
     <nav class="menuLinks" aria-label="Dead Tide menu"><button id="modesLink" class="textBtn" type="button">◂ ALL MODES</button><button id="leaderboardMenu" class="textBtn" type="button">LEADERBOARD</button><button id="settingsMenu" class="textBtn" type="button">SETTINGS</button><button id="controlsMenu" class="textBtn" type="button">CONTROLS</button></nav>
     </div>
   </div>
@@ -171,4 +169,4 @@
 </section>
 <!-- v214: Dead Tide's own leaderboard (spec 12), the mansion's board's layout and element ids. -->
 <section id="leaderboard" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle"><div class="card leaderboardCard tideBoard"><div class="leaderboardHeading"><div><small>DEAD TIDE / SHARED SCORES</small><h2 id="leaderboardTitle">The tide keeps count.</h2></div><button id="leaderboardClose" class="textBtn" aria-label="Close leaderboard">BACK · ESC</button></div><p class="leaderboardIntro">Dead Tide's own board, apart from the mansion's. One shared board for everyone with the game link.</p><p id="runSummary" class="runSummary hidden"></p><form id="scoreForm" class="hidden"><label id="pendingRunPickerLabel" for="pendingRunPicker" class="hidden">UNSAVED RUN<select id="pendingRunPicker" aria-label="Choose an unsaved run"></select></label><label for="leaderboardName">YOUR NAME</label><div class="scoreFormRow"><input id="leaderboardName" name="name" type="text" maxlength="48" autocomplete="nickname" placeholder="Enter your name" required><button id="leaderboardSubmit" type="submit">ADD MY SCORE</button></div></form><p id="scoreSaveStatus" role="status" aria-live="polite"></p><div class="leaderboardTools"><p id="leaderboardStatus" role="status" aria-live="polite">Top 50 runs · Most kills first · Updates every 15s</p><button id="leaderboardRefresh" class="textBtn">REFRESH</button></div><div class="leaderboardTableWrap"><table><thead><tr><th scope="col">RANK</th><th scope="col">SURVIVOR</th><th scope="col">KILLS</th><th scope="col">THREAT</th><th scope="col">TIME</th><th scope="col">ESSENCE</th></tr></thead><tbody id="leaderboardRows"></tbody></table></div><p class="leaderboardNote">Runs rank by enemies killed. Ties favor the higher threat level, then the longer survival.</p><button id="leaderboardNewRun" class="secondary hidden">NEW RUN →</button></div></section>
-<div id="loading">PREPARING THE ISLAND <span>...</span></div><div id="error" class="hidden"><h2>The island could not open.</h2><p id="errorDetails"></p><button id="retry" class="secondary">RELOAD</button></div><script src="tide-boot.js?v=216" defer></script></body></html>
+<div id="loading">PREPARING THE ISLAND <span>...</span></div><div id="error" class="hidden"><h2>The island could not open.</h2><p id="errorDetails"></p><button id="retry" class="secondary">RELOAD</button></div><script src="tide-boot.js?v=217" defer></script></body></html>
