@@ -1,0 +1,96 @@
+{"check":"main vs v218, both from git archive","pair":1,"label":"b218","page":"tide.html","modulesMs":302,"worldMs":1647,"shadersMs":10781,"totalMs":12731}
+{"check":"main vs v218, both from git archive","pair":1,"label":"h218","page":"tide.html","modulesMs":314,"worldMs":1631,"shadersMs":10758,"totalMs":12703}
+{"check":"main vs v218, both from git archive","pair":2,"label":"h218","page":"tide.html","modulesMs":373,"worldMs":1701,"shadersMs":11076,"totalMs":13150}
+{"check":"main vs v218, both from git archive","pair":2,"label":"b218","page":"tide.html","modulesMs":287,"worldMs":1734,"shadersMs":11024,"totalMs":13045}
+{"check":"main vs v218, both from git archive","pair":3,"label":"b218","page":"tide.html","modulesMs":270,"worldMs":1887,"shadersMs":10852,"totalMs":13009}
+{"check":"main vs v218, both from git archive","pair":3,"label":"h218","page":"tide.html","modulesMs":280,"worldMs":1907,"shadersMs":11565,"totalMs":13752}
+{"check":"main vs v218, both from git archive","pair":4,"label":"h218","page":"tide.html","modulesMs":345,"worldMs":1778,"shadersMs":11177,"totalMs":13299}
+{"check":"main vs v218, both from git archive","pair":4,"label":"b218","page":"tide.html","modulesMs":331,"worldMs":1568,"shadersMs":10765,"totalMs":12664}
+{"check":"main vs v218, both from git archive","pair":5,"label":"b218","page":"tide.html","modulesMs":306,"worldMs":1756,"shadersMs":10643,"totalMs":12705}
+{"check":"main vs v218, both from git archive","pair":5,"label":"h218","page":"tide.html","modulesMs":308,"worldMs":1713,"shadersMs":10672,"totalMs":12693}
+{"check":"main vs v218, both from git archive","pair":6,"label":"h218","page":"tide.html","modulesMs":318,"worldMs":1554,"shadersMs":10532,"totalMs":12404}
+{"check":"main vs v218, both from git archive","pair":6,"label":"b218","page":"tide.html","modulesMs":314,"worldMs":1621,"shadersMs":10478,"totalMs":12413}
+{"check":"main vs v218, both from git archive","pair":7,"label":"b218","page":"tide.html","modulesMs":299,"worldMs":1637,"shadersMs":10796,"totalMs":12732}
+{"check":"main vs v218, both from git archive","pair":7,"label":"h218","page":"tide.html","modulesMs":334,"worldMs":1693,"shadersMs":10733,"totalMs":12759}
+{"check":"main vs v218, both from git archive","pair":8,"label":"h218","page":"tide.html","modulesMs":306,"worldMs":1674,"shadersMs":10779,"totalMs":12758}
+{"check":"main vs v218, both from git archive","pair":8,"label":"b218","page":"tide.html","modulesMs":363,"worldMs":1710,"shadersMs":10735,"totalMs":12808}
+{"check":"main vs v218, both from git archive","pair":9,"label":"b218","page":"tide.html","modulesMs":273,"worldMs":1690,"shadersMs":10548,"totalMs":12511}
+{"check":"main vs v218, both from git archive","pair":9,"label":"h218","page":"tide.html","modulesMs":299,"worldMs":1697,"shadersMs":10590,"totalMs":12586}
+{"check":"main vs v218, both from git archive","pair":10,"label":"h218","page":"tide.html","modulesMs":328,"worldMs":1609,"shadersMs":10572,"totalMs":12509}
+{"check":"main vs v218, both from git archive","pair":10,"label":"b218","page":"tide.html","modulesMs":253,"worldMs":1707,"shadersMs":10291,"totalMs":12250}
+{"check":"main vs v218, both from git archive","pair":11,"label":"b218","page":"tide.html","modulesMs":302,"worldMs":1739,"shadersMs":10624,"totalMs":12665}
+{"check":"main vs v218, both from git archive","pair":11,"label":"h218","page":"tide.html","modulesMs":360,"worldMs":1632,"shadersMs":10561,"totalMs":12553}
+{"check":"main vs v218, both from git archive","pair":12,"label":"h218","page":"tide.html","modulesMs":283,"worldMs":1679,"shadersMs":10569,"totalMs":12532}
+{"check":"main vs v218, both from git archive","pair":12,"label":"b218","page":"tide.html","modulesMs":304,"worldMs":1696,"shadersMs":10857,"totalMs":12856}
+{"check":"main vs v218, both from git archive","pair":13,"label":"b218","page":"tide.html","modulesMs":351,"worldMs":1525,"shadersMs":10980,"totalMs":12856}
+{"check":"main vs v218, both from git archive","pair":13,"label":"h218","page":"tide.html","modulesMs":289,"worldMs":1779,"shadersMs":10997,"totalMs":13065}
+{"check":"main vs v218, both from git archive","pair":14,"label":"h218","page":"tide.html","modulesMs":292,"worldMs":1683,"shadersMs":11198,"totalMs":13173}
+{"check":"main vs v218, both from git archive","pair":14,"label":"b218","page":"tide.html","modulesMs":274,"worldMs":1765,"shadersMs":10572,"totalMs":12610}
+{"check":"main vs v218, both from git archive","pair":15,"label":"b218","page":"tide.html","modulesMs":334,"worldMs":1747,"shadersMs":10936,"totalMs":13016}
+{"check":"main vs v218, both from git archive","pair":15,"label":"h218","page":"tide.html","modulesMs":332,"worldMs":1638,"shadersMs":11127,"totalMs":13097}
+{"check":"main vs v218, both from git archive","pair":16,"label":"h218","page":"tide.html","modulesMs":327,"worldMs":1659,"shadersMs":10461,"totalMs":12448}
+{"check":"main vs v218, both from git archive","pair":16,"label":"b218","page":"tide.html","modulesMs":343,"worldMs":1617,"shadersMs":10666,"totalMs":12626}
+{"check":"main vs an identical copy of main","pair":1,"label":"b218","page":"tide.html","modulesMs":338,"worldMs":1713,"shadersMs":10851,"totalMs":12902}
+{"check":"main vs an identical copy of main","pair":1,"label":"b218b","page":"tide.html","modulesMs":298,"worldMs":1763,"shadersMs":10916,"totalMs":12977}
+{"check":"main vs an identical copy of main","pair":2,"label":"b218b","page":"tide.html","modulesMs":287,"worldMs":1802,"shadersMs":10981,"totalMs":13071}
+{"check":"main vs an identical copy of main","pair":2,"label":"b218","page":"tide.html","modulesMs":336,"worldMs":1664,"shadersMs":11141,"totalMs":13140}
+{"check":"main vs an identical copy of main","pair":3,"label":"b218","page":"tide.html","modulesMs":311,"worldMs":1759,"shadersMs":11228,"totalMs":13298}
+{"check":"main vs an identical copy of main","pair":3,"label":"b218b","page":"tide.html","modulesMs":312,"worldMs":1687,"shadersMs":11378,"totalMs":13376}
+{"check":"main vs an identical copy of main","pair":4,"label":"b218b","page":"tide.html","modulesMs":322,"worldMs":1764,"shadersMs":11001,"totalMs":13086}
+{"check":"main vs an identical copy of main","pair":4,"label":"b218","page":"tide.html","modulesMs":312,"worldMs":1758,"shadersMs":10772,"totalMs":12842}
+{"check":"main vs an identical copy of main","pair":5,"label":"b218","page":"tide.html","modulesMs":302,"worldMs":1748,"shadersMs":10805,"totalMs":12854}
+{"check":"main vs an identical copy of main","pair":5,"label":"b218b","page":"tide.html","modulesMs":322,"worldMs":1875,"shadersMs":10806,"totalMs":13002}
+{"check":"main vs an identical copy of main","pair":6,"label":"b218b","page":"tide.html","modulesMs":299,"worldMs":1844,"shadersMs":11228,"totalMs":13371}
+{"check":"main vs an identical copy of main","pair":6,"label":"b218","page":"tide.html","modulesMs":303,"worldMs":1715,"shadersMs":10816,"totalMs":12834}
+{"check":"main vs an identical copy of main","pair":7,"label":"b218","page":"tide.html","modulesMs":292,"worldMs":1715,"shadersMs":11178,"totalMs":13185}
+{"check":"main vs an identical copy of main","pair":7,"label":"b218b","page":"tide.html","modulesMs":335,"worldMs":1710,"shadersMs":10791,"totalMs":12837}
+{"check":"main vs an identical copy of main","pair":8,"label":"b218b","page":"tide.html","modulesMs":291,"worldMs":1759,"shadersMs":11061,"totalMs":13110}
+{"check":"main vs an identical copy of main","pair":8,"label":"b218","page":"tide.html","modulesMs":286,"worldMs":1758,"shadersMs":10765,"totalMs":12808}
+{"check":"main vs an identical copy of main","pair":9,"label":"b218","page":"tide.html","modulesMs":308,"worldMs":1751,"shadersMs":10860,"totalMs":12919}
+{"check":"main vs an identical copy of main","pair":9,"label":"b218b","page":"tide.html","modulesMs":315,"worldMs":1836,"shadersMs":10649,"totalMs":12799}
+{"check":"main vs an identical copy of main","pair":10,"label":"b218b","page":"tide.html","modulesMs":301,"worldMs":1797,"shadersMs":10608,"totalMs":12705}
+{"check":"main vs an identical copy of main","pair":10,"label":"b218","page":"tide.html","modulesMs":333,"worldMs":1744,"shadersMs":10623,"totalMs":12700}
+{"check":"main vs an identical copy of main","pair":11,"label":"b218","page":"tide.html","modulesMs":350,"worldMs":1710,"shadersMs":10501,"totalMs":12561}
+{"check":"main vs an identical copy of main","pair":11,"label":"b218b","page":"tide.html","modulesMs":291,"worldMs":1619,"shadersMs":10836,"totalMs":12746}
+{"check":"main vs an identical copy of main","pair":12,"label":"b218b","page":"tide.html","modulesMs":317,"worldMs":1735,"shadersMs":10759,"totalMs":12811}
+{"check":"main vs an identical copy of main","pair":12,"label":"b218","page":"tide.html","modulesMs":300,"worldMs":1783,"shadersMs":10675,"totalMs":12758}
+{"check":"main vs an identical copy of main","pair":13,"label":"b218","page":"tide.html","modulesMs":301,"worldMs":1712,"shadersMs":10981,"totalMs":12994}
+{"check":"main vs an identical copy of main","pair":13,"label":"b218b","page":"tide.html","modulesMs":336,"worldMs":1681,"shadersMs":10715,"totalMs":12731}
+{"check":"main vs an identical copy of main","pair":14,"label":"b218b","page":"tide.html","modulesMs":297,"worldMs":1616,"shadersMs":10529,"totalMs":12443}
+{"check":"main vs an identical copy of main","pair":14,"label":"b218","page":"tide.html","modulesMs":342,"worldMs":1648,"shadersMs":10445,"totalMs":12434}
+{"check":"main vs an identical copy of main","pair":15,"label":"b218","page":"tide.html","modulesMs":307,"worldMs":1828,"shadersMs":10970,"totalMs":13104}
+{"check":"main vs an identical copy of main","pair":15,"label":"b218b","page":"tide.html","modulesMs":361,"worldMs":1689,"shadersMs":10801,"totalMs":12852}
+{"check":"main vs an identical copy of main","pair":16,"label":"b218b","page":"tide.html","modulesMs":289,"worldMs":1596,"shadersMs":10792,"totalMs":12677}
+{"check":"main vs an identical copy of main","pair":16,"label":"b218","page":"tide.html","modulesMs":288,"worldMs":1869,"shadersMs":11122,"totalMs":13279}
+{"check":"v218 vs v218 with only the old formula","pair":1,"label":"h218r","page":"tide.html","modulesMs":350,"worldMs":1681,"shadersMs":11246,"totalMs":13277}
+{"check":"v218 vs v218 with only the old formula","pair":1,"label":"h218","page":"tide.html","modulesMs":412,"worldMs":1495,"shadersMs":10563,"totalMs":12470}
+{"check":"v218 vs v218 with only the old formula","pair":2,"label":"h218","page":"tide.html","modulesMs":325,"worldMs":1795,"shadersMs":10843,"totalMs":12964}
+{"check":"v218 vs v218 with only the old formula","pair":2,"label":"h218r","page":"tide.html","modulesMs":324,"worldMs":1863,"shadersMs":10957,"totalMs":13144}
+{"check":"v218 vs v218 with only the old formula","pair":3,"label":"h218r","page":"tide.html","modulesMs":369,"worldMs":1697,"shadersMs":10757,"totalMs":12823}
+{"check":"v218 vs v218 with only the old formula","pair":3,"label":"h218","page":"tide.html","modulesMs":270,"worldMs":1925,"shadersMs":10876,"totalMs":13071}
+{"check":"v218 vs v218 with only the old formula","pair":4,"label":"h218","page":"tide.html","modulesMs":331,"worldMs":1725,"shadersMs":11018,"totalMs":13074}
+{"check":"v218 vs v218 with only the old formula","pair":4,"label":"h218r","page":"tide.html","modulesMs":326,"worldMs":1681,"shadersMs":10836,"totalMs":12842}
+{"check":"v218 vs v218 with only the old formula","pair":5,"label":"h218r","page":"tide.html","modulesMs":275,"worldMs":1630,"shadersMs":10659,"totalMs":12564}
+{"check":"v218 vs v218 with only the old formula","pair":5,"label":"h218","page":"tide.html","modulesMs":306,"worldMs":1618,"shadersMs":10912,"totalMs":12836}
+{"check":"v218 vs v218 with only the old formula","pair":6,"label":"h218","page":"tide.html","modulesMs":355,"worldMs":1710,"shadersMs":10912,"totalMs":12977}
+{"check":"v218 vs v218 with only the old formula","pair":6,"label":"h218r","page":"tide.html","modulesMs":249,"worldMs":1743,"shadersMs":10719,"totalMs":12711}
+{"check":"v218 vs v218 with only the old formula","pair":7,"label":"h218r","page":"tide.html","modulesMs":342,"worldMs":1642,"shadersMs":11023,"totalMs":13007}
+{"check":"v218 vs v218 with only the old formula","pair":7,"label":"h218","page":"tide.html","modulesMs":318,"worldMs":1633,"shadersMs":10880,"totalMs":12831}
+{"check":"v218 vs v218 with only the old formula","pair":8,"label":"h218","page":"tide.html","modulesMs":290,"worldMs":1777,"shadersMs":10779,"totalMs":12845}
+{"check":"v218 vs v218 with only the old formula","pair":8,"label":"h218r","page":"tide.html","modulesMs":292,"worldMs":1600,"shadersMs":10654,"totalMs":12546}
+{"check":"v218 vs v218 with only the old formula","pair":9,"label":"h218r","page":"tide.html","modulesMs":321,"worldMs":1819,"shadersMs":10710,"totalMs":12849}
+{"check":"v218 vs v218 with only the old formula","pair":9,"label":"h218","page":"tide.html","modulesMs":295,"worldMs":1698,"shadersMs":10696,"totalMs":12690}
+{"check":"v218 vs v218 with only the old formula","pair":10,"label":"h218","page":"tide.html","modulesMs":315,"worldMs":1597,"shadersMs":11135,"totalMs":13046}
+{"check":"v218 vs v218 with only the old formula","pair":10,"label":"h218r","page":"tide.html","modulesMs":340,"worldMs":1605,"shadersMs":10753,"totalMs":12699}
+{"check":"v218 vs v218 with only the old formula","pair":11,"label":"h218r","page":"tide.html","modulesMs":306,"worldMs":1745,"shadersMs":11302,"totalMs":13352}
+{"check":"v218 vs v218 with only the old formula","pair":11,"label":"h218","page":"tide.html","modulesMs":340,"worldMs":1664,"shadersMs":10715,"totalMs":12719}
+{"check":"v218 vs v218 with only the old formula","pair":12,"label":"h218","page":"tide.html","modulesMs":317,"worldMs":1701,"shadersMs":10755,"totalMs":12774}
+{"check":"v218 vs v218 with only the old formula","pair":12,"label":"h218r","page":"tide.html","modulesMs":290,"worldMs":1653,"shadersMs":10911,"totalMs":12854}
+{"check":"v218 vs v218 with only the old formula","pair":13,"label":"h218r","page":"tide.html","modulesMs":286,"worldMs":1680,"shadersMs":10953,"totalMs":12919}
+{"check":"v218 vs v218 with only the old formula","pair":13,"label":"h218","page":"tide.html","modulesMs":290,"worldMs":1855,"shadersMs":10838,"totalMs":12983}
+{"check":"v218 vs v218 with only the old formula","pair":14,"label":"h218","page":"tide.html","modulesMs":320,"worldMs":1679,"shadersMs":10680,"totalMs":12679}
+{"check":"v218 vs v218 with only the old formula","pair":14,"label":"h218r","page":"tide.html","modulesMs":277,"worldMs":1792,"shadersMs":10898,"totalMs":12967}
+{"check":"v218 vs v218 with only the old formula","pair":15,"label":"h218r","page":"tide.html","modulesMs":335,"worldMs":1855,"shadersMs":10711,"totalMs":12901}
+{"check":"v218 vs v218 with only the old formula","pair":15,"label":"h218","page":"tide.html","modulesMs":314,"worldMs":1728,"shadersMs":11153,"totalMs":13195}
+{"check":"v218 vs v218 with only the old formula","pair":16,"label":"h218","page":"tide.html","modulesMs":304,"worldMs":1789,"shadersMs":11715,"totalMs":13808}
+{"check":"v218 vs v218 with only the old formula","pair":16,"label":"h218r","page":"tide.html","modulesMs":315,"worldMs":1724,"shadersMs":10950,"totalMs":12989}

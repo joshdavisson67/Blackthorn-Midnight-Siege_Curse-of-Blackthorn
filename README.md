@@ -53,7 +53,9 @@ From the user, after a run to threat level 67: it played far too easy.
 - **The design spec** (6.4) records the decision.
 - **Tests:** `tests/tide-threat.mjs` checks the compounding level by level, the cap at level 54, and that the new curve is never weaker than the old one.
 - **Gameplay changes, by design:** the dead's health from threat level 2 on.
-- TIERS
+- **Release tiers:**
+  - **The mansion and the mode picker:** quick; nothing they load changed.
+  - **Dead Tide:** full. Size, views, the fight and frame logic are unchanged. The tool put loading 0.26 s slower. Three further checks found that to be noise: with only the formula changed, loading is level. The golden trace differs in 25 gameplay channels, by design (the dead's health from level 2 on). Details: `perf/README.md`.
 
 ## Dead Tide's picker art and title screen, no longer a preview (version 217)
 
