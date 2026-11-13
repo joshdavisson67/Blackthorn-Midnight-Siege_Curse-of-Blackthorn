@@ -101,6 +101,14 @@ const T=await import('../public/game/three.module.js');
 const scene=new T.Scene(),world=new T.Group();scene.add(world);const I=buildIsland({scene,world,audit:true});
 // v216: nothing that stands on the ground hangs off it: every part placed on the ground meets it under every edge.
 assert.deepEqual(I.floating,[],`Nothing floats: ${JSON.stringify(I.floating.slice(0,5))}`);
+// v220 (the user: a strange wavy pattern in the water): the sea's depth map is half floats and goes on below
+// zero over the land, so the waterline falls between its samples (in 8 bits, clamped at the shore, the foam broke
+// into steps a metre wide); and the ripples and caustics come from a tiling noise, not from rows of sines.
+{const D=I.depthMap,N=I.noiseMap,half=T.DataUtils.fromHalfFloat;assert.equal(D.type,T.HalfFloatType,'The depth map is half floats');
+ const vals=Array.from(D.image.data,half);assert(Math.min(...vals)<-.4&&Math.max(...vals)>.99,'from below zero over the land to the open sea');
+ const near0=vals.filter(v=>Math.abs(v)<.02).length;assert(near0<vals.length*.02,'with few samples sitting on the waterline itself');
+ assert(N&&N.image.width===128&&N.wrapS===T.RepeatWrapping,'The sea has its tiling noise');
+ const src=I.seaMat.fragmentShader;assert(/noiseMap/.test(src)&&!/sin\(p\.x\*1\.6/.test(src)&&(src.match(/texture2D\(/g)||[]).length<=4,'The sea takes its ripples and caustics from the noise, in four texture reads at most');}
 // v219: the cliff's rock face stands out from the ground at every height: 0.15 m in from any of its vertices
 // standing 0.1 m or more above the ground, the ground is lower than the vertex (so the step behind it never shows through).
 {const S=islandSites().sites.camp;let face=null;world.traverse(o=>{if(o.name==='Camp cliff')face=o;});assert(face,'The camp\u2019s cliff face is built');

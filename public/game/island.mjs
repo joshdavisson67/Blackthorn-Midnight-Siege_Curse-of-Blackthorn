@@ -1,6 +1,6 @@
 import * as T from './three.module.js';
 import {combineMeshes} from './batching.mjs?v=204';
-import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry,hullGeometry,columnGeometry} from './island-art.mjs?v=219';
+import {textured,terrain,foliage,standInTextures,ART_UNIFORMS,palmCrownGeometry,fernGeometry,tuftGeometry,shrubGeometry,vineGeometry,boulderGeometry,hullGeometry,columnGeometry} from './island-art.mjs?v=220';
 
 // Dead Tide's island (v204, Dead Tide step 2): the grey-box map. A central hill with the
 // radio tent and a lattice tower on its flat top, a lowland ring, beaches all round,
@@ -171,6 +171,17 @@ export function campMeshHeight(x,z){const h=groundHeight(x,z),P=CAMP_PLATEAU,{lx
   const edge=campEdge(lz/d);if(d<edge+P.face-.45||d>=edge+P.face)return h;const cw=campCliffWeight(lx,lz,d);if(cw<=.02)return h;
   const f=(edge+P.face+.05)/d,foot=groundHeight(CAMP.x+(x-CAMP.x)*f,CAMP.z+(z-CAMP.z)*f);if(CAMPLAND.top-foot<.6)return h;
   return h-Math.max(0,h-foot)*smooth(.3,.8,cw);}
+// v220: the sea's noise, 128 pixels square, tiling: fractal value noise, 4 cells across at its broadest, in red,
+// green and alpha (three independent fields), and in blue a web of light where two more such fields meet (the
+// caustics, baked here so the sea reads them in one tap). Seeded, so every build makes the same one.
+function seaNoise(){const N=128,data=new Uint8Array(N*N*4);
+  const hash=(x,y,k)=>{let h=(Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(k,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;};
+  const value=(x,y,p,k)=>{const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy),w=a=>((a%p)+p)%p;
+    const a=hash(w(xi),w(yi),k),b=hash(w(xi+1),w(yi),k),c=hash(w(xi),w(yi+1),k),d=hash(w(xi+1),w(yi+1),k);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy;};
+  const field=(u,v,k)=>{let t=0,amp=.5,norm=0;for(let o=0;o<4;o++){const p=4<<o;t+=amp*value(u*p,v*p,p,k*97+o*13+5);norm+=amp;amp*=.5;}return Math.min(1,Math.max(0,.5+(t/norm-.5)*1.8));};
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const u=i/N,v=j/N,k=(j*N+i)*4,web=Math.pow(1-Math.min(1,Math.abs(field(u,v,4)-field(u,v,5))*2.6),3);
+    data[k]=Math.round(field(u,v,0)*255);data[k+1]=Math.round(field(u,v,1)*255);data[k+2]=Math.round(web*255);data[k+3]=Math.round(field(u,v,3)*255);}
+  const tex=new T.DataTexture(data,N,N,T.RGBAFormat,T.UnsignedByteType);tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.magFilter=T.LinearFilter;tex.minFilter=T.LinearMipmapLinearFilter;tex.generateMipmaps=true;tex.name='island-sea-noise';tex.needsUpdate=true;return tex;}
 export function campStepNear(x,z,margin=.8){const P=CAMP_PLATEAU,{lx,lz,d}=campFrame(x,z);if(d>P.flat+P.face+margin+1)return false;
   const edge=campEdge(d>1e-6?lz/d:0);return d>edge-margin&&d<edge+P.face+margin&&campCliffWeight(lx,lz,d)>.02;}
 // Where the camp's cliff face is, and its shoulders, where it curves round the plateau's back half and
@@ -352,31 +363,42 @@ export function buildIsland({scene,world,textures=standInTextures(),audit=false}
   // ---- The sea --------------------------------------------------------------------------
   // One flat sheet at y=0. Its shader reads the water's depth from a map of the ground,
   // so the shallows glow lighter and the surf rolls in exactly where the beach dips under.
-  const MAP=256,MAP_SIZE=256,depthData=new Uint8Array(MAP*MAP);
-  for(let j=0;j<MAP;j++)for(let i=0;i<MAP;i++){const x=(i+.5)/MAP*MAP_SIZE-MAP_SIZE/2,z=(j+.5)/MAP*MAP_SIZE-MAP_SIZE/2;depthData[j*MAP+i]=Math.round(Math.min(1,Math.max(0,-groundHeight(x,z)/DEEP))*255);}
-  const depthMap=new T.DataTexture(depthData,MAP,MAP,T.RedFormat,T.UnsignedByteType);depthMap.magFilter=depthMap.minFilter=T.LinearFilter;depthMap.wrapS=depthMap.wrapT=T.ClampToEdgeWrapping;depthMap.needsUpdate=true;
+  // v220: the depth is kept in half floats and carries on below zero over the land (to half the seabed's depth),
+  // so the waterline falls between the map's samples instead of on a clamp: in 8 bits and clamped at the shore,
+  // the foam and the surf bands broke into steps a metre wide.
+  const MAP=256,MAP_SIZE=256,depthData=new Uint16Array(MAP*MAP);
+  for(let j=0;j<MAP;j++)for(let i=0;i<MAP;i++){const x=(i+.5)/MAP*MAP_SIZE-MAP_SIZE/2,z=(j+.5)/MAP*MAP_SIZE-MAP_SIZE/2;depthData[j*MAP+i]=T.DataUtils.toHalfFloat(Math.min(1,Math.max(-.5,-groundHeight(x,z)/DEEP)));}
+  const depthMap=new T.DataTexture(depthData,MAP,MAP,T.RedFormat,T.HalfFloatType);depthMap.magFilter=depthMap.minFilter=T.LinearFilter;depthMap.wrapS=depthMap.wrapT=T.ClampToEdgeWrapping;depthMap.needsUpdate=true;
+  // v220: a small tiling noise for the sea's ripples, caustics and surf, in place of plain
+  // sines, whose regular lattice showed in the shallows.
+  const noiseMap=seaNoise();
   const moonDir=new T.Vector3(.6,.55,-.58).normalize();
   // v215 (the art pass): turquoise over the sand in the shallows, the seabed showing through, bent
   // by the ripples and lit by moving caustics, darkening to deep water; the moon's glint on the
   // ripples fades with distance, so far water shimmers instead of breaking into squares.
+  // v220: the ripples, caustics and the surf's sway come from the noise, so nothing repeats in rows.
   const seaMat=new T.ShaderMaterial({fog:true,
-    uniforms:T.UniformsUtils.merge([T.UniformsLib.fog,{time:{value:0},depthMap:{value:null},sandMap:{value:null},moonDir:{value:new T.Vector3()},deep:{value:new T.Color(0x031820)},shallow:{value:new T.Color(0x14706c)},bedTint:{value:new T.Color(0x9fe0d6)},foam:{value:new T.Color(0xa8d4cc)},mapSize:{value:MAP_SIZE},seabed:{value:DEEP}}]),
+    uniforms:T.UniformsUtils.merge([T.UniformsLib.fog,{time:{value:0},depthMap:{value:null},noiseMap:{value:null},sandMap:{value:null},moonDir:{value:new T.Vector3()},deep:{value:new T.Color(0x031820)},shallow:{value:new T.Color(0x14706c)},bedTint:{value:new T.Color(0x9fe0d6)},foam:{value:new T.Color(0xa8d4cc)},mapSize:{value:MAP_SIZE},seabed:{value:DEEP}}]),
     vertexShader:`varying vec3 vWorld;
 #include <fog_pars_vertex>
 void main(){vec4 world=modelMatrix*vec4(position,1.);vWorld=world.xyz;vec4 mvPosition=viewMatrix*world;gl_Position=projectionMatrix*mvPosition;
 #include <fog_vertex>
 }`,
-    fragmentShader:`uniform float time;uniform sampler2D depthMap;uniform sampler2D sandMap;uniform vec3 moonDir;uniform vec3 deep;uniform vec3 shallow;uniform vec3 bedTint;uniform vec3 foam;uniform float mapSize;uniform float seabed;varying vec3 vWorld;
+    fragmentShader:`uniform float time;uniform sampler2D depthMap;uniform sampler2D noiseMap;uniform sampler2D sandMap;uniform vec3 moonDir;uniform vec3 deep;uniform vec3 shallow;uniform vec3 bedTint;uniform vec3 foam;uniform float mapSize;uniform float seabed;varying vec3 vWorld;
 #include <fog_pars_fragment>
 void main(){
-  vec2 p=vWorld.xz;float depth=texture2D(depthMap,p/mapSize+.5).r*seabed;float far=length(cameraPosition-vWorld),near=1.-smoothstep(25.,140.,far);
-  // Ripples tilt a fake normal (calmer with distance); the moon glints along them.
-  vec2 rip=vec2(cos(p.x*.35+time*.9)*.028+cos((p.x+p.y)*.9+time*1.6)*.02,cos(p.y*.41-time*.7)*.033+sin(p.x*.7-p.y*.5+time*1.1)*.015);
+  vec2 p=vWorld.xz;float shore=texture2D(depthMap,p/mapSize+.5).r*seabed,depth=max(shore,0.);float far=length(cameraPosition-vWorld),near=1.-smoothstep(25.,140.,far);
+  // Ripples tilt a fake normal (calmer with distance); the moon glints along them. They come from drifting
+  // noise, so the swell never lines up in rows.
+  vec4 nA=texture2D(noiseMap,p*.05+time*vec2(.011,.006));
+  vec2 rip=(nA.rg-.5)*.17;
   vec3 n=normalize(vec3(rip.x*near,1.,rip.y*near));
   vec3 view=normalize(cameraPosition-vWorld);
   // The seabed through the water: sand, bent by the ripples, under moving caustics.
   vec3 bed=texture2D(sandMap,(p+rip*18.)/5.).rgb;
-  float caustic=abs(sin(p.x*1.6+time*.7+sin(p.y*1.2+time*.5)*1.6)*sin(p.y*1.8-time*.6+sin(p.x*1.05-time*.4)*1.6));caustic=pow(caustic,2.5);
+  // Caustics: a soft web of light (baked into the noise's third channel), drifting and bent by the ripples,
+  // brighter in some patches than others.
+  float caustic=texture2D(noiseMap,p*.34+rip*4.+time*vec2(.021,-.014)).b*mix(.4,1.,smoothstep(.3,.7,nA.a))*1.6;
   // The deeper it lies, the less of the bed shows and the bluer and dimmer it is.
   float under=smoothstep(.0,1.7,depth),clear=(1.-under)*mix(.35,.9,view.y);
   vec3 water=mix(deep,shallow,(1.-smoothstep(.2,2.2,depth))*.85);
@@ -384,15 +406,15 @@ void main(){
   float glint=pow(max(dot(n,normalize(view+moonDir)),0.),mix(140.,260.,near))*mix(.06,1.1,near);
   col+=vec3(.7,.95,.9)*glint+deep*.35*(1.-view.y);
   // Surf: bands rolling in over the shallows, and a ribbon of foam on the sand's edge.
-  float surf=1.-smoothstep(.05,.55,depth),band=.5+.5*sin(depth*20.-time*2.3+sin(p.x*.13+p.y*.11)*2.);
-  float froth=surf*smoothstep(.6,1.,band)*.7+(1.-smoothstep(.0,.09,depth))*.85;
+  float surf=1.-smoothstep(.05,.55,depth),band=.5+.5*sin(depth*20.-time*2.3+(nA.a-.5)*9.);
+  float froth=surf*smoothstep(.6,1.,band)*.7+(1.-smoothstep(.0,.09,shore))*.85;
   col=mix(col,foam,clamp(froth,0.,1.)*.55);
   gl_FragColor=vec4(col,1.);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
 #include <fog_fragment>
 }`});
-  seaMat.uniforms.depthMap.value=depthMap;seaMat.uniforms.sandMap.value=TEX.sand;seaMat.uniforms.moonDir.value.copy(moonDir);
+  seaMat.uniforms.depthMap.value=depthMap;seaMat.uniforms.noiseMap.value=noiseMap;seaMat.uniforms.sandMap.value=TEX.sand;seaMat.uniforms.moonDir.value.copy(moonDir);
   const sea=new T.Mesh(new T.PlaneGeometry(900,900,1,1),seaMat);sea.rotation.x=-Math.PI/2;sea.name='The sea';sea.userData.dynamic=true;sea.renderOrder=-1;world.add(sea);
 
   // ---- Collision ------------------------------------------------------------------------
@@ -1010,7 +1032,7 @@ void main(){
       }};
   }
 
-  return {floating,boathouse:boathouseDoor,colliders,platforms,solidMeshes,lights,sea,seaMat,depthMap,beacon,beaconLight,lamp,palms:palmSpots,rocks:rockSpots,landRocks,brush:brushSpots,props,tower,wreck,summit,moonDir,buildRoutes,
+  return {floating,boathouse:boathouseDoor,colliders,platforms,solidMeshes,lights,sea,seaMat,depthMap,noiseMap,beacon,beaconLight,lamp,palms:palmSpots,rocks:rockSpots,landRocks,brush:brushSpots,props,tower,wreck,summit,moonDir,buildRoutes,
     sites:SITE,landmarks:LANDMARKS,stations,trails,
     wreckAt:{x:wx,z:wz,heading},groundHeight,supportBelow,ceilingAt,isBlocked,move,updateHeight,zoneAt,update,
     tentInside,visibleFloor:(x,z,support)=>support,floorHeight:(x,z)=>groundHeight(x,z)};

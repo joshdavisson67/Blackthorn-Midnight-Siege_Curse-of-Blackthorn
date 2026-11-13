@@ -483,6 +483,40 @@ Dead Tide carries the katana through the shared modules. Measured twice beside m
 
 No mansion files are fetched on either build.
 
+## v220 (natural water and sand) against main (v219)
+
+Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering, plus render checks of three versions with `scripts/perf-measure.mjs`.
+
+### Mansion and mode picker: quick
+
+Nothing either loads changed. Five of the mansion's files differ only in their version number.
+
+### Dead Tide: full protocol
+
+`island.mjs`, `island-art.mjs`, `tide.mjs` and `assets/island/sand.webp` changed.
+
+| | main (v219) | v220 |
+|---|---:|---:|
+| KB to download | 3,191 | 3,195 |
+| Textures / shader programs / geometries | 49 / 70 / 293 | 50 / 70 / 293 |
+| Time to playable (20 pairs) | 13,429 ms | +89 ms (SE 73: within noise) |
+| ↳ modules / world / shaders | 310 / 1,833 / 11,287 ms | −5 / +15 / +79 ms (all within noise) |
+| Frame logic (24 pairs, standard / full series) | 0.366 / 0.380 ms | 0.370 / 0.371 ms (within noise) |
+| The nine views' frame times, summed (software rendering) | 7,512 / 7,552 ms | 7,525 / 7,625 ms (final; level) |
+
+- **A slowdown, found and fixed.**
+  - The first version drew every view 3–5% slower in software rendering, in all three runs of each build (the views summed 7,489 → 7,874 ms on average; the fight 1,506 → 1,557 ms).
+  - Its sea read seven textures a pixel (a four-tap B-spline for the depth, four noise taps). Cut to four (one depth tap, one noise tap, the caustics baked into the noise), it still measured 3% slower: 7,512 → 7,755 ms over three alternating pairs.
+  - Two variants, measured twice each:
+    - main's sea shader on that version: 7,870 / 7,707 ms, still slow;
+    - that version without the terrain's blurred sand read: 7,525 / 7,625 ms, level with main's 7,512 / 7,552 ms.
+  - So the cost was the terrain's large copy of the sand read with a mip bias (a slow path in software rendering, over most of the screen). The sea cost nothing measurable. The blur is dropped: the repainted sand's ripples lie in patches and turn direction, so its large copy no longer draws rows.
+  - The release tool's run measured the first version. The final build differs from it only in the sea's and terrain's shaders (same files, same textures).
+- **The golden trace** matches in every gameplay channel (screen, view and page hashes aside).
+- **Not measured:** real GPUs, phones, or frame rates in a real browser. On a GPU these texture reads cost far less than in software rendering.
+
+Files: `v220-tide.jsonl`, `v220-tide-load-phases.jsonl`, `v220-tide-frame-logic.jsonl`, `v220-tier-summary.json`, `v220-tide-render-checks.jsonl`.
+
 ## v219 (the camp's cliff meets its sand) against main (v218)
 
 Measured by `node scripts/release-tier.mjs --measure` (full protocol for Dead Tide) on one machine, headless Chromium with software rendering. The fine band round the cliff was then narrowed (a 0.8 m margin, from 2 m), so the final build was measured again: its views once each (their counts don't vary from run to run) and 16 load-phase pairs.
