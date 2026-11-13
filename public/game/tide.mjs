@@ -24,17 +24,17 @@ import {createSignage} from './signage.mjs?v=94';
 import {createControlScheme} from './input-scheme.mjs?v=142';
 import {createTouchControls} from './touch-controls.mjs?v=148';
 import {createGamepadControls} from './gamepad-controls.mjs?v=128';
-import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=219';
-import {loadIslandTextures} from './island-art.mjs?v=219';
+import {ISLAND,buildIsland,groundHeight} from './island.mjs?v=220';
+import {loadIslandTextures} from './island-art.mjs?v=220';
 import {buildEnemyAssets} from './enemy-assets.mjs?v=207';
 import {createCrowd,enemyBody} from './crowd.mjs?v=123';
 import {createEnemySpawner} from './enemy-spawn.mjs?v=206';
 import {createEnemyAI} from './enemy-ai.mjs?v=206';
 import {createPowerupAssets,POWERUPS} from './powerups.mjs?v=205';
 import {fadeMaterials} from './drop-fade.mjs?v=169';
-import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=219';
-import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=219';
-import {createTideLeaderboard} from './tide-leaderboard.mjs?v=219';
+import {createIslandLevel,followPlayer,playerOccupancy,createThreatDirector} from './tide-dead.mjs?v=220';
+import {THREAT_RULES,TIDE_KINDS,threatLevel,threatStats,threatProgress,threatRank,tideMix} from './tide-threat.mjs?v=220';
+import {createTideLeaderboard} from './tide-leaderboard.mjs?v=220';
 import {armorRank} from './armor.mjs?v=94';
 
 // Dead Tide (v204, Dead Tide step 2): the island mode's entry, loaded only by tide.html
@@ -524,7 +524,7 @@ async function prepareRendering(){
     const warmPickups=Object.keys(POWERUPS).map(type=>powerupAssets.create(type)),warmFading=Object.keys(POWERUPS).map(type=>powerupAssets.create(type));
     for(const g of warmFading){g.visible=true;fadeMaterials(g).set(.5);}
     return {world,warm:[...warmPickups,...warmFading,grenadeAssets.create(),explosionFx.warmGroup()],
-      textures:()=>[...weaponSurfaces().textures,...katanaSurfaces().textures,island.depthMap],
+      textures:()=>[...weaponSurfaces().textures,...katanaSurfaces().textures,island.depthMap,island.noiseMap],
       done(){viewModels.forEach((g,i)=>g.visible=savedVisibility[i]);scopeMasks.forEach((mask,i)=>mask.visible=savedMasks[i]);gunRoot.visible=savedGun;grenadeThrow.cancel();}};
   });
 }

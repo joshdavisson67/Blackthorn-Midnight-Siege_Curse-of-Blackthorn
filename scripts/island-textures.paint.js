@@ -47,11 +47,15 @@ const rgb=(c,a=1)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
 
 // ---- Ground ---------------------------------------------------------------------------------------
 // Pale coral sand: broad drifts, wind ripples, grain, and specks of shell and dark grit.
+// v220: the ripples lie in patches, wander more and turn between two directions across the tile; in one
+// straight set they read from afar as stripes ruled across every beach.
 function sand(n){
   seed=11;
   const c=pixels(n,(u,v)=>{
-    const broad=fbm(u,v,3,4,5),ripple=Math.sin(2*Math.PI*(u*21+v*7)+fbm(u,v,4,3,9)*7),grain=hash(Math.floor(u*n),Math.floor(v*n),3)-.5;
-    let col=mix([196,183,152],[214,202,174],broad);col=shade(col,1+ripple*.035+grain*.09);
+    const broad=fbm(u,v,3,4,5),grain=hash(Math.floor(u*n),Math.floor(v*n),3)-.5;
+    const r1=Math.sin(2*Math.PI*(u*20+v*6)+fbm(u,v,4,3,9)*12),r2=Math.sin(2*Math.PI*(v*19-u*5)+fbm(u,v,4,3,15)*12),turn=smooth(.38,.62,fbm(u,v,2,3,17));
+    const ripple=(r1*(1-turn)+r2*turn)*smooth(.42,.68,fbm(u,v,3,4,19));
+    let col=mix([196,183,152],[214,202,174],broad);col=shade(col,1+ripple*.03+grain*.09);
     const damp=smooth(.58,.75,fbm(u,v,5,4,13));col=mix(col,[160,148,122],damp*.35);
     return col;});
   wrapped(c,(x,n)=>{seed=12;for(let i=0;i<1700;i++){const px=rand()*n,py=rand()*n,r=.6+rand()*1.6,t=rand();x.fillStyle=t<.5?'rgba(70,62,50,.45)':t<.85?'rgba(245,238,222,.55)':'rgba(200,150,130,.45)';x.beginPath();x.ellipse(px,py,r,r*(.5+rand()*.5),rand()*3,0,7);x.fill();}});

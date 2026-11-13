@@ -29,6 +29,33 @@ Combat now uses ten prebuilt enemy templates with shared geometry/materials and 
 
 The expansion uses spatial collision lookup, reusable navigation buffers, local enemy spawn selection, spatial mesh batches, and eight pooled lights for the new wings. These keep cost bounded as the estate grows; real browser frame rates remain unmeasured.
 
+## Dead Tide: natural water and sand (version 220)
+
+From the user: a strange wavy pattern in the water and some of the ground.
+
+- **The waterline's stair-steps (a bug):** the foam along the waterline and the surf bands rolling in broke into jagged steps about a metre wide.
+  - **Why:** the sea reads its depth from a 256 × 256 map (1 m a sample), stored in 8 bits and clamped to zero on land. The waterline fell exactly on that clamp.
+  - **The fix:** the map is now half floats and carries on below zero over the land, so the waterline falls smoothly between samples.
+- **The ripples and caustics (an effect, made natural):**
+  - The ripples were four plain sine waves, and the sand seen through the water was bent by them. The caustics were the product of two sines. All of it repeated in a visible lattice.
+  - Now a small tiling noise (128 pixels), made when the island loads, drives the ripples, the moon's glint, the bend of the seabed and the surf's sway.
+  - The caustics are a soft web of light, baked into that noise, drifting and bent by the ripples, brighter in some patches than others.
+  - The sea reads four textures a pixel (two before): the depth, the noise, the caustics and the seabed's sand. It costs nothing measurable over the old sines.
+- **The sand's stripes (an effect, made natural):**
+  - The painted wind ripples ran in one straight set, and the terrain's second, larger copy of the sand drew them again a metre apart. From a few metres away they read as stripes ruled across every beach.
+  - `sand.webp` is repainted (only that texture changes): the ripples now lie in patches, wander more, and turn between two directions across the tile. Its large copy shows them as broad, soft ripples in patches, not as rows.
+- **Tests** (`tests/dead-tide.mjs`) check that:
+  - the depth map is half floats running below zero over the land, with few samples on the waterline itself;
+  - the sea takes its ripples and caustics from the noise, in four texture reads at most.
+- **Gameplay:** unchanged.
+- **Release tiers:**
+  - **The mansion and the mode picker:** quick; nothing they load changed.
+  - **Dead Tide:** full.
+    - One more texture (the sea's noise, 64 KB on the GPU) and +4 KB to download.
+    - Load and frame logic are within noise. The golden trace matches in every gameplay channel.
+    - **A slowdown, found and fixed.** The first version drew every view 3–5% slower in software rendering. Variants traced it to the terrain reading its large copy of the sand blurred (a texture read with a bias). The sea's new shader cost nothing measurable. The blur is dropped; the repainted sand doesn't need it, and the views now draw level with main.
+    - Details: `perf/README.md`.
+
 ## Dead Tide: the camp's cliff meets its sand (version 219)
 
 From the user: the sand and the cliff behind the Coastal Camp didn't connect; there was a big gap.
